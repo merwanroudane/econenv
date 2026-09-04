@@ -104,7 +104,9 @@ batch mode, which is what 0.1.5 claimed.
 
 ### Notes
 
-- 166 tests, up from 150. 136 catalogue entries, 94 verified.
+- 166 tests, up from 150.
+
+Published to PyPI: <https://pypi.org/project/econenv/0.1.6/> 136 catalogue entries, 94 verified.
 
 ## [0.1.5] — 2026-09-04
 
