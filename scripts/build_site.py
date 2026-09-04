@@ -735,15 +735,26 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
     <tbody>
       <tr><td><b>Python</b></td><td>works</td><td>it is the kernel</td></tr>
       <tr><td><b>R</b></td><td>works</td><td>R is already on the Colab image</td></tr>
-      <tr><td><b>Stata</b></td><td>no</td><td>commercial, not installed, and the runtime is destroyed when the session ends</td></tr>
-      <tr><td><b>EViews</b></td><td>no</td><td>its automation interface is Windows COM — there is no Linux equivalent</td></tr>
+      <tr><td><b>Stata</b></td><td><b>possible</b></td><td>Stata for Linux exists and pystata supports it — install it from Google Drive if you hold a Linux licence</td></tr>
+      <tr><td><b>EViews</b></td><td>no</td><td>no Linux build; Wine cannot licence it; and EViews forbids remote access</td></tr>
     </tbody>
   </table></div>
 
-  <div class="note"><b>This is a limit of the programs, not of EconEnv.</b>
-  No configuration changes it, so <code>%econ doctor</code> detects Colab and
-  says so outright rather than reporting a fault you cannot fix. For Stata and
-  EViews, run the four-engine notebook on a local Windows machine.</div>
+  <div class="note"><b>Stata is possible on Colab.</b>
+  Stata for Linux installs from a tarball and pystata supports Linux, so with a
+  Linux licence you can install it from Google Drive at the top of a notebook —
+  EconEnv then finds it with no configuration. It has to be repeated each
+  session, and whether your licence covers a disposable cloud VM is a question
+  for StataCorp.</div>
+
+  <div class="warn"><b>EViews genuinely cannot, and this is not EconEnv's doing.</b>
+  There is no Linux build. Under Wine, EViews cannot read a valid machine ID, so
+  licence activation fails. And the obvious workaround — running EViews on your
+  own Windows machine and reaching it from Colab over a tunnel — is ruled out by
+  EViews itself, whose documentation states that <i>"web server access to EViews
+  via COM is not allowed"</i> and limits remote Distributed COM to a single
+  instance. That workaround is easy to build and contractually prohibited, so
+  EconEnv will not ship it.</div>
 
   <p><a class="btn btn-primary" href="{COLAB}">Open the Colab notebook</a></p>
 </div></section>

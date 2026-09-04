@@ -198,11 +198,17 @@ Then, in a notebook:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb)
 
-EconEnv runs on Colab for **Python and R** — one line to install, no local
-setup. Stata and EViews cannot run there: Colab is Linux, EViews automation is
-Windows COM, and a Stata licence cannot sensibly live on a disposable runtime.
-`%econ doctor` says so explicitly when it detects Colab, rather than reporting
-a fault you cannot fix.
+One line to install, no local setup.
+
+| Engine | On Colab | |
+|---|---|---|
+| Python | works | it is the kernel |
+| R | works | R is on the Colab image |
+| Stata | **possible** | Stata for Linux + a Linux licence, installed from Drive each session |
+| EViews | no | no Linux build; Wine fails licence activation; and EViews forbids remote access — *"web server access to EViews via COM is not allowed"* |
+
+`%econ doctor` detects Colab and says which of these applies to you.
+[Full details, including the Stata recipe](docs/installation.md#google-colab).
 
 
 ---

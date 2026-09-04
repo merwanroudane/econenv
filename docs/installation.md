@@ -79,14 +79,68 @@ No local installation at all:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb)
 
-**Python and R work.** Colab ships R, and Python is the kernel.
+| Engine | On Colab | |
+|---|---|---|
+| **Python** | works | it is the kernel |
+| **R** | works | R is on the Colab image |
+| **Stata** | **possible** | Stata for Linux exists, and pystata supports Linux |
+| **EViews** | no | no Linux build, and no permitted workaround |
 
-**Stata and EViews cannot.** Colab is Linux; EViews automation is Windows COM
-and has no Linux equivalent, and a Stata licence cannot sensibly live on a
-runtime that is destroyed when the session ends. This is a property of those
-programs, not something EconEnv can configure around — which is why
-`%econ doctor` detects Colab and says so outright instead of reporting a fault
-you cannot fix.
+### Stata on Colab
 
-For all four engines, use a local Windows machine and
+This does work, if you hold a Stata **Linux** licence. Stata for Linux installs
+from a tarball, and [pystata officially supports
+Linux](https://www.stata.com/python/pystata17/install.html) via
+`stata_setup.config(path, edition)`.
+
+Keep the Linux tarball and your `stata.lic` in Google Drive, then in a Colab
+cell:
+
+```python
+from google.colab import drive
+drive.mount('/content/drive')
+```
+
+```bash
+!mkdir -p /usr/local/stata19
+!tar -xzf "/content/drive/MyDrive/stata/Stata19Linux64.tar.gz" -C /usr/local/stata19
+!cd /usr/local/stata19 && yes | ./install
+!cp "/content/drive/MyDrive/stata/stata.lic" /usr/local/stata19/
+```
+
+EconEnv then finds it with no configuration — Linux executable names
+(`stata-mp`, `stata-se`, `stata`) and `/usr/local` are already part of
+discovery:
+
+```python
+%load_ext econenv
+%econ status
+```
+
+Three caveats, none of them technical:
+
+- You need a **Linux** licence entitlement. A Windows-only licence does not
+  cover this.
+- The runtime is destroyed at the end of the session, so this repeats every
+  time. Fine as a cell at the top of a notebook; irritating as a habit.
+- Whether your licence permits installation on a disposable cloud VM is a
+  question for StataCorp, not for EconEnv. Check before relying on it.
+
+### EViews on Colab — genuinely not possible
+
+Not a limitation EconEnv can route around:
+
+1. **There is no Linux build of EViews.** It ships for Windows and macOS only.
+2. **Wine does not work.** EViews cannot read a valid machine ID under Wine, so
+   licence activation fails. This is longstanding and unresolved.
+3. **Driving a Windows copy remotely is forbidden by EViews.** The obvious
+   workaround — run EViews on your own Windows machine and reach it from Colab
+   over a tunnel — is ruled out by EViews' own documentation, which states that
+   *"web server access to EViews via COM is not allowed"*, and limits remote
+   Distributed COM to a single instance.
+
+Point 3 is the important one: the workaround is technically straightforward and
+contractually prohibited, so EconEnv will not ship it.
+
+For EViews, use a local Windows machine and
 [the four-engine notebook](../examples/10_real_data_four_engines.ipynb).

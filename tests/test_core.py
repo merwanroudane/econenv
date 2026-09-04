@@ -533,7 +533,10 @@ class TestColab:
         assert colab, "doctor must say when it is running on Colab"
         assert colab[0].status is diagnostics.Status.PASS
         assert "R" in colab[0].detail
-        assert "Windows-only" in colab[0].fix
+        # Stata for Linux exists and pystata supports it, so Colab must not be
+        # told Stata is impossible — only EViews is.
+        assert "Stata for Linux" in colab[0].fix
+        assert "EViews cannot" in colab[0].fix
 
     def test_eviews_on_colab_is_skipped_never_an_error(self, monkeypatch):
         from econenv import diagnostics, discovery
@@ -545,4 +548,9 @@ class TestColab:
 
         assert len(checks) == 1
         assert checks[0].status is diagnostics.Status.SKIP
-        assert "Colab" in checks[0].fix
+        # The reason must be the real one, not a guess: no Linux build, Wine
+        # cannot licence, and EViews itself forbids reaching it over a network.
+        fix = checks[0].fix
+        assert "no Linux build" in fix
+        assert "Wine" in fix
+        assert "web server access to EViews via COM is not allowed" in fix

@@ -79,11 +79,24 @@ batch mode, which is what 0.1.5 claimed.
   `%pip install econenv` and a Python + R workflow on real macro data, needing
   no local setup.
 - **Colab detection.** `discovery.is_colab()`, and a `doctor` check that names
-  the environment and states what cannot run there. Colab is Linux, so EViews
-  automation — Windows COM — has no equivalent, and a Stata licence cannot
-  sensibly live on a runtime that is destroyed at the end of the session. On
-  Colab the EViews check now explains that rather than leaving someone hunting
-  for a configuration fix that does not exist.
+  the environment and states precisely what can and cannot run there.
+
+  **Stata can.** Stata for Linux installs from a tarball and
+  [pystata supports Linux](https://www.stata.com/python/pystata17/install.html),
+  so with a Linux licence it can be installed from Google Drive at the top of a
+  notebook. EconEnv already discovers it — the Linux executable names and
+  `/usr/local` were in discovery from the start. `docs/installation.md` carries
+  the recipe, and the caveats: it repeats every session, and whether your licence
+  covers a disposable cloud VM is a question for StataCorp.
+
+  **EViews cannot, and this is not a limitation EconEnv can route around.**
+  There is no Linux build. Under Wine, EViews cannot read a valid machine ID, so
+  licence activation fails. And the obvious workaround — running EViews on a
+  Windows machine and reaching it from Colab over a tunnel — is ruled out by
+  EViews' own documentation, which states that *"web server access to EViews via
+  COM is not allowed"* and limits remote Distributed COM to a single instance.
+  That workaround is easy to build and contractually prohibited, so EconEnv does
+  not ship it.
 
 ### Also fixed
 

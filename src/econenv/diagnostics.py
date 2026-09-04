@@ -208,10 +208,12 @@ def check_host() -> List[Check]:
             Check(
                 "Google Colab",
                 Status.PASS,
-                "detected — Python and R work here",
-                "Stata and EViews cannot run on Colab: EViews automation is Windows-only, "
-                "and Stata would need installing and licensing on a runtime that is "
-                "destroyed when the session ends. Use a local machine for those two.",
+                "detected — Python and R work here; Stata is possible, EViews is not",
+                "Stata for Linux can be installed on the runtime if you have a Linux "
+                "licence — EconEnv finds it automatically once it is there. EViews cannot: "
+                "there is no Linux build, and EViews' own terms forbid reaching a Windows "
+                "copy over the network ('web server access to EViews via COM is not "
+                "allowed'). See docs/installation.md.",
                 group="host",
             )
         )
@@ -443,9 +445,11 @@ def check_eviews(deep: bool = False) -> List[Check]:
                 Status.SKIP,
                 f"COM automation is Windows-only; this is {platform.system()}",
                 (
-                    "Not fixable here, and not a misconfiguration: EViews has no Linux or "
-                    "macOS automation interface. On Google Colab use Python and R; run "
-                    "EViews work on a local Windows machine."
+                    "Not fixable, and not a misconfiguration. EViews has no Linux build; "
+                    "under Wine it cannot read a valid machine ID, so licensing fails; and "
+                    "driving a Windows copy from here is ruled out by EViews itself, whose "
+                    "documentation states that web server access to EViews via COM is not "
+                    "allowed. Run EViews work on a local Windows machine."
                     if discovery.is_colab()
                     else "EconEnv installs and works fine without it — the other engines "
                     "are unaffected."
