@@ -20,3 +20,6 @@ htmlcov/
 *.smcl
 econenv-snapshot.json
 .econenv/
+
+# The original project brief - kept locally, not published.
+معلومات المشروع.md
