@@ -331,7 +331,8 @@ and tested. The API may still change before v1.0.
 
 | Version | | What changed |
 |---|---|---|
-| **0.1.6** | [PyPI](https://pypi.org/project/econenv/0.1.6/) · [notes](CHANGELOG.md#016--2026-09-04) | EViews command reference searchable from a cell; forecast plots; worked example on real data; user guide |
+| **0.1.7** | [PyPI](https://pypi.org/project/econenv/0.1.7/) · [notes](CHANGELOG.md#017--2026-09-04) | Google Colab support; all four engines via a local runtime |
+| 0.1.6 | [PyPI](https://pypi.org/project/econenv/0.1.6/) · [notes](CHANGELOG.md#016--2026-09-04) | EViews command reference searchable from a cell; forecast plots; worked example on real data; user guide |
 | 0.1.5 | [PyPI](https://pypi.org/project/econenv/0.1.5/) · [notes](CHANGELOG.md#015--2026-09-04) | Full EViews graph/output audit; text and spool views captured; no silent failures |
 | 0.1.4 | folded into 0.1.5 · [notes](CHANGELOG.md#014--2026-09-04) | EViews graph commands (`line x`) now render |
 | 0.1.3 | [PyPI](https://pypi.org/project/econenv/0.1.3/) · [notes](CHANGELOG.md#013--2026-09-04) | EViews plotting views (`x.line`) now render; no duplicate or repeated figures |

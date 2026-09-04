@@ -4,6 +4,53 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] — 2026-09-04
+
+Google Colab support, and a correction to what I had claimed about it.
+
+### Added
+
+- **Colab detection.** `discovery.is_colab()` reads `COLAB_RELEASE_TAG`,
+  `COLAB_GPU` or the `google.colab` module, and `doctor` reports the environment
+  by name with what can and cannot run there.
+- **`examples/11_colab_quickstart.ipynb`** with an *Open in Colab* badge: one
+  `%pip install econenv`, then a Python + R workflow on the same real macro data
+  as the four-engine notebook.
+- **All four engines in Colab, via a local runtime.** Colab already runs in a
+  browser on your own PC, so it can be pointed at a Jupyter server on that same
+  PC: the interface stays Colab while the kernel — and therefore Python, R,
+  Stata **and EViews** — is your Windows machine. Nothing is exposed to the
+  internet, so this is not the prohibited "web server access to EViews via COM".
+
+  It needs the classic Jupyter stack, and that was measured rather than assumed.
+  `jupyter_http_over_ws` was last released in March 2020 and is a notebook 5/6
+  server extension: on notebook 7.5.5 and 6.5.7 — both on `jupyter_server 2` —
+  enabling it fails and `/http_over_websocket` returns 404. Pinned to
+  `notebook==6.4.12` it validates and the probe returns HTTP 400, the endpoint
+  waiting for Colab's websocket upgrade.
+- A **Colab chapter** in the printed guide, and a Colab section on the
+  documentation site and in `docs/installation.md`.
+
+### Corrected
+
+- **Stata on Colab was reported as impossible. It is not.** Stata for Linux
+  installs from a tarball and pystata officially supports Linux, so with a Linux
+  licence it can be installed on a Colab runtime from Google Drive — and EconEnv
+  finds it with no configuration, since the Linux executable names and
+  `/usr/local` were already in discovery. The recipe and its caveats are
+  documented.
+- **EViews on a Colab runtime remains impossible, now for cited reasons**
+  rather than assumption: no Linux build, Wine cannot read a valid machine ID so
+  licensing fails, and EViews' own documentation forbids reaching it over a
+  network.
+
+### Notes
+
+- 170 tests, up from 166. The Colab tests pin the corrected facts, including the
+  exact EViews restriction, so this cannot silently revert.
+
+Published to PyPI: <https://pypi.org/project/econenv/0.1.7/>
+
 ## [0.1.6] — 2026-09-04
 
 For researchers who have only ever driven EViews from its menus. In a notebook
@@ -443,6 +490,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[0.1.7]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.7
 [0.1.6]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.6
 [0.1.5]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.5
 [0.1.4]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.4

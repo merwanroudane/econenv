@@ -658,6 +658,144 @@ it.
 \end{note}
 
 % ======================================================================
+\chapter{Google Colab}
+
+Colab is Linux, and that settles what is possible before anything is installed.
+
+\section{What runs on a Colab cloud runtime}
+
+\begin{center}
+\begin{tabular}{@{}llp{7.4cm}@{}}
+\toprule
+\textbf{Engine} & \textbf{Colab} & \textbf{Why} \\
+\midrule
+Python & works & it is the kernel \\
+R & works & R is already on the Colab image \\
+Stata & \textbf{possible} & Stata for Linux exists and pystata supports it \\
+EViews & no & no Linux build, and no permitted workaround \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Install as usual:
+
+\begin{lstlisting}
+%pip install econenv
+\end{lstlisting}
+
+\section{Stata on a Colab runtime}
+
+This does work, if you hold a Stata \textbf{Linux} licence. Keep the Linux
+tarball and your \texttt{stata.lic} in Google Drive, mount Drive, and install at
+the top of the notebook:
+
+\begin{lstlisting}
+from google.colab import drive
+drive.mount('/content/drive')
+\end{lstlisting}
+
+\begin{lstlisting}
+!mkdir -p /usr/local/stata19
+!tar -xzf "/content/drive/MyDrive/stata/Stata19Linux64.tar.gz" -C /usr/local/stata19
+!cd /usr/local/stata19 && yes | ./install
+!cp "/content/drive/MyDrive/stata/stata.lic" /usr/local/stata19/
+\end{lstlisting}
+
+EconEnv finds it with no configuration: the Linux executable names
+(\texttt{stata-mp}, \texttt{stata-se}, \texttt{stata}) and \texttt{/usr/local}
+have been part of discovery from the start.
+
+\begin{warn}
+Three caveats, none of them technical. You need a \textbf{Linux} licence
+entitlement --- a Windows-only licence does not cover this. The runtime is
+destroyed at the end of the session, so the install repeats every time. And
+whether your licence permits installation on a disposable cloud VM is a question
+for StataCorp, not for this project.
+\end{warn}
+
+\section{EViews on a Colab runtime --- not possible}
+
+Three independent blockers, none of which EconEnv can route around:
+
+\begin{enumerate}
+  \item \textbf{There is no Linux build.} EViews ships for Windows and macOS.
+  \item \textbf{Wine does not work.} EViews cannot read a valid machine ID under
+        Wine, so licence activation fails.
+  \item \textbf{Remote access is forbidden.} The obvious workaround --- run
+        EViews on your Windows machine and reach it from Colab over a tunnel ---
+        is ruled out by EViews' own documentation, which states that
+        \emph{``web server access to EViews via COM is not allowed''} and limits
+        remote Distributed COM to a single instance.
+\end{enumerate}
+
+The third is the one that settles it: that bridge is straightforward to build
+and contractually prohibited, so EconEnv does not ship it.
+
+\section{All four engines, still in Colab}
+
+There is a way to have the Colab interface \emph{and} every engine, and it
+avoids all of the above.
+
+Colab runs in a browser \textbf{on your own PC}. Google lets you point that
+interface at a Jupyter server running on that same PC --- a \textbf{local
+runtime}. The notebook UI stays Colab; the kernel, and therefore Python, R,
+Stata and EViews, is your Windows machine.
+
+\begin{note}
+Nothing is exposed to the internet. Your browser talks to \texttt{localhost},
+Google's servers never reach your machine, and EViews is driven by local COM
+exactly as it would be in a local notebook. There is no web server in front of
+EViews, so this is not the restriction quoted above.
+\end{note}
+
+It needs the \textbf{classic} Jupyter stack. The bridge package
+\texttt{jupyter\_http\_over\_ws} was last released in March 2020 and is a
+notebook 5/6 server extension; on \texttt{notebook 7} and
+\texttt{jupyter\_server 2} it does not load at all.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Stack} & \textbf{Enable step} & \texttt{/http\_over\_websocket} \\
+\midrule
+notebook 7.5.5 & fails & 404 \\
+notebook 6.5.7 & fails & 404 \\
+\textbf{notebook 6.4.12} & \textbf{validates} & \textbf{HTTP 400} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+HTTP 400 is the correct answer: the endpoint exists and is waiting for the
+websocket upgrade Colab performs. Both other stacks run on
+\texttt{jupyter\_server 2}, which will not load a legacy server extension.
+
+So use a dedicated environment:
+
+\begin{lstlisting}
+python -m venv colab-runtime
+colab-runtime/Scripts/pip install notebook==6.4.12 jupyter_http_over_ws econenv
+colab-runtime/Scripts/jupyter serverextension enable --py jupyter_http_over_ws
+colab-runtime/Scripts/jupyter notebook --no-browser --port=8888
+    --NotebookApp.port_retries=0
+    --NotebookApp.allow_origin="https://colab.research.google.com"
+\end{lstlisting}
+
+Copy the \texttt{http://localhost:8888/?token=...} line it prints. In Colab,
+click the \textbf{Connect} arrow, choose \textbf{Connect to a local runtime},
+and paste the URL.
+
+Then everything works, because the kernel is your PC:
+
+\begin{lstlisting}
+%load_ext econenv
+%econ status
+\end{lstlisting}
+
+Two practical caveats: your PC must stay awake with the server running for as
+long as the notebook is open, and that environment is separate from your usual
+one, so install into it whatever the notebook needs.
+
+% ======================================================================
 \chapter{A worked example}
 
 The notebook \texttt{examples/10\_real\_data\_four\_engines.ipynb} works through a
