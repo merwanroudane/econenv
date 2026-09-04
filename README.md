@@ -1,0 +1,378 @@
+<div align="center">
+
+# EconEnv
+
+**One Notebook. Multiple Econometric Engines.**
+
+Python, R, Stata and EViews in a single Jupyter workflow — on one Python kernel.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org)
+[![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#project-status)
+
+</div>
+
+---
+
+## The problem
+
+An applied econometrics paper rarely lives in one program. The unit-root test is
+in EViews because that is where the ARDL bounds output is readable. The panel
+estimator is in Stata because `xtreg` is the reference implementation. The plots
+are in R because `ggplot2` is better. The data cleaning is in Python because
+pandas is better.
+
+So the working day looks like this:
+
+```
+Python  →  to_csv()  →  Stata  →  export delimited  →  R  →  write.csv  →  EViews
+```
+
+Four programs open. Four windows. Four copies of the same data, drifting apart.
+A missing value that meant `.a` in Stata arriving as an empty cell in R. A
+quarterly index that became a string. And when a referee asks "why does your
+robust standard error differ from mine?", there is no way to answer without
+redoing the whole chain by hand.
+
+## The solution
+
+EconEnv makes the four programs **execution engines behind one Python kernel**.
+
+```python
+%load_ext econenv
+
+df = pd.read_csv("data.csv")          # Python, as usual
+```
+
+```python
+%%R -i df
+fit <- lm(y ~ x1 + x2, data = df)
+summary(fit)
+```
+
+```python
+%%stata
+regress y x1 x2
+```
+
+```python
+%%eviews -i df
+equation eq1.ls y c x1 x2
+```
+
+One notebook. One kernel. One dataset. No CSV round-trip.
+
+And then the part that is hard to do any other way:
+
+```python
+econenv.compare_ols(df, "y ~ x1 + x2")
+```
+
+```
+OLS: y ~ x1 + x2
+Engines agree within tolerance (rtol=1e-08, atol=1e-10)
+
+Coefficients
+          python           r       stata      eviews
+term
+x1     0.4821094   0.4821094   0.4821094   0.4821094
+x2    -0.1330277  -0.1330277  -0.1330277  -0.1330277
+_cons  1.9042118   1.9042118   1.9042118   1.9042118
+
+Notes:
+  - aic: AIC normalisation differs: statsmodels -2ll+2k; R counts sigma^2 as a
+    parameter (k+1); EViews divides by n; Stata needs `estat ic`.
+```
+
+The coefficients match. The information criteria do not — and EconEnv says
+**why**, instead of quietly picking one.
+
+---
+
+## Architecture
+
+```mermaid
+graph TD
+    A[JupyterLab / Notebook] --> B[IPython / Python kernel]
+    B --> C[EconEnv extension]
+    C --> D[Magics: %econ · %R · %stata · %eviews]
+    C --> E[Engine registry]
+    E --> F[Python engine]
+    E --> G[R engine]
+    E --> H[Stata engine]
+    E --> I[EViews engine]
+    G --> G1[subprocess backend<br/>persistent Rterm]
+    G --> G2[rpy2 backend<br/>when installed]
+    H --> H1[PyStata<br/>official]
+    I --> I1[COM automation<br/>comtypes]
+    C --> J[Data bridges<br/>pandas is canonical]
+    C --> K[Results · Diagnostics · Snapshots]
+    E -.future.-> L[MATLAB · Julia · SAS · Gretl · Dynare · GAUSS · Ox · RATS]
+```
+
+Three rules hold the design together:
+
+1. **No custom kernel.** EconEnv is a Python package plus an IPython extension.
+   A polyglot kernel is evaluated in the roadmap, not assumed.
+2. **Nothing above the engine layer touches a vendor API.** Magics, the CLI,
+   diagnostics and the model layer speak only to `BaseEngine`. Adding MATLAB
+   means writing one adapter, not editing the core.
+3. **Never hide a difference.** Lossy conversions warn. Engine disagreements are
+   reported with the defaults that explain them.
+
+---
+
+## Features
+
+| | |
+|---|---|
+| **Four engines, one kernel** | Python, R, Stata, EViews — persistent sessions, no kernel switching |
+| **Real data bridge** | `pandas.DataFrame` is canonical; push/pull/move between any two engines with no file round-trip |
+| **Type fidelity** | Factors, categoricals, dates, booleans, integers and missing values survive the trip — or you get a warning saying exactly what changed |
+| **Econometric metadata** | Time variable, panel variable, frequency, labels and conversion history travel with the frame |
+| **Structured results** | `ExecutionResult` and `ModelResult` instead of scraped text; raw engine output always retained |
+| **Cross-engine comparison** | Same specification, four engines, one table, with tolerance-aware agreement testing |
+| **Diagnostics** | `econenv doctor` checks every layer and tells you how to fix what is broken |
+| **Reproducibility** | Environment snapshots and provenance records (code hash, data hash, versions, timing) |
+| **Rich output** | HTML tables, PNG/SVG plots from R and EViews rendered inline |
+| **Honest about limits** | Capability matrix reports what each engine can do *on this machine*, not in theory |
+
+---
+
+## Installation
+
+```bash
+pip install econenv
+```
+
+Optional extras — install only what you use:
+
+```bash
+pip install "econenv[stata]"    # helper for locating PyStata
+pip install "econenv[eviews]"   # comtypes, Windows only
+pip install "econenv[arrow]"    # fast Arrow transfer to R
+pip install "econenv[all]"
+```
+
+Then, in a notebook:
+
+```python
+%load_ext econenv
+%econ doctor
+```
+
+### Requirements
+
+| | Required | Notes |
+|---|---|---|
+| Python | 3.9+ | the host kernel |
+| pandas, numpy, IPython | yes | installed automatically |
+| R | optional | 4.0+; EconEnv finds it, no PATH setup needed |
+| Stata | optional | **17 or newer** — PyStata ships with Stata 17+ |
+| EViews | optional | **Windows only**; automation is COM-based |
+| `comtypes` | for EViews | `pip install "econenv[eviews]"` |
+| `rpy2` | never required | no Windows wheels; EconEnv's subprocess backend replaces it |
+
+---
+
+## Engine setup
+
+EconEnv discovers installations automatically — environment variables, `PATH`,
+the Windows registry, then the usual install roots. You should not need to
+configure anything. When you do:
+
+```python
+%econ config r.home      "C:/Program Files/R/R-4.5.2"
+%econ config stata.home  "C:/Program Files/Stata19"
+%econ config stata.edition mp
+%econ config eviews.progid EViews14.Manager
+```
+
+Or persistently, in `~/.econenv/config.toml`:
+
+```toml
+[r]
+home = "C:/Program Files/R/R-4.5.2"
+
+[stata]
+home = "C:/Program Files/StataNow19"
+edition = "mp"
+
+[eviews]
+progid = "EViews14.Manager"
+```
+
+Environment variables work too: `ECONENV_STATA_EDITION=mp`, `R_HOME`,
+`STATA_HOME`.
+
+**A note on R and Windows.** rpy2 publishes no Windows wheels, so EconEnv's
+default R backend is a persistent `Rterm` child process driven over a private
+protocol — no compiler, no `R_HOME` gymnastics. Where rpy2 *is* installed
+(usually Linux and macOS) EconEnv uses it, and loads **rpy2's own** `%R`/`%%R`
+magics rather than shadowing them.
+
+---
+
+## Examples
+
+### Move data without touching a file
+
+```python
+econenv.push("stata", "default", df)      # Python  → Stata
+econenv.move("stata", "r", "default")     # Stata   → R
+back = econenv.pull("r", "econenv_ols_data")
+```
+
+### Keep the metadata
+
+```python
+%%R -i panel -o results
+library(plm)
+fit <- plm(y ~ x, data = panel, index = c("id", "year"), model = "within")
+results <- as.data.frame(summary(fit)$coefficients)
+```
+
+`panel`'s MultiIndex is recognised as (entity, time); `results` comes back with
+its R types intact.
+
+### See what a transfer cost
+
+```python
+econenv.push("eviews", "wf", df)
+```
+
+```
+UserWarning: EconEnv push -> eviews: [warning] region: categorical stored as
+integer codes; EViews has no factor type
+```
+
+### Diagnose
+
+```bash
+econenv doctor
+```
+
+```
+✔ PASS    Python: 3.11.0
+✔ PASS    R installation: C:\Program Files\R\R-4.5.2 (R 4.5.2)
+! WARNING Multiple R versions: 4.5.2, 4.4.3
+              → EconEnv picks the newest. Pin one with `%econ config r.home ...`.
+✔ PASS    PyStata: C:\Program Files\StataNow19\utilities\pystata
+! WARNING COM version binding: several EViews versions are installed
+              → Pin one: `%econ config eviews.progid EViews14.Manager`.
+```
+
+More in [`examples/`](examples/):
+
+1. Quick start
+2. Python + R
+3. Python + Stata
+4. Python + EViews
+5. All four engines
+6. The same OLS in four engines
+7. Data transfer and type fidelity
+8. Time series
+9. Panel data
+
+---
+
+## Project status
+
+**v0.1 — alpha.** Execution, engine management, the data bridge, results,
+graphs, diagnostics, snapshots and cross-engine OLS comparison are implemented
+and tested. The API may still change before v1.0.
+
+What is verified, and on what:
+
+| | Verified |
+|---|---|
+| Python engine | yes, in CI |
+| R engine (subprocess) | yes, against R 4.5.2 on Windows |
+| Stata engine | yes, against StataNow 19.5 MP + PyStata 0.1.2 |
+| EViews engine | yes, against EViews 13 via COM on Windows |
+| R engine (rpy2) | **not** verified — no rpy2 on the development machine |
+| Linux / macOS | **not** verified — the design supports them; nobody has run them yet |
+
+Where something is untested, this README and the docs say so. See
+[`docs/audit/PHASE0_TECHNOLOGY_AUDIT.md`](docs/audit/PHASE0_TECHNOLOGY_AUDIT.md)
+for the measured evidence behind every technical decision.
+
+## Roadmap
+
+| Version | Scope |
+|---|---|
+| **v0.1** | Execution + engine management + data bridge + results + graphs + diagnostics ✅ |
+| v0.2 | Broader type coverage, Stata value labels, EViews alpha/matrix transfer, Arrow everywhere |
+| v0.3 | Model registry beyond OLS: logit, probit, IV, panel FE/RE |
+| v0.4 | Time-series and cointegration estimators; richer comparison reports |
+| v0.5 | Full provenance capture and run manifests |
+| v1.0 | Stable public API, documented multi-engine workflow, JupyterLab cell-toolbar extension |
+
+Graphs were pulled forward from v0.3 into v0.1: plot capture is a property of the
+transport layer, and retrofitting it later would have meant touching every
+adapter twice.
+
+---
+
+## Platform support
+
+| | Python | R | Stata | EViews |
+|---|---|---|---|---|
+| **Windows** | ✅ | ✅ | ✅ | ✅ |
+| **Linux** | ✅ | ✅ | ✅ | ✖ COM is unavailable |
+| **macOS** | ✅ | ✅ | ✅ | ✖ COM is unavailable |
+
+The absence of EViews never blocks installation or use of the others. On
+non-Windows platforms the EViews engine reports itself unavailable and everything
+else works normally.
+
+---
+
+## Commercial software disclaimer
+
+**EconEnv contains, bundles and redistributes no part of Stata or EViews** — no
+binaries, no libraries, no licence files, no serial numbers, no activation keys.
+
+EconEnv locates software already installed on your machine and drives it through
+each vendor's own documented automation interface. You are responsible for
+obtaining, installing and licensing Stata and EViews, and for complying with
+those licences, including any restriction on concurrent sessions, server
+deployment or automated use.
+
+Stata® is a registered trademark of StataCorp LLC. EViews® is a registered
+trademark of IHS Global Inc. R is free software from the R Foundation. None of
+them endorses or is affiliated with this project.
+
+---
+
+## Troubleshooting
+
+Start with `econenv doctor` — it names the problem and the fix. Common ones are
+in [`docs/troubleshooting.md`](docs/troubleshooting.md), including:
+
+* Stata says the edition is wrong
+* EViews connects to the wrong version
+* R starts but never becomes ready
+* `pyeviews` fails to import (it is not needed)
+* Values arrive in EViews as all-NA
+
+## Contributing
+
+Issues and pull requests are welcome. See
+[`docs/development.md`](docs/development.md) for the layout, the test markers
+(`-m "not stata and not eviews"` runs everything that needs no licence) and how
+to write a new engine adapter.
+
+## Citation
+
+If EconEnv is part of your research workflow, please cite it — see
+[`CITATION.cff`](CITATION.cff).
+
+## License
+
+MIT — see [LICENSE](LICENSE). The MIT grant covers EconEnv's own source only and
+confers no rights in Stata, EViews or R.
+
+## Author
+
+**Dr Merwan Roudane** · [github.com/merwanroudane](https://github.com/merwanroudane)

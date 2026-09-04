@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+title: "EconEnv: Python, R, Stata and EViews in one reproducible Jupyter workflow"
+message: "If you use EconEnv in your research, please cite it as below."
+type: software
+authors:
+  - family-names: Roudane
+    given-names: Merwan
+    email: merwanroudane920@gmail.com
+    orcid: ""
+repository-code: "https://github.com/merwanroudane/econenv"
+url: "https://github.com/merwanroudane/econenv"
+abstract: >-
+  EconEnv is an IPython extension that lets a researcher run Python, R, Stata
+  and EViews inside a single Jupyter notebook on one Python kernel. It provides
+  persistent engine sessions, a unified pandas-based data bridge that preserves
+  econometric metadata, standardised execution and model result objects,
+  installation diagnostics, environment snapshots for reproducibility, and a
+  cross-engine model comparison framework that reports where the programs
+  genuinely disagree rather than hiding the difference.
+keywords:
+  - econometrics
+  - reproducible research
+  - jupyter
+  - stata
+  - eviews
+  - r
+  - polyglot notebook
+license: MIT
+version: 0.1.0
+date-released: "2026-09-04"
+# A DOI will be added here on the first archived release (Zenodo).
+# doi: 10.5281/zenodo.XXXXXXX
+preferred-citation:
+  type: software
+  title: "EconEnv: Python, R, Stata and EViews in one reproducible Jupyter workflow"
+  authors:
+    - family-names: Roudane
+      given-names: Merwan
+  year: 2026
+  version: 0.1.0
+  url: "https://github.com/merwanroudane/econenv"
