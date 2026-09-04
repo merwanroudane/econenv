@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - name: ruff format --check
+        run: ruff format --check src tests
+      - name: ruff check
+        run: ruff check src tests
+
+  types:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install editables && pip install -e ".[dev]"
+      - run: mypy
+
+  test:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install editables && pip install -e ".[dev,arrow]"
+      # No R, Stata or EViews on a public runner. The unit tests must pass
+      # without them (brief §40) — including the mocked EViews COM tests, which
+      # is the point: the PutSeries trap is guarded on Linux too.
+      - name: Unit tests
+        run: pytest -m "not r and not stata and not eviews" --cov=econenv --cov-report=term-missing
+
+  test-with-r:
+    name: Tests with R (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+      - name: Install R packages used by the transports
+        run: Rscript -e 'install.packages(c("jsonlite","data.table","svglite"), repos="https://cloud.r-project.org")'
+      - run: pip install editables && pip install -e ".[dev,arrow]"
+      - name: R integration tests
+        run: pytest -m "not stata and not eviews"
+
+  build:
+    name: Build the distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # Stata and EViews are licensed commercial software. They are not installed
+  # on public runners — doing so would breach their licences — so the full
+  # integration suite runs only on a self-hosted Windows machine that already
+  # has them, and only when one is available.
+  commercial:
+    name: Commercial engine integration (self-hosted)
+    runs-on: [self-hosted, windows, econenv-licensed]
+    if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install editables && pip install -e ".[dev,all]"
+      - name: Diagnostics
+        run: econenv doctor --deep
+      - name: Full suite
+        run: pytest
