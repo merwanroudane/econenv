@@ -6,9 +6,13 @@
 
 Python, R, Stata and EViews in a single Jupyter workflow — on one Python kernel.
 
+[![PyPI](https://img.shields.io/pypi/v/econenv.svg)](https://pypi.org/project/econenv/)
+[![Python](https://img.shields.io/pypi/pyversions/econenv.svg)](https://pypi.org/project/econenv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org)
+[![Downloads](https://img.shields.io/pypi/dm/econenv.svg)](https://pypi.org/project/econenv/)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#project-status)
+
+**[Install from PyPI](https://pypi.org/project/econenv/)** · [Documentation](docs/) · [Examples](examples/) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -141,6 +145,8 @@ Three rules hold the design together:
 
 ## Installation
 
+Released on PyPI: **<https://pypi.org/project/econenv/>**
+
 ```bash
 pip install econenv
 ```
@@ -166,7 +172,7 @@ Then, in a notebook:
 | | Required | Notes |
 |---|---|---|
 | Python | 3.9+ | the host kernel |
-| pandas, numpy, IPython | yes | installed automatically |
+| pandas, numpy, IPython, statsmodels | yes | installed automatically |
 | R | optional | 4.0+; EconEnv finds it, no PATH setup needed |
 | Stata | optional | **17 or newer** — PyStata ships with Stata 17+ |
 | EViews | optional | **Windows only**; automation is COM-based |
@@ -278,7 +284,8 @@ More in [`examples/`](examples/):
 
 ## Project status
 
-**v0.1 — alpha.** Execution, engine management, the data bridge, results,
+**v0.1 — alpha, released on [PyPI](https://pypi.org/project/econenv/).**
+Execution, engine management, the data bridge, results,
 graphs, diagnostics, snapshots and cross-engine OLS comparison are implemented
 and tested. The API may still change before v1.0.
 

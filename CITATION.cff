@@ -8,6 +8,7 @@ authors:
     email: merwanroudane920@gmail.com
     orcid: ""
 repository-code: "https://github.com/merwanroudane/econenv"
+repository-artifact: "https://pypi.org/project/econenv/"
 url: "https://github.com/merwanroudane/econenv"
 abstract: >-
   EconEnv is an IPython extension that lets a researcher run Python, R, Stata

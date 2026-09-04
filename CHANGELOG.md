@@ -108,4 +108,6 @@ that would have shipped:
 - Stata value labels are not created from pandas categoricals (v0.2).
 - EViews string (alpha) transfer is capped at 5000 rows.
 
+Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
+
 [0.1.0]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.0

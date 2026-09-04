@@ -79,6 +79,8 @@ docs = ["mkdocs>=1.5", "mkdocs-material>=9.5"]
 
 [project.urls]
 Homepage = "https://github.com/merwanroudane/econenv"
+PyPI = "https://pypi.org/project/econenv/"
+Changelog = "https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md"
 Repository = "https://github.com/merwanroudane/econenv"
 Issues = "https://github.com/merwanroudane/econenv/issues"
 Documentation = "https://github.com/merwanroudane/econenv/tree/main/docs"

@@ -1,11 +1,14 @@
 # Installation
 
+EconEnv is on PyPI: <https://pypi.org/project/econenv/>
+
 ```bash
 pip install econenv
 ```
 
-Core dependencies are only `pandas`, `numpy` and `ipython`. Nothing commercial
-is pulled in, and nothing is bundled.
+Core dependencies are `pandas`, `numpy`, `ipython` and `statsmodels` — the last
+because Python is one of the four comparable engines and `compare_ols` needs its
+OLS adapter. Nothing commercial is pulled in, and nothing is bundled.
 
 ## Extras
 
