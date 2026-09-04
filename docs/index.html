@@ -546,9 +546,7 @@ F-statistic: 1.248e+05 on 2 and 200 DF,  p-value: &lt; 2.2e-16</pre>
 tsset t
 newey lrcons lrgdp realint, lag(4)</pre>
   <span class="label lab-out">real output</span>
-  <pre class="out">. tsset, clear
-
-. gen t = _n
+  <pre class="out">. gen t = _n
 
 . tsset t
 
@@ -584,7 +582,7 @@ gci.coint(e)</pre>
   <span class="label lab-out">real output</span>
   <pre class="out">                   Johansen Cointegration Test
 =================================================================
-Date: 09/04/26   Time: 13:51
+Date: 09/04/26   Time: 19:36
 Sample: 1959Q1 2009Q3
 Included observations: 203
 Lags interval (in first differences): 1 to 4
@@ -606,7 +604,7 @@ eq_ev.output</pre>
   <span class="label lab-out">real output</span>
   <pre class="out">Dependent Variable: LRCONS
 Method: Least Squares
-Date: 09/04/26   Time: 13:51
+Date: 09/04/26   Time: 19:36
 Sample: 1959Q1 2009Q3
 Included observations: 203
 
