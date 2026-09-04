@@ -295,6 +295,16 @@ Execution, engine management, the data bridge, results,
 graphs, diagnostics, snapshots and cross-engine OLS comparison are implemented
 and tested. The API may still change before v1.0.
 
+### Releases
+
+| Version | | What changed |
+|---|---|---|
+| **0.1.2** | [PyPI](https://pypi.org/project/econenv/0.1.2/) · [notes](CHANGELOG.md#012--2026-09-04) | Correct EViews ProgID discovery; stop guessing the EViews version before connecting |
+| 0.1.1 | [PyPI](https://pypi.org/project/econenv/0.1.1/) · [notes](CHANGELOG.md#011--2026-09-04) | EViews cell output and graph capture; honest engine reporting |
+| 0.1.0 | [PyPI](https://pypi.org/project/econenv/0.1.0/) · [notes](CHANGELOG.md#010--2026-09-04) | First release |
+
+Install the latest with `pip install --upgrade econenv`.
+
 What is verified, and on what:
 
 | | Verified |
