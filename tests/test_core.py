@@ -1,0 +1,381 @@
+"""Unit tests that need no third-party engine at all (brief §40)."""
+
+from __future__ import annotations
+
+import json
+
+import numpy as np
+import pandas as pd
+import pytest
+
+import econenv
+from econenv import config, schema, transfer
+from econenv.engines import registry
+from econenv.engines.base import BaseEngine, Capability, EngineState
+from econenv.exceptions import (
+    ConfigurationError,
+    EconEnvError,
+    EngineNotFoundError,
+    ModelSpecificationError,
+)
+from econenv.models.spec import ModelSpec, parse_spec
+from econenv.results import ExecutionResult, ModelResult
+
+
+# --------------------------------------------------------------------------- #
+# package surface
+# --------------------------------------------------------------------------- #
+def test_version_is_exposed():
+    assert econenv.__version__.count(".") == 2
+
+
+def test_all_four_engines_are_registered():
+    assert set(registry.names()) == {"python", "r", "stata", "eviews"}
+
+
+def test_python_is_listed_first():
+    assert registry.names()[0] == "python"
+
+
+def test_unknown_engine_names_the_alternatives():
+    with pytest.raises(EngineNotFoundError) as excinfo:
+        registry.get("gretl")
+    assert "python" in str(excinfo.value)
+
+
+def test_engine_info_is_json_serialisable():
+    for info in registry.info():
+        json.dumps(info.to_dict())
+
+
+# --------------------------------------------------------------------------- #
+# config
+# --------------------------------------------------------------------------- #
+def test_config_defaults_resolve():
+    assert config.get_option("core", "timeout") == 300.0
+    assert config.get_option("r", "backend") == "auto"
+
+
+def test_runtime_override_wins():
+    config.set_option("core", "timeout", 42.0)
+    try:
+        assert config.get_option("core", "timeout") == 42.0
+    finally:
+        config.reset("core")
+    assert config.get_option("core", "timeout") == 300.0
+
+
+def test_unknown_option_is_rejected_not_stored():
+    with pytest.raises(ConfigurationError):
+        config.set_option("r", "hoem", "typo")
+    with pytest.raises(ConfigurationError):
+        config.set_option("julia", "home", "x")
+
+
+def test_string_values_are_coerced_to_the_default_type():
+    config.set_option("core", "timeout", "12.5")
+    try:
+        assert config.get_option("core", "timeout") == 12.5
+    finally:
+        config.reset("core")
+
+
+def test_env_layer_is_read(monkeypatch):
+    monkeypatch.setenv("ECONENV_CORE_TIMEOUT", "77")
+    assert config.get_option("core", "timeout") == 77.0
+
+
+# --------------------------------------------------------------------------- #
+# schema / types
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ([1, 2, 3], schema.LogicalType.INTEGER),
+        ([1.0, 2.0], schema.LogicalType.FLOAT),
+        (["a", "b"], schema.LogicalType.STRING),
+        ([True, False], schema.LogicalType.BOOLEAN),
+    ],
+)
+def test_logical_type_inference(values, expected):
+    assert schema.logical_type_of(pd.Series(values)) is expected
+
+
+def test_categorical_and_datetime_are_recognised(typed_frame):
+    meta = schema.describe_frame(typed_frame, name="t")
+    assert meta.column("grp").logical_type is schema.LogicalType.CATEGORICAL
+    assert meta.column("grp").categories == ["lo", "hi"]
+    assert meta.column("grp").ordered is True
+    assert meta.column("when").logical_type is schema.LogicalType.DATETIME
+
+
+def test_datetime_index_becomes_the_time_variable(quarterly_frame):
+    meta = schema.describe_frame(quarterly_frame)
+    assert meta.time_var is not None
+    assert meta.frequency is not None
+
+
+def test_multiindex_is_read_as_panel_then_time():
+    index = pd.MultiIndex.from_product(
+        [["a", "b"], pd.date_range("2020-01-01", periods=3, freq="YS")], names=["id", "year"]
+    )
+    frame = pd.DataFrame({"y": range(6)}, index=index)
+    meta = schema.describe_frame(frame)
+    assert meta.panel_var == "id"
+    assert meta.time_var == "year"
+
+
+def test_conversion_report_tracks_severity():
+    report = schema.ConversionReport(engine="r", direction="push")
+    assert not report.lossy
+    report.add(schema.Severity.INFO, "fine")
+    assert not report.lossy
+    report.add(schema.Severity.WARNING, "renamed", column="x")
+    assert report.lossy
+    assert len(report.warnings) == 1
+    assert "x" in str(report)
+
+
+# --------------------------------------------------------------------------- #
+# results
+# --------------------------------------------------------------------------- #
+def test_execution_result_round_trips_to_dict():
+    result = ExecutionResult(engine="r", code="1+1", stdout="2", scalars={"a": np.float64(1.0)})
+    payload = result.to_dict()
+    json.dumps(payload)
+    assert payload["engine"] == "r"
+    assert payload["scalars"]["a"] == 1.0
+
+
+def test_execution_result_renders_both_mimetypes():
+    bundle = ExecutionResult(engine="r", code="x", stdout="hi")._repr_mimebundle_()
+    assert "text/plain" in bundle
+    assert "hi" in bundle["text/html"]
+
+
+def test_model_result_from_arrays_pads_missing_columns():
+    result = ModelResult.from_arrays("python", "OLS", ["x", "_cons"], [1.0, 2.0])
+    assert list(result.coefficients.columns) == list(ModelResult.COEF_COLUMNS)
+    assert np.isnan(result.coefficients["std_err"]).all()
+    assert result.coefficients.loc["x", "coef"] == 1.0
+
+
+def test_model_result_summary_row_keeps_missing_as_none():
+    result = ModelResult(engine="stata", model="OLS", r2=0.5)
+    row = result.summary_row()
+    assert row["r2"] == 0.5
+    assert row["aic"] is None
+
+
+# --------------------------------------------------------------------------- #
+# model specification
+# --------------------------------------------------------------------------- #
+def test_formula_parsing():
+    spec = ModelSpec.from_formula("y ~ x1 + x2")
+    assert spec.depvar == "y"
+    assert spec.exog == ["x1", "x2"]
+    assert spec.constant is True
+
+
+def test_formula_without_constant():
+    assert ModelSpec.from_formula("y ~ x - 1").constant is False
+    assert ModelSpec.from_formula("y ~ x + 0").constant is False
+
+
+def test_positional_spec_parsing():
+    spec = parse_spec("y x1 x2")
+    assert (spec.depvar, spec.exog) == ("y", ["x1", "x2"])
+
+
+@pytest.mark.parametrize("formula", ["y ~ x1*x2", "y ~ log(x)", "y ~ factor(id)", "y ~ x1:x2"])
+def test_unsupported_formula_terms_are_refused_clearly(formula):
+    """Half-supporting interactions across four dialects would be worse than refusing."""
+    with pytest.raises(ModelSpecificationError) as excinfo:
+        ModelSpec.from_formula(formula)
+    assert "additive" in str(excinfo.value)
+
+
+def test_depvar_on_both_sides_is_rejected():
+    with pytest.raises(ModelSpecificationError):
+        ModelSpec(depvar="y", exog=["y", "x"])
+
+
+def test_duplicate_regressors_are_rejected():
+    with pytest.raises(ModelSpecificationError):
+        ModelSpec(depvar="y", exog=["x", "x"])
+
+
+def test_unknown_vcov_is_rejected():
+    with pytest.raises(ModelSpecificationError):
+        ModelSpec(depvar="y", exog=["x"], vcov="sandwich")
+
+
+def test_spec_round_trips_through_dict():
+    spec = ModelSpec.from_formula("y ~ x1 + x2", vcov="hc1")
+    assert ModelSpec(**dict(spec.to_dict())).formula == spec.formula
+
+
+# --------------------------------------------------------------------------- #
+# python engine
+# --------------------------------------------------------------------------- #
+def test_python_engine_executes_and_keeps_state():
+    engine = registry.get("python")
+    engine.start()
+    engine.execute("value = 6 * 7")
+    assert engine.pull_scalar("value") == 42
+
+
+def test_python_engine_captures_stdout():
+    engine = registry.get("python")
+    engine.start()
+    assert "hello" in engine.execute("print('hello')").stdout
+
+
+def test_python_engine_reports_errors_with_the_code():
+    from econenv.exceptions import EngineExecutionError
+
+    engine = registry.get("python")
+    engine.start()
+    with pytest.raises(EngineExecutionError) as excinfo:
+        engine.execute("1 / 0")
+    assert excinfo.value.code == "1 / 0"
+
+
+def test_python_ols_matches_statsmodels(sample_frame):
+    import statsmodels.api as sm
+
+    engine = registry.get("python")
+    engine.start()
+    result = engine._fit_ols(ModelSpec.from_formula("y ~ x1 + x2"), sample_frame)
+
+    X = sm.add_constant(sample_frame[["x1", "x2"]])
+    expected = sm.OLS(sample_frame["y"], X).fit()
+    assert result.nobs == int(expected.nobs)
+    np.testing.assert_allclose(result.r2, expected.rsquared)
+    np.testing.assert_allclose(
+        result.coefficients.loc["x1", "coef"], expected.params["x1"], rtol=1e-12
+    )
+
+
+def test_intercept_is_named_cons_everywhere(sample_frame):
+    engine = registry.get("python")
+    engine.start()
+    result = engine._fit_ols(ModelSpec.from_formula("y ~ x1"), sample_frame)
+    assert "_cons" in result.coefficients.index
+
+
+# --------------------------------------------------------------------------- #
+# registry extensibility (brief §5)
+# --------------------------------------------------------------------------- #
+class _FakeEngine(BaseEngine):
+    name = "fake"
+    display_name = "Fake"
+    declared_capabilities = (Capability.EXECUTE,)
+
+    def _detect(self):
+        self._backend = "test"
+        return True
+
+    def _start(self):
+        self._state = EngineState.RUNNING
+
+    def _stop(self):
+        pass
+
+    def _execute(self, code, **kwargs):
+        return ExecutionResult(engine=self.name, code=code, stdout=code.upper())
+
+
+def test_third_party_engine_can_be_registered_and_removed():
+    registry.register(_FakeEngine)
+    try:
+        assert "fake" in registry.names()
+        engine = registry.get("fake")
+        assert engine.execute("hi").stdout == "HI"
+        assert not engine.has(Capability.PUSH_FRAME)
+    finally:
+        registry.unregister("fake")
+    assert "fake" not in registry.names()
+
+
+def test_registering_a_duplicate_name_is_refused():
+    registry.register(_FakeEngine)
+    try:
+
+        class Other(_FakeEngine):
+            pass
+
+        with pytest.raises(EconEnvError):
+            registry.register(Other)
+    finally:
+        registry.unregister("fake")
+
+
+def test_capability_error_names_the_missing_capability():
+    from econenv.exceptions import CapabilityError
+
+    registry.register(_FakeEngine)
+    try:
+        engine = registry.get("fake")
+        engine.start()
+        with pytest.raises(CapabilityError) as excinfo:
+            engine.push("x", pd.DataFrame({"a": [1]}))
+        assert "push_frame" in str(excinfo.value)
+    finally:
+        registry.unregister("fake")
+
+
+# --------------------------------------------------------------------------- #
+# provenance
+# --------------------------------------------------------------------------- #
+def test_frame_hash_is_stable_and_sensitive(sample_frame):
+    first = transfer.hash_frame(sample_frame)
+    assert first == transfer.hash_frame(sample_frame.copy())
+    changed = sample_frame.copy()
+    changed.iloc[0, 0] += 1.0
+    assert transfer.hash_frame(changed) != first
+
+
+def test_frame_hash_notices_a_dtype_change(sample_frame):
+    as_float32 = sample_frame.astype("float32")
+    assert transfer.hash_frame(as_float32) != transfer.hash_frame(sample_frame)
+
+
+def test_snapshot_is_serialisable():
+    payload = transfer.snapshot(include_packages=False)
+    json.dumps(payload, default=str)
+    assert set(payload["engines"]) == {"python", "r", "stata", "eviews"}
+
+
+def test_provenance_record_has_the_required_fields():
+    record = transfer.provenance(engine="python", code="1+1")
+    assert record["engine"] == "python"
+    assert len(record["code_sha256_16"]) == 16
+    assert record["timestamp"].endswith("+00:00")
+
+
+def test_annotate_attaches_metadata(sample_frame):
+    frame = transfer.annotate(sample_frame.copy(), name="d", time_var="x1")
+    assert transfer.metadata(frame).time_var == "x1"
+
+
+# --------------------------------------------------------------------------- #
+# diagnostics
+# --------------------------------------------------------------------------- #
+def test_doctor_runs_and_reports_host_checks():
+    report = econenv.doctor()
+    groups = report.by_group()
+    assert "host" in groups
+    assert any(c.name == "Python" for c in groups["host"])
+    json.dumps(report.to_dict())
+
+
+def test_doctor_findings_carry_a_fix():
+    """A warning without a suggested action is only half a diagnostic."""
+    report = econenv.doctor()
+    for check in report.warnings + report.errors:
+        assert check.fix, f"{check.name} has no suggested fix"
+
+
+def test_doctor_for_an_unknown_engine_is_an_error_not_a_crash():
+    assert econenv.doctor("julia").errors
