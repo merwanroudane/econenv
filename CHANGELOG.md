@@ -4,6 +4,56 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] — 2026-09-04
+
+A full audit of EViews graph and output forms, pre- and post-estimation,
+instead of fixing them one report at a time. 44 forms were run against
+EViews 13 through `%%eviews`; 40 already worked, 4 did not.
+
+### Added
+
+- **Text and spool views are captured.** A view freezes into one of four object
+  types, and only two were handled. `eq1.representations` freezes into a
+  **text** object and `g2.coint(e)` — the Johansen cointegration test — into a
+  **spool**; neither has cells to read, so both produced nothing at all. They
+  are now exported and read back: the Johansen output returns 5,501 characters
+  where it previously returned an empty cell.
+- **A verified capability matrix** in `docs/engines/eviews.md`, listing every
+  pre- and post-estimation form that was actually run, marked plot or text.
+
+### Fixed
+
+- **No display command can fail silently any more.** If a line freezes as a
+  view but none of the four readers can make sense of it, the result carries a
+  warning naming the line and pointing at the issue tracker. Silence was the
+  failure mode behind every EViews report in 0.1.0 through 0.1.4.
+
+### Verified
+
+Plots, before estimation: `line`, `bar`, `area`, `spike`, `dot`, `seasplot`,
+`hist`, `distplot`, `boxplot`, `qqplot`, `scat`, `xyline`, `scatmat` — as
+series views, as group views and as standalone commands.
+
+Plots, after estimation: `resids`, `hist`, recursive least squares
+`rls(c|r|q|o|n)`, `arma(type=root|acf|imp)`, GARCH conditional variance, VAR
+impulse responses and residual correlograms.
+
+Tables and text: `output`, `coefcov`, `correl`, `correlsq`, `stats`, `uroot`,
+`bdstest`, `archtest`, `white`, `reset`, `representations`, `coint`, VAR
+`decomp` and `arroots`.
+
+Two gaps remain, both EViews behaviour rather than EconEnv, and both
+documented: the graph shown by `eq.fit(g)` / `eq.forecast(g)` belongs to no
+object and cannot be exported (plot the resulting series instead), and
+`eq.rls(s)` — CUSUM — is refused by EViews in batch mode, though `rls(q)`,
+CUSUM of squares, works.
+
+### Notes
+
+- 150 tests, up from 147.
+
+Published to PyPI: <https://pypi.org/project/econenv/0.1.5/>
+
 ## [0.1.4] — 2026-09-04
 
 `line x` — the most direct way to plot in EViews — still produced no graph.
@@ -244,6 +294,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[0.1.5]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.5
 [0.1.4]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.4
 [0.1.3]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.3
 [0.1.2]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.2

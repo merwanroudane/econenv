@@ -5,6 +5,7 @@ adapter makes *before* it talks to COM. The COM behaviour they encode was
 measured against EViews 13 on Windows.
 """
 
+import logging
 import os
 import re
 
@@ -186,3 +187,45 @@ class TestGraphCommands:
     )
     def test_ordinary_commands_are_left_alone(self, line):
         assert eviews_engine._graph_command(line) is None
+
+
+class TestViewObjectTypes:
+    """A view freezes into a table, a graph, a text object or a spool.
+
+    Only the first two were handled, so `eq1.representations` (text) and
+    `g2.coint(e)` (spool — the Johansen test) produced nothing at all. Verified
+    against EViews 13 with `@wlookup`.
+    """
+
+    @staticmethod
+    def _engine(object_type, text=None, table=None):
+        engine = object.__new__(eviews_engine.EViewsEngine)
+        engine._emitted_graphs = set()
+        engine.log = logging.getLogger("test")
+        engine._run_command = lambda line: None
+        engine._object_type = lambda name: object_type
+        engine._read_table = lambda name: table
+        engine._read_text_object = lambda name: text
+        engine.capture_graph = lambda name: None
+        return engine
+
+    def test_a_text_view_is_read_not_dropped(self):
+        engine = self._engine("text", text="Estimation Command:\nLS Y C X")
+
+        captured = engine._capture_view("eq1.representations")
+
+        assert captured is not None, "a text view must not vanish"
+        assert captured[0] == "text"
+        assert "LS Y C X" in captured[1]
+
+    def test_a_spool_view_is_read(self):
+        engine = self._engine("spool", text="Johansen Cointegration Test")
+
+        captured = engine._capture_view("g2.coint(e)")
+
+        assert captured[0] == "text"
+        assert "Johansen" in captured[1]
+
+    def test_an_unreadable_view_returns_none_rather_than_pretending(self):
+        engine = self._engine(None)
+        assert engine._capture_view("eq1.mystery") is None

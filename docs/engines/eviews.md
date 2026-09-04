@@ -240,6 +240,55 @@ so all three forms render:
 | `x.line` | view | frozen, exported as an image |
 | `graph g1.line x` | object | exported by the end-of-cell sweep |
 
+## What a view freezes into
+
+A view becomes one of four object types, and each is read differently:
+
+| Object | Example | Read as |
+|---|---|---|
+| table | `eq1.output` | cells, over COM — no temporary file |
+| graph | `x.line` | PNG or SVG |
+| text | `eq1.representations` | exported text |
+| spool | `g2.coint(e)` | exported text |
+
+If a view freezes but none of the four can read it, you get a warning naming
+the line. EconEnv never runs a display command and shows nothing.
+
+## Verified graph and output forms
+
+Every entry below was run against EViews 13 through `%%eviews`. **P** = plot,
+**T** = text or table.
+
+**Before estimation**
+
+| Series views | Group views | Commands |
+|---|---|---|
+| `x.line` P `x.bar` P `x.area` P | `g.line` P `g.scat` P | `line x` P `scat x y` P |
+| `x.spike` P `x.dot` P `x.seasplot` P | `g.xyline` P `g.scatmat` P | `bar x` P `xyline x y` P |
+| `x.hist` P `x.distplot` P | `g.boxplot` P `g.distplot` P | `boxplot x` P `area x` P |
+| `x.boxplot` P `x.qqplot` P | `g.stats` T `g.cor` T | `spike x` P `qqplot x` P |
+| `x.correl` T `x.stats` T | `g.coint(e)` T | `distplot x` P `scatmat x y` P |
+| `x.uroot` T `x.bdstest` T | | |
+
+**After estimation**
+
+| Equation | Stability | ARMA / GARCH / VAR |
+|---|---|---|
+| `eq.resids` P `eq.hist` P | `eq.rls(c)` P `eq.rls(r)` P | `eq.arma(type=root)` P |
+| `eq.output` T `eq.coefcov` T | `eq.rls(q)` P `eq.rls(o)` P | `eq.arma(type=acf)` P |
+| `eq.correl` T `eq.correlsq` T | `eq.rls(n)` P | `eq.arma(type=imp)` P |
+| `eq.archtest(1)` T `eq.white` T | | `eqg.garch` P `eqg.resids` P |
+| `eq.reset(1)` T | | `v.impulse` P `v.correl` P |
+| `eq.representations` T | | `v.output` T `v.decomp` T `v.arroots` T |
+
+Two known gaps, both EViews behaviour rather than EconEnv:
+
+- `eq.fit(g) yf` and `eq.forecast(g) yf2` create their series correctly, but the
+  graph the `g` option displays belongs to no object and cannot be exported.
+  Plot the result instead: `line yf`.
+- `eq.rls(s)` (CUSUM) is refused by EViews in batch mode — *"Incomplete command
+  in batch mode"*. `eq.rls(q)`, the CUSUM of squares, works.
+
 Very large views are capped:
 
 ```python

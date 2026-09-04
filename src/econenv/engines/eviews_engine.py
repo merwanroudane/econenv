@@ -293,10 +293,19 @@ class EViewsEngine(BaseEngine):
                         result.warnings.append(
                             f"{line}: output truncated; raise eviews.max_view_cells to see it all."
                         )
+                elif captured[0] == "text":
+                    chunks.append(captured[1])
                 else:
                     result.figures.append(captured[1])
                 executed.append(line)
                 continue
+            if expression is not None:
+                # It froze — so it *was* a view — but produced nothing readable.
+                # Silence is the failure mode that wastes the most time, so say so.
+                result.warnings.append(
+                    f"{line}: ran, but EconEnv could not read its output. "
+                    f"Please report it: https://github.com/merwanroudane/econenv/issues"
+                )
             try:
                 self._run_command(line)
             except Exception as exc:
@@ -382,20 +391,55 @@ class EViewsEngine(BaseEngine):
             self.log.debug("not a view: %s (%s)", expression, com_message(exc) or exc)
             return None
         try:
-            table = self._read_table(name)
-            if table is not None:
-                grid, truncated = table
-                return ("table", grid, truncated)
-            if not graphs:
-                return None
-            figure = self.capture_graph(name)
-            if figure is not None:
-                figure.name = expression
-                return ("figure", figure)
+            kind = self._object_type(name)
+            if kind in (None, "table"):
+                table = self._read_table(name)
+                if table is not None:
+                    grid, truncated = table
+                    return ("table", grid, truncated)
+            if kind in (None, "graph") and graphs:
+                figure = self.capture_graph(name)
+                if figure is not None:
+                    figure.name = expression
+                    return ("figure", figure)
+            if kind in (None, "text", "spool"):
+                text = self._read_text_object(name)
+                if text:
+                    return ("text", text)
             return None
         finally:
             with contextlib.suppress(Exception):
                 self._run_command(f"delete {name}")
+
+    def _object_type(self, name: str) -> Optional[str]:
+        """What ``freeze`` produced. Views become one of four object types."""
+        for kind in ("table", "graph", "text", "spool"):
+            hit = self._eval(f'@wlookup("{name}","{kind}")')
+            if hit and str(hit).strip():
+                return kind
+        return None
+
+    def _read_text_object(self, name: str) -> Optional[str]:
+        """Read a frozen text or spool object.
+
+        Estimation representations freeze into a ``text`` object and the
+        cointegration tests into a ``spool``; neither has cells to read, so they
+        go out to a temporary file and come straight back. Both used to produce
+        nothing at all.
+        """
+        target = self._tempdir_path() / f"{name}-{uuid.uuid4().hex[:8]}.txt"
+        try:
+            self._run_command(f'{name}.save(t=txt) "{_native(target)}"')
+        except Exception as exc:
+            self.log.debug("text export failed for %s: %s", name, com_message(exc) or exc)
+            return None
+        if not target.exists():
+            return None
+        try:
+            return target.read_text("utf-8", "replace").rstrip()
+        finally:
+            with contextlib.suppress(OSError):
+                target.unlink()
 
     def _read_table(self, name: str) -> Optional[tuple]:
         """Read every cell of an EViews table object. ``None`` if not a table."""
