@@ -278,6 +278,30 @@ class EViewsEngine(BaseEngine):
                     result.figures.append(figure)
                     executed.append(line)
                     continue
+                request = _forecast_request(line)
+                if request is not None:
+                    try:
+                        self._run_command(line)
+                    except Exception as exc:
+                        message = com_message(exc) or str(exc)
+                        raise EngineExecutionError(
+                            f"{message}\n  in: {line}",
+                            engine=self.name,
+                            code=code,
+                            stdout="\n".join(executed),
+                            raw=exc,
+                            hint=_execution_hint(message, len(executed), len(lines)),
+                        ) from exc
+                    rebuilt = self._forecast_figure(request)
+                    if rebuilt is not None:
+                        result.figures.append(rebuilt)
+                    else:
+                        result.warnings.append(
+                            f"{line}: the forecast series was created, but its graph could "
+                            f"not be rebuilt. Plot it directly: line {request['target']}"
+                        )
+                    executed.append(line)
+                    continue
             expression = _view_expression(line)
             captured = (
                 self._capture_view(expression, graphs=want_graphs)
@@ -338,6 +362,37 @@ class EViewsEngine(BaseEngine):
                 if (figure.name or "").upper() not in seen
             )
         return result
+
+    def _forecast_figure(self, request: Dict[str, str]) -> Optional[Figure]:
+        """Rebuild the forecast plot EViews shows for ``forecast(g)``.
+
+        The window EViews opens is not an object and cannot be exported, so the
+        same picture is reconstructed: the forecast, plus and minus two
+        standard errors. Every series used is temporary and removed afterwards,
+        so the workfile is left exactly as the user's own command left it.
+        """
+        tag = uuid.uuid4().hex[:8]
+        forecast, errors = f"_ee_f{tag}", f"_ee_s{tag}"
+        upper, lower, graph = f"_ee_u{tag}", f"_ee_l{tag}", f"_ee_fg{tag}"
+        temporaries = [forecast, errors, upper, lower, graph]
+        try:
+            self._run_command(
+                f"{request['object']}.{request['proc']}({request['options']}) {forecast} {errors}"
+            )
+            self._run_command(f"series {upper} = {forecast} + 2*{errors}")
+            self._run_command(f"series {lower} = {forecast} - 2*{errors}")
+            self._run_command(f"graph {graph}.line {forecast} {upper} {lower}")
+            figure = self.capture_graph(graph)
+        except Exception as exc:
+            self.log.debug("forecast graph rebuild failed: %s", com_message(exc) or exc)
+            figure = None
+        finally:
+            for name in temporaries:
+                with contextlib.suppress(Exception):
+                    self._run_command(f"delete {name}")
+        if figure is not None:
+            figure.name = f"{request['object']}.{request['proc']} (forecast ± 2 s.e.)"
+        return figure
 
     def _capture_graph_command(self, line: str) -> Optional[Figure]:
         """Run a standalone graph command as a named object so it can be shown.
@@ -816,6 +871,37 @@ def _graph_command(line: str) -> Optional[str]:
         return None
     kind, options, arguments = match.groups()
     return f".{kind}{options or ''} {arguments.strip()}"
+
+
+# `eq.forecast(g) yf` and `eq.fit(g) yf` draw a forecast graph that belongs to
+# no object, so it cannot be exported. The graph is rebuilt from the forecast
+# and its standard errors, which EViews *will* write to series.
+_FORECAST_RE = re.compile(
+    r"^(?P<obj>[A-Za-z_][A-Za-z0-9_]*)\.(?P<proc>forecast|fit)"
+    r"(?:\((?P<options>[^()]*)\))?\s+(?P<names>\S.*)$",
+    re.IGNORECASE,
+)
+
+
+def _forecast_request(line: str) -> Optional[Dict[str, str]]:
+    """A ``forecast``/``fit`` call that asked for a graph, or ``None``.
+
+    Only the ``g`` option means "show me the plot"; a forecast without it is
+    just series arithmetic and must not gain an unasked-for figure.
+    """
+    match = _FORECAST_RE.match(line.strip())
+    if not match:
+        return None
+    options = [o.strip().lower() for o in (match.group("options") or "").split(",") if o.strip()]
+    if "g" not in options:
+        return None
+    return {
+        "object": match.group("obj"),
+        "proc": match.group("proc"),
+        # `e` adds the standard-error series; `g` would only redraw the window.
+        "options": ",".join([o for o in options if o != "g"] + ["e"]),
+        "target": match.group("names").split()[0],
+    }
 
 
 def _split_commands(code: str) -> List[str]:

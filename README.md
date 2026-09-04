@@ -63,6 +63,13 @@ regress y x1 x2
 equation eq1.ls y c x1 x2
 ```
 
+Never typed an EViews command before? You do not have to leave the notebook to
+find one:
+
+```python
+%econ eviews find cointegration
+```
+
 One notebook. One kernel. One dataset. No CSV round-trip.
 
 And then the part that is hard to do any other way:
@@ -299,7 +306,8 @@ and tested. The API may still change before v1.0.
 
 | Version | | What changed |
 |---|---|---|
-| **0.1.5** | [PyPI](https://pypi.org/project/econenv/0.1.5/) · [notes](CHANGELOG.md#015--2026-09-04) | Full EViews graph/output audit; text and spool views captured; no silent failures |
+| **0.1.6** | [PyPI](https://pypi.org/project/econenv/0.1.6/) · [notes](CHANGELOG.md#016--2026-09-04) | EViews command reference for GUI users, searchable from a cell; forecast plots |
+| 0.1.5 | [PyPI](https://pypi.org/project/econenv/0.1.5/) · [notes](CHANGELOG.md#015--2026-09-04) | Full EViews graph/output audit; text and spool views captured; no silent failures |
 | 0.1.4 | [PyPI](https://pypi.org/project/econenv/0.1.4/) · [notes](CHANGELOG.md#014--2026-09-04) | EViews graph commands (`line x`) now render |
 | 0.1.3 | [PyPI](https://pypi.org/project/econenv/0.1.3/) · [notes](CHANGELOG.md#013--2026-09-04) | EViews plotting views (`x.line`) now render; no duplicate or repeated figures |
 | 0.1.2 | [PyPI](https://pypi.org/project/econenv/0.1.2/) · [notes](CHANGELOG.md#012--2026-09-04) | Correct EViews ProgID discovery; stop guessing the EViews version before connecting |

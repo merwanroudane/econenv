@@ -4,6 +4,54 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] — 2026-09-04
+
+For researchers who have only ever driven EViews from its menus. In a notebook
+there is nothing to click, and not knowing the command is a harder barrier than
+any missing feature.
+
+### Added
+
+- **A searchable catalogue of 134 EViews commands**, 92 of them verified
+  against EViews 13. Each entry records the menu path you already know, the
+  command it becomes, what it does in plain language, and a runnable example.
+- **`%econ eviews`** — look commands up from inside the notebook, while writing
+  the cell:
+
+  ```python
+  %econ eviews                      # tasks
+  %econ eviews graph                # everything about plotting
+  %econ eviews find cointegration   # search all of it
+  ```
+
+  Also `econenv eviews <term>` from the command line; both share one catalogue.
+- **`docs/engines/eviews-commands.md`**, generated from that catalogue by
+  `scripts/gen_eviews_docs.py`, so the page and the lookup cannot disagree — a
+  test fails if the file on disk drifts from the source.
+
+### Fixed
+
+- **`eq.forecast(g)` and `eq.fit(g)` now produce a plot.** EViews draws the
+  forecast in a window belonging to no object, so it could not be exported.
+  EconEnv rebuilds the same picture — forecast ± 2 standard errors — from
+  series EViews will write, using temporary series that are deleted afterwards.
+  The figure is labelled so you can tell it was reconstructed. A forecast
+  *without* the `g` option still produces no figure, because none was asked for.
+- **The `✓` in command listings no longer crashes the Windows console.** cp1252
+  cannot encode U+2713, which turned "help me find a command" into a traceback.
+
+### Resolved
+
+The CUSUM gap reported in 0.1.5 was a mistake in EconEnv's own notes, not a
+limitation. `rls(s)` is not a valid EViews 13 option at all — the accepted
+recursive options are `c`, `n`, `o`, `q`, `r` and `v`, and all six work.
+
+### Notes
+
+- 160 tests, up from 150.
+
+Published to PyPI: <https://pypi.org/project/econenv/0.1.6/>
+
 ## [0.1.5] — 2026-09-04
 
 A full audit of EViews graph and output forms, pre- and post-estimation,
@@ -294,6 +342,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[0.1.6]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.6
 [0.1.5]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.5
 [0.1.4]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.4
 [0.1.3]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.3

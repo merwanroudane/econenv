@@ -7,6 +7,7 @@ measured against EViews 13 on Windows.
 
 import logging
 import os
+import pathlib
 import re
 
 import pytest
@@ -229,3 +230,75 @@ class TestViewObjectTypes:
     def test_an_unreadable_view_returns_none_rather_than_pretending(self):
         engine = self._engine(None)
         assert engine._capture_view("eq1.mystery") is None
+
+
+class TestCommandCatalogue:
+    """The catalogue exists because GUI users cannot guess commands.
+
+    It is also the source of the documentation page, so the two cannot drift.
+    """
+
+    def test_every_entry_is_complete(self):
+        from econenv.engines import eviews_commands as catalogue
+
+        for command in catalogue.COMMANDS:
+            assert command.command.strip(), "a command needs a name"
+            assert command.gui.strip(), f"{command.command}: no GUI path"
+            assert command.does.strip(), f"{command.command}: no description"
+            assert command.example.strip(), f"{command.command}: no example"
+            assert command.category in catalogue.CATEGORIES, (
+                f"{command.command}: unknown category {command.category!r}"
+            )
+
+    def test_every_category_has_commands(self):
+        from econenv.engines import eviews_commands as catalogue
+
+        empty = [name for name in catalogue.CATEGORIES if not catalogue.by_category(name)]
+        assert not empty, f"categories documented but empty: {empty}"
+
+    @pytest.mark.parametrize(
+        "term, expected",
+        [
+            ("cointegration", "coint"),
+            ("garch", "arch"),
+            ("unit root", "uroot"),
+            ("scatter", "scat"),
+            ("fixed effects", "cx=f"),
+            ("forecast", "forecast"),
+        ],
+    )
+    def test_a_researcher_can_find_it_by_the_word_they_would_use(self, term, expected):
+        """The search has to work on the vocabulary of the field, not of EViews."""
+        from econenv.engines import eviews_commands as catalogue
+
+        matches = catalogue.search(term)
+        assert matches, f"nothing found for {term!r}"
+        blob = " ".join(m.command + m.example for m in matches)
+        assert expected in blob
+
+    def test_search_ranks_the_command_name_above_the_prose(self):
+        from econenv.engines import eviews_commands as catalogue
+
+        matches = catalogue.search("uroot")
+        assert "uroot" in matches[0].command
+
+    def test_the_docs_page_matches_the_catalogue(self):
+        """Generated, not hand-written — so it cannot describe a command wrongly.
+
+        Regenerate with: python scripts/gen_eviews_docs.py
+        """
+        import importlib.util
+
+        root = pathlib.Path(__file__).resolve().parents[1]
+        spec = importlib.util.spec_from_file_location(
+            "gen_eviews_docs", root / "scripts" / "gen_eviews_docs.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        page = root / "docs" / "engines" / "eviews-commands.md"
+        assert page.exists(), "the command reference is missing"
+        assert page.read_text(encoding="utf-8") == module.render(), (
+            "docs/engines/eviews-commands.md is out of date — "
+            "run: python scripts/gen_eviews_docs.py"
+        )

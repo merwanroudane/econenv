@@ -48,6 +48,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Also start each engine (slower; launches Stata/EViews).",
     )
 
+    eviews = sub.add_parser(
+        "eviews", help="Look up EViews commands by task or keyword, for GUI users."
+    )
+    eviews.add_argument("term", nargs="*", help="A task name, or any keyword to search for.")
+
     config = sub.add_parser("config", help="Show or set configuration.")
     config.add_argument("key", nargs="?", default=None, help="e.g. r.home")
     config.add_argument("value", nargs="?", default=None)
@@ -102,6 +107,30 @@ def _dispatch(args: argparse.Namespace) -> int:
             print("\nThird-party engine plugins that failed to load:")
             for name, error in payload["plugin_errors"].items():
                 print(f"  {name}: {error}")
+        return 0
+
+    if args.command == "eviews":
+        from .engines import eviews_commands as catalogue
+
+        term = " ".join(args.term or []).strip()
+        if term.split()[:1] in (["find"], ["search"]):
+            term = " ".join(term.split()[1:])
+
+        if not term:
+            print("EViews commands by task. Use: econenv eviews <task-or-keyword>\n")
+            for name, description in catalogue.categories().items():
+                print(f"  {name:<10} {description}")
+            return 0
+
+        matches = catalogue.find(term)
+        if not matches:
+            print(f"Nothing matches {term!r}. Run `econenv eviews` for the list of tasks.")
+            return 1
+        print(catalogue.categories().get(term.lower()) or f"{len(matches)} matching {term!r}")
+        print()
+        for command in matches:
+            print(command)
+            print()
         return 0
 
     if args.command == "engines":

@@ -76,6 +76,11 @@ def _build_parser() -> MagicParser:
     move.add_argument("target")
     move.add_argument("name")
 
+    eviews = sub.add_parser(
+        "eviews", add_help=False, help="Look up EViews commands by task or keyword."
+    )
+    eviews.add_argument("term", nargs="*", default=None)
+
     ols = sub.add_parser("ols", add_help=False, help="Run one OLS across engines.")
     ols.add_argument("formula", nargs="+")
     ols.add_argument("--data", required=True, help="Name of the DataFrame in Python.")
@@ -133,6 +138,46 @@ class EconMagics(Magics):
             print("Magic ownership")
             for entry in lines:
                 print(f"  {entry}")
+        return None
+
+    def _cmd_eviews(self, args, local_ns) -> Any:
+        """Find the EViews command for something you would normally click.
+
+        The reason this is a magic and not only a documentation page: the
+        question "what do I type for a Johansen test" is asked *while writing
+        the cell*, and an answer that needs a browser is an answer too late.
+        """
+        from ..engines import eviews_commands as catalogue
+
+        term = " ".join(getattr(args, "term", None) or []).strip()
+
+        if not term:
+            print("EViews commands by task. Use `%econ eviews <task>` or a keyword.\n")
+            for name, description in catalogue.categories().items():
+                print(f"  {name:<10} {description}")
+            print("\nExamples:")
+            print("  %econ eviews graph              every kind of plot")
+            print("  %econ eviews estimate           estimating equations")
+            print("  %econ eviews find cointegration search everything")
+            return None
+
+        if term.split()[0] in {"find", "search"}:
+            term = " ".join(term.split()[1:])
+
+        matches = catalogue.find(term)
+        if not matches:
+            print(f"Nothing matches {term!r}. Try `%econ eviews` for the list of tasks,")
+            print("or ask EViews itself:  %%eviews\n  help <command>")
+            return None
+
+        heading = (
+            catalogue.categories().get(term.lower())
+            or f"{len(matches)} command(s) matching {term!r}"
+        )
+        print(f"{heading}\n")
+        for command in matches:
+            print(command)
+            print()
         return None
 
     def _cmd_versions(self, args, local_ns) -> Any:

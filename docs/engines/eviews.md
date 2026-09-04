@@ -1,5 +1,9 @@
 # EViews
 
+> **New to typing EViews commands?** If you have always used the GUI, start
+> with [EViews commands for people who use the GUI](eviews-commands.md), or run
+> `%econ eviews` in a cell to look commands up without leaving the notebook.
+
 **Windows only.** Automation is COM-based, and COM does not exist on Linux or
 macOS. On those platforms the EViews engine reports itself unavailable and
 everything else works normally.
