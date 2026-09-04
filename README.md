@@ -207,8 +207,14 @@ One line to install, no local setup.
 | Stata | **possible** | Stata for Linux + a Linux licence, installed from Drive each session |
 | EViews | no | no Linux build; Wine fails licence activation; and EViews forbids remote access — *"web server access to EViews via COM is not allowed"* |
 
+**Want all four engines with the Colab interface?** Use Colab's *local runtime*:
+the notebook UI stays Colab, but the kernel runs on your own PC, so EViews and
+Stata work exactly as they do locally. Nothing is exposed to the internet — your
+browser talks to `localhost`. It needs the classic Jupyter stack
+(`notebook==6.4.12`), because the bridge package does not load on notebook 7.
+
 `%econ doctor` detects Colab and says which of these applies to you.
-[Full details, including the Stata recipe](docs/installation.md#google-colab).
+[Full details, including both recipes](docs/installation.md#google-colab).
 
 
 ---

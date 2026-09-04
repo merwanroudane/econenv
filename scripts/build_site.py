@@ -756,6 +756,45 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
   instance. That workaround is easy to build and contractually prohibited, so
   EconEnv will not ship it.</div>
 
+  <h3>All four engines, still in Colab</h3>
+  <p class="sub">There is a way round every limitation above, and it is Google's
+  own feature: <b>connect Colab to a local runtime</b>. Colab already runs in a
+  browser on your PC — point it at a Jupyter server on that same PC and the
+  interface stays Colab while the kernel, and every engine, is your Windows
+  machine.</p>
+
+  <div class="flow">
+    <span class="node" style="background:#FBF3E0;border-color:#EEDCB0;color:#8A6A12">Colab UI in your browser</span>
+    <span class="arrow">→</span>
+    <span class="node" style="background:#F6F5F1;border-color:#E4E2DC;color:#5B6672">localhost:8888</span>
+    <span class="arrow">→</span>
+    <span class="node n-py">Python</span>
+    <span class="node n-r">R</span>
+    <span class="node n-stata">Stata</span>
+    <span class="node n-ev">EViews</span>
+  </div>
+
+  <p class="sub">Nothing is exposed to the internet: your browser talks to
+  <code>localhost</code>, Google's servers never reach your machine, and EViews
+  is driven by local COM exactly as in a local notebook.</p>
+
+  <pre class="sh">python -m venv colab-runtime
+colab-runtime/Scripts/pip install "notebook==6.4.12" jupyter_http_over_ws econenv</pre>
+  <pre class="sh">colab-runtime/Scripts/jupyter serverextension enable --py jupyter_http_over_ws</pre>
+  <pre class="sh">colab-runtime/Scripts/jupyter notebook --no-browser --port=8888 --NotebookApp.port_retries=0 --NotebookApp.allow_origin="https://colab.research.google.com"</pre>
+
+  <p class="sub">Copy the <code>http://localhost:8888/?token=…</code> line, then
+  in Colab click the <b>Connect</b> arrow and choose <b>Connect to a local
+  runtime</b>.</p>
+
+  <div class="warn"><b>It needs the classic Jupyter stack, and this is measured.</b>
+  <code>jupyter_http_over_ws</code> was last released in March 2020 and is a
+  notebook 5/6 server extension. On notebook 7 and jupyter_server 2 it does not
+  load — enabling it fails and <code>/http_over_websocket</code> returns 404.
+  Pinned to <code>notebook==6.4.12</code> the same probe returns HTTP 400, which
+  is the endpoint waiting for Colab's websocket upgrade. Hence the separate
+  environment.</div>
+
   <p><a class="btn btn-primary" href="{COLAB}">Open the Colab notebook</a></p>
 </div></section>
 

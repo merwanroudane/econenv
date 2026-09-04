@@ -73,7 +73,25 @@ batch mode, which is what 0.1.5 claimed.
   commands, a chapter for EViews users who have only ever clicked,
   reproducibility, and troubleshooting. Source in `econenv-guide.tex`.
 
-### Added — Google Colab
+### Added — Google Colab, including all four engines
+
+- **Colab's local runtime gets you all four engines**, and it was the user's
+  idea: Colab already runs in a browser on your own PC, so point it at a Jupyter
+  server on that same PC. The interface stays Colab; the kernel — and therefore
+  Python, R, Stata and EViews — is your Windows machine. Nothing is exposed to
+  the internet, so this is not the prohibited "web server access to EViews via
+  COM": your browser talks to `localhost` and EViews is driven by local COM
+  exactly as in a local notebook.
+
+  It needs the **classic** Jupyter stack, and that was measured rather than
+  assumed. `jupyter_http_over_ws` was last released in March 2020 and is a
+  notebook 5/6 server extension: on notebook 7.5.5 and 6.5.7 — both running on
+  jupyter_server 2 — enabling it fails and `/http_over_websocket` returns 404.
+  Pinned to `notebook==6.4.12` the extension validates and the same probe
+  returns HTTP 400, the endpoint waiting for Colab's websocket upgrade. The
+  recipe and that evidence are in `docs/installation.md`.
+
+### Added — Google Colab cloud runtimes
 
 - **`examples/11_colab_quickstart.ipynb`**, with an *Open in Colab* badge: one
   `%pip install econenv` and a Python + R workflow on real macro data, needing

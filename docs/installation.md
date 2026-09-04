@@ -126,7 +126,70 @@ Three caveats, none of them technical:
 - Whether your licence permits installation on a disposable cloud VM is a
   question for StataCorp, not for EconEnv. Check before relying on it.
 
-### EViews on Colab — genuinely not possible
+### All four engines in Colab — connect it to your own machine
+
+There is a way to get **Python, R, Stata and EViews** while still working in the
+Colab interface, and it sidesteps every objection above: Colab's **local
+runtime**.
+
+Colab runs in a browser *on your PC*. Google lets you point that interface at a
+Jupyter server running on your own machine instead of at a cloud VM. The
+notebook UI stays Colab; the kernel — and therefore every engine — is your
+Windows PC.
+
+Nothing is exposed to the internet. Your browser talks to `localhost`; Google's
+servers never reach your machine, and EViews is driven by local COM exactly as
+it would be in a local notebook. This is not the prohibited "web server access
+to EViews via COM": there is no web server in front of EViews.
+
+**It needs the classic Jupyter stack.** The bridge package
+`jupyter_http_over_ws` was last released in March 2020 and is a `notebook 5/6`
+server extension. It does **not** load on `notebook 7` or `jupyter_server 2` —
+the enable step fails with *"The module could not be found"*, and
+`/http_over_websocket` returns 404. Verified here on notebook 7.5.5 and 6.5.7,
+both of which run on jupyter_server 2.
+
+So use a dedicated environment:
+
+```bash
+python -m venv colab-runtime
+```
+
+```bash
+colab-runtime/Scripts/pip install "notebook==6.4.12" jupyter_http_over_ws econenv
+```
+
+```bash
+colab-runtime/Scripts/jupyter serverextension enable --py jupyter_http_over_ws
+```
+
+```bash
+colab-runtime/Scripts/jupyter notebook --no-browser --port=8888 --NotebookApp.port_retries=0 --NotebookApp.allow_origin="https://colab.research.google.com"
+```
+
+Copy the `http://localhost:8888/?token=...` line it prints. In Colab, click the
+**Connect** arrow, choose **Connect to a local runtime**, paste the URL.
+
+Verified on this machine: with `notebook 6.4.12` the extension validates and
+`/http_over_websocket` answers `HTTP 400` — the endpoint exists and is waiting
+for the websocket upgrade Colab performs. On the modern stack the same probe
+returns 404.
+
+Then everything works, because the kernel is your PC:
+
+```python
+%load_ext econenv
+%econ status      # Python, R, Stata and EViews, all four
+```
+
+Two caveats worth knowing:
+
+- Your PC must stay awake and the server running for as long as the notebook is
+  open.
+- That environment is separate from your usual one, so install into it whatever
+  the notebook needs.
+
+### EViews *on* a Colab cloud runtime — genuinely not possible
 
 Not a limitation EconEnv can route around:
 
