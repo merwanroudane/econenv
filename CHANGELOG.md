@@ -4,6 +4,43 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] — 2026-09-04
+
+First stable release. The same code as 0.1.7, with the version number and the
+project's claims about itself brought into line.
+
+### Changed
+
+- **0.1.7 → 1.0.7, and the API is declared stable.** The magics,
+  `push` / `pull` / `move`, the result objects and `compare_ols` now follow
+  semantic versioning: no breaking change without a major bump.
+- `Development Status` classifier moved from *3 - Alpha* to
+  *5 - Production/Stable*, and the README status badge with it. Shipping a 1.0
+  while still calling the project alpha would have been a contradiction.
+
+### What "stable" does and does not claim
+
+It says the public API is settled. It does not say every path has been
+exercised, and the verification table in the README is unchanged:
+
+- The **rpy2 R backend** is implemented but unverified — rpy2 is not
+  installable on the development machine.
+- **Linux and macOS** are supported by design and have not been run end to end.
+  R discovery resolves correctly on Linux by inspection; the runtime has not
+  been exercised.
+- **Panel commands** — 42 of the 136 catalogue entries — are documented syntax
+  rather than verified, because no panel-structured workfile was available.
+
+Everything else in the four-engine workflow was run against R 4.5.2, StataNow
+19.5 MP and EViews 13 on Windows, and the example notebook is re-executed
+against them on every release.
+
+### Note on the jump
+
+1.0.0 through 1.0.6 never existed; the number went straight from 0.1.7 at the
+author's request. PyPI orders releases numerically, so 1.0.7 supersedes every
+0.x version permanently — a later 0.x would never be served as latest.
+
 ## [0.1.7] — 2026-09-04
 
 Google Colab support, and a correction to what I had claimed about it.
@@ -490,6 +527,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[1.0.7]: https://github.com/merwanroudane/econenv/releases/tag/v1.0.7
 [0.1.7]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.7
 [0.1.6]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.6
 [0.1.5]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.5

@@ -22,7 +22,7 @@ keywords = [
     "reproducibility",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Framework :: IPython",
     "Framework :: Jupyter",
     "Intended Audience :: Science/Research",

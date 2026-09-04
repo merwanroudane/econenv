@@ -10,7 +10,7 @@ Python, R, Stata and EViews in a single Jupyter workflow — on one Python kerne
 [![PyPI](https://img.shields.io/pypi/v/econenv.svg)](https://pypi.org/project/econenv/)
 [![Python](https://img.shields.io/pypi/pyversions/econenv.svg)](https://pypi.org/project/econenv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#project-status)
+[![Status: stable](https://img.shields.io/badge/status-stable-2E7D4F.svg)](#project-status)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb)
 
 **[Website](https://merwanroudane.github.io/econenv/)** · **[Install from PyPI](https://pypi.org/project/econenv/)** · [User Guide (PDF)](docs/guide/econenv-guide.pdf) · [Examples](examples/) · [Changelog](CHANGELOG.md)
@@ -322,16 +322,19 @@ More in [`examples/`](examples/):
 
 ## Project status
 
-**v0.1 — alpha, released on [PyPI](https://pypi.org/project/econenv/).**
+**v1.0 — stable, released on [PyPI](https://pypi.org/project/econenv/).**
 Execution, engine management, the data bridge, results,
 graphs, diagnostics, snapshots and cross-engine OLS comparison are implemented
-and tested. The API may still change before v1.0.
+and tested. The public API — the magics, `push`/`pull`/`move`, the result
+objects and `compare_ols` — is stable and follows semantic versioning: no
+breaking change without a major bump.
 
 ### Releases
 
 | Version | | What changed |
 |---|---|---|
-| **0.1.7** | [PyPI](https://pypi.org/project/econenv/0.1.7/) · [notes](CHANGELOG.md#017--2026-09-04) | Google Colab support; all four engines via a local runtime |
+| **1.0.7** | [PyPI](https://pypi.org/project/econenv/1.0.7/) · [notes](CHANGELOG.md#107--2026-09-04) | First stable release; API declared stable |
+| 0.1.7 | [PyPI](https://pypi.org/project/econenv/0.1.7/) · [notes](CHANGELOG.md#017--2026-09-04) | Google Colab support; all four engines via a local runtime |
 | 0.1.6 | [PyPI](https://pypi.org/project/econenv/0.1.6/) · [notes](CHANGELOG.md#016--2026-09-04) | EViews command reference searchable from a cell; forecast plots; worked example on real data; user guide |
 | 0.1.5 | [PyPI](https://pypi.org/project/econenv/0.1.5/) · [notes](CHANGELOG.md#015--2026-09-04) | Full EViews graph/output audit; text and spool views captured; no silent failures |
 | 0.1.4 | folded into 0.1.5 · [notes](CHANGELOG.md#014--2026-09-04) | EViews graph commands (`line x`) now render |
