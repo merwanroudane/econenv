@@ -60,7 +60,7 @@ diagnostics, snapshots and cross-engine OLS comparison.
 - `econenv doctor` — every warning and error carries a fix, enforced by a test.
 - Environment snapshots and provenance records (code hash, data hash, versions,
   timing).
-- 112 tests; unit tests need no commercial engine.
+- 114 tests; unit tests need no commercial engine.
 
 ### Corrections to the original project brief
 
