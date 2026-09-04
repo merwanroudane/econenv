@@ -488,3 +488,61 @@ def test_r_remembers_the_frame_econenv_last_transferred():
         bridge.pull_frame = original
 
     assert pulled["name"] == "macro", "the default must be the frame we transferred"
+
+
+class TestColab:
+    """Colab is Linux, so what is possible there is decided before install.
+
+    Saying "EViews not configured" on a machine where EViews *cannot exist*
+    sends someone hunting for a fix that does not exist.
+    """
+
+    def test_colab_is_detected_from_its_environment(self, monkeypatch):
+        from econenv import discovery
+
+        monkeypatch.setenv("COLAB_RELEASE_TAG", "release-colab_2026")
+        assert discovery.is_colab() is True
+
+    def test_not_colab_on_an_ordinary_machine(self, monkeypatch):
+        import sys as _sys
+
+        from econenv import discovery
+
+        monkeypatch.delenv("COLAB_RELEASE_TAG", raising=False)
+        monkeypatch.delenv("COLAB_GPU", raising=False)
+        monkeypatch.setitem(_sys.modules, "google.colab", None)
+        monkeypatch.delitem(_sys.modules, "google.colab")
+        monkeypatch.setattr(
+            discovery.importlib.util
+            if hasattr(discovery, "importlib")
+            else __import__("importlib.util", fromlist=["util"]),
+            "find_spec",
+            lambda name: None,
+            raising=False,
+        )
+        assert discovery.is_colab() is False
+
+    def test_doctor_explains_colab_rather_than_reporting_a_fault(self, monkeypatch):
+        from econenv import diagnostics, discovery
+
+        monkeypatch.setattr(discovery, "is_colab", lambda: True)
+
+        checks = diagnostics.check_host()
+        colab = [c for c in checks if c.name == "Google Colab"]
+
+        assert colab, "doctor must say when it is running on Colab"
+        assert colab[0].status is diagnostics.Status.PASS
+        assert "R" in colab[0].detail
+        assert "Windows-only" in colab[0].fix
+
+    def test_eviews_on_colab_is_skipped_never_an_error(self, monkeypatch):
+        from econenv import diagnostics, discovery
+
+        monkeypatch.setattr(diagnostics.platform, "system", lambda: "Linux")
+        monkeypatch.setattr(discovery, "is_colab", lambda: True)
+
+        checks = diagnostics.check_eviews()
+
+        assert len(checks) == 1
+        assert checks[0].status is diagnostics.Status.SKIP
+        assert "Colab" in checks[0].fix

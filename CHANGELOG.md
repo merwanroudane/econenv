@@ -73,6 +73,18 @@ batch mode, which is what 0.1.5 claimed.
   commands, a chapter for EViews users who have only ever clicked,
   reproducibility, and troubleshooting. Source in `econenv-guide.tex`.
 
+### Added — Google Colab
+
+- **`examples/11_colab_quickstart.ipynb`**, with an *Open in Colab* badge: one
+  `%pip install econenv` and a Python + R workflow on real macro data, needing
+  no local setup.
+- **Colab detection.** `discovery.is_colab()`, and a `doctor` check that names
+  the environment and states what cannot run there. Colab is Linux, so EViews
+  automation — Windows COM — has no equivalent, and a Stata licence cannot
+  sensibly live on a runtime that is destroyed at the end of the session. On
+  Colab the EViews check now explains that rather than leaving someone hunting
+  for a configuration fix that does not exist.
+
 ### Also fixed
 
 - **`pull("r")` without a name returned an empty frame.** Stata and EViews have

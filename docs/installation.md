@@ -68,3 +68,25 @@ econenv doctor
 
 Exit code 0 means no errors. Warnings are fine — a missing engine is a warning,
 not an error.
+
+## Google Colab
+
+No local installation at all:
+
+```python
+%pip install econenv
+```
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb)
+
+**Python and R work.** Colab ships R, and Python is the kernel.
+
+**Stata and EViews cannot.** Colab is Linux; EViews automation is Windows COM
+and has no Linux equivalent, and a Stata licence cannot sensibly live on a
+runtime that is destroyed when the session ends. This is a property of those
+programs, not something EconEnv can configure around — which is why
+`%econ doctor` detects Colab and says so outright instead of reporting a fault
+you cannot fix.
+
+For all four engines, use a local Windows machine and
+[the four-engine notebook](../examples/10_real_data_four_engines.ipynb).

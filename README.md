@@ -11,6 +11,7 @@ Python, R, Stata and EViews in a single Jupyter workflow — on one Python kerne
 [![Python](https://img.shields.io/pypi/pyversions/econenv.svg)](https://pypi.org/project/econenv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#project-status)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb)
 
 **[Website](https://merwanroudane.github.io/econenv/)** · **[Install from PyPI](https://pypi.org/project/econenv/)** · [User Guide (PDF)](docs/guide/econenv-guide.pdf) · [Examples](examples/) · [Changelog](CHANGELOG.md)
 
@@ -192,6 +193,17 @@ Then, in a notebook:
 | EViews | optional | **Windows only**; automation is COM-based |
 | `comtypes` | for EViews | `pip install "econenv[eviews]"` |
 | `rpy2` | never required | no Windows wheels; EconEnv's subprocess backend replaces it |
+
+### Google Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb)
+
+EconEnv runs on Colab for **Python and R** — one line to install, no local
+setup. Stata and EViews cannot run there: Colab is Linux, EViews automation is
+Windows COM, and a Stata licence cannot sensibly live on a disposable runtime.
+`%econ doctor` says so explicitly when it detects Colab, rather than reporting
+a fault you cannot fix.
+
 
 ---
 

@@ -450,5 +450,26 @@ def host_info() -> Dict[str, str]:
     }
 
 
+def is_colab() -> bool:
+    """Whether this kernel is running in Google Colab.
+
+    Worth knowing because Colab changes what is *possible*, not just what is
+    installed: it is Linux, so EViews can never run there, and Stata would have
+    to be installed and licensed on a machine that is destroyed when the runtime
+    ends. Saying so plainly is kinder than letting someone hunt for a
+    configuration problem that has no solution.
+    """
+    if os.environ.get("COLAB_RELEASE_TAG") or os.environ.get("COLAB_GPU") is not None:
+        return True
+    if "google.colab" in sys.modules:
+        return True
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("google.colab") is not None
+    except (ImportError, ValueError):
+        return False
+
+
 def which_all(names_: Sequence[str]) -> Dict[str, Optional[str]]:
     return {name: shutil.which(name) for name in names_}

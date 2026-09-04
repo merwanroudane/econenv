@@ -29,6 +29,7 @@ NOTEBOOK = ROOT / "examples" / "10_real_data_four_engines.ipynb"
 REPO = "https://github.com/merwanroudane/econenv"
 PYPI = "https://pypi.org/project/econenv/"
 AUTHOR_GH = "https://github.com/merwanroudane"
+COLAB = "https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb"
 
 
 # --------------------------------------------------------------------------- #
@@ -253,6 +254,7 @@ def build(outputs: dict) -> str:
     <a href="#example">Worked example</a>
     <a href="#eviews">EViews for GUI users</a>
     <a href="#compare">Comparison</a>
+    <a href="#colab">Colab</a>
     <a href="#help">Troubleshooting</a>
   </nav>
 </div></div>
@@ -276,6 +278,7 @@ def build(outputs: dict) -> str:
     <a class="btn btn-ghost" href="{PYPI}">View on PyPI</a>
     <a class="btn btn-ghost" href="{REPO}">GitHub</a>
     <a class="btn btn-ghost" href="guide/econenv-guide.pdf">User Guide (PDF)</a>
+    <a class="btn btn-ghost" href="{COLAB}">Try it on Colab</a>
   </div>
 
   <div class="byline">
@@ -715,6 +718,34 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
 
   <p><a href="{REPO}/blob/main/docs/engines/eviews-commands.md">The complete
   command reference →</a></p>
+</div></section>
+
+<!-- ============================ COLAB ============================ -->
+<section id="colab"><div class="wrap">
+  <p class="eyebrow">No installation at all</p>
+  <h2>Running on Google Colab</h2>
+  <p class="sub">One line, no local setup — but only for two of the four
+  engines, and the reason is worth stating plainly rather than leaving you to
+  discover it.</p>
+
+  <pre class="sh">%pip install econenv</pre>
+
+  <div class="scroll"><table>
+    <thead><tr><th>Engine</th><th>On Colab</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>Python</b></td><td>works</td><td>it is the kernel</td></tr>
+      <tr><td><b>R</b></td><td>works</td><td>R is already on the Colab image</td></tr>
+      <tr><td><b>Stata</b></td><td>no</td><td>commercial, not installed, and the runtime is destroyed when the session ends</td></tr>
+      <tr><td><b>EViews</b></td><td>no</td><td>its automation interface is Windows COM — there is no Linux equivalent</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note"><b>This is a limit of the programs, not of EconEnv.</b>
+  No configuration changes it, so <code>%econ doctor</code> detects Colab and
+  says so outright rather than reporting a fault you cannot fix. For Stata and
+  EViews, run the four-engine notebook on a local Windows machine.</div>
+
+  <p><a class="btn btn-primary" href="{COLAB}">Open the Colab notebook</a></p>
 </div></section>
 
 <!-- ============================ HELP ============================ -->

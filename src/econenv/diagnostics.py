@@ -203,6 +203,19 @@ def check_host() -> List[Check]:
                 )
             )
 
+    if discovery.is_colab():
+        checks.append(
+            Check(
+                "Google Colab",
+                Status.PASS,
+                "detected — Python and R work here",
+                "Stata and EViews cannot run on Colab: EViews automation is Windows-only, "
+                "and Stata would need installing and licensing on a runtime that is "
+                "destroyed when the session ends. Use a local machine for those two.",
+                group="host",
+            )
+        )
+
     temp = tempfile.gettempdir()
     writable = os.access(temp, os.W_OK)
     checks.append(
@@ -429,7 +442,14 @@ def check_eviews(deep: bool = False) -> List[Check]:
                 "EViews",
                 Status.SKIP,
                 f"COM automation is Windows-only; this is {platform.system()}",
-                "EconEnv installs and works fine without it — the other engines are unaffected.",
+                (
+                    "Not fixable here, and not a misconfiguration: EViews has no Linux or "
+                    "macOS automation interface. On Google Colab use Python and R; run "
+                    "EViews work on a local Windows machine."
+                    if discovery.is_colab()
+                    else "EconEnv installs and works fine without it — the other engines "
+                    "are unaffected."
+                ),
                 group="eviews",
             )
         ]

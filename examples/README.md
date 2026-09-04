@@ -14,6 +14,7 @@ file you do not have (brief §44).
 | [07_data_transfer.ipynb](07_data_transfer.ipynb) | R and Stata |
 | [08_time_series.ipynb](08_time_series.ipynb) | R, Stata, EViews |
 | [09_panel_data.ipynb](09_panel_data.ipynb) | R, Stata |
+| [11_colab_quickstart.ipynb](11_colab_quickstart.ipynb) | Python, R — **runs on Google Colab**, no local install |
 | **[10_real_data_four_engines.ipynb](10_real_data_four_engines.ipynb)** | **all four** — a complete worked analysis on real US macro data, with every output executed |
 
 Notebook 5 is the acceptance test from the project brief: a Python cell, an R
