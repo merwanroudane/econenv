@@ -9,7 +9,6 @@ Python, R, Stata and EViews in a single Jupyter workflow — on one Python kerne
 [![PyPI](https://img.shields.io/pypi/v/econenv.svg)](https://pypi.org/project/econenv/)
 [![Python](https://img.shields.io/pypi/pyversions/econenv.svg)](https://pypi.org/project/econenv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/econenv.svg)](https://pypi.org/project/econenv/)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#project-status)
 
 **[Install from PyPI](https://pypi.org/project/econenv/)** · [Documentation](docs/) · [Examples](examples/) · [Changelog](CHANGELOG.md)
