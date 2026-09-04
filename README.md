@@ -7,7 +7,7 @@
 Python, R, Stata and EViews in a single Jupyter workflow — on one Python kernel.
 
 [![Website](https://img.shields.io/badge/docs-econenv-2B5CA8.svg)](https://merwanroudane.github.io/econenv/)
-[![PyPI](https://img.shields.io/pypi/v/econenv.svg)](https://pypi.org/project/econenv/)
+[![PyPI](https://img.shields.io/pypi/v/econenv.svg?cacheSeconds=1800)](https://pypi.org/project/econenv/)
 [![Python](https://img.shields.io/pypi/pyversions/econenv.svg)](https://pypi.org/project/econenv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status: stable](https://img.shields.io/badge/status-stable-2E7D4F.svg)](#project-status)
