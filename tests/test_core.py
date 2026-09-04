@@ -404,3 +404,41 @@ def test_statsmodels_is_a_core_dependency():
     import importlib.util
 
     assert importlib.util.find_spec("statsmodels") is not None
+
+
+def test_printing_a_result_shows_what_the_notebook_shows():
+    """`str()` and the rich display must not disagree about what an object is.
+
+    Every result class defined `_repr_mimebundle_` but no `__str__`, so a
+    notebook showed the full table while `print(result)` in a script or the CLI
+    showed only `<ComparisonResult ...>`. The text was already being built —
+    it just was not reachable outside a notebook.
+    """
+    import numpy as np
+    import pandas as pd
+
+    rng = np.random.default_rng(3)
+    n = 40
+    frame = pd.DataFrame({"x": rng.normal(size=n)})
+    frame["y"] = 1 + 2 * frame.x + rng.normal(scale=0.3, size=n)
+
+    comparison = econenv.compare_ols(frame, "y ~ x", engines=["python"])
+
+    rendered = str(comparison)
+    assert rendered == comparison._repr_mimebundle_()["text/plain"]
+    assert "Coefficients" in rendered
+    assert not rendered.startswith("<"), "str() must not fall back to the repr"
+    assert repr(comparison).startswith("<"), "repr() stays terse for debugging"
+
+
+def test_printing_a_figure_describes_it_rather_than_dumping_bytes():
+    from econenv.results import Figure
+
+    figure = Figure(
+        data=b"\x89PNG" + b"0" * 5000, mimetype="image/png", engine="eviews", name="x.line"
+    )
+
+    rendered = str(figure)
+    assert "PNG" in rendered and "eviews" in rendered and "x.line" in rendered
+    assert "5,004" in rendered, "say how big it is"
+    assert "\x89" not in rendered, "never print raw image bytes to a terminal"

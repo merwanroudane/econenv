@@ -124,6 +124,14 @@ class ComparisonResult:
         engines = ", ".join(self.results)
         return f"<ComparisonResult {self.spec.estimator} [{engines}] agree={self.agree}>"
 
+    def __str__(self) -> str:
+        """The comparison table, as the notebook renders it.
+
+        This is the output the README shows, so ``print(comparison)`` has to
+        produce it rather than a one-line repr.
+        """
+        return self._plain()
+
     def _repr_mimebundle_(self, include=None, exclude=None):
         return {"text/plain": self._plain(), "text/html": self._html()}
 

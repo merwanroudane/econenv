@@ -33,6 +33,16 @@ class Figure:
     engine: str
     name: Optional[str] = None
 
+    def __str__(self) -> str:
+        """A description, since the payload itself is an image.
+
+        Printing raw PNG bytes to a terminal is worse than useless, so str()
+        says what the figure is instead.
+        """
+        kind = "SVG" if self.mimetype == "image/svg+xml" else "PNG"
+        name = f" {self.name!r}" if self.name else ""
+        return f"<{kind} figure from {self.engine}{name}, {len(self.data):,} bytes>"
+
     def _repr_mimebundle_(self, include=None, exclude=None):
         if self.mimetype == "image/svg+xml":
             return {"image/svg+xml": self.data.decode("utf-8", "replace")}
@@ -96,6 +106,15 @@ class ExecutionResult:
             f"<ExecutionResult {self.engine} {state} "
             f"{self.elapsed:.3f}s tables={len(self.tables)} figures={len(self.figures)}>"
         )
+
+    def __str__(self) -> str:
+        """The same text the notebook shows.
+
+        Without this, ``print(result)`` in a script or the CLI gives only the
+        debugging repr, while a notebook shows the full table — the two
+        disagreeing about what the object *is*.
+        """
+        return self._plain()
 
     def _repr_mimebundle_(self, include=None, exclude=None):
         return {"text/plain": self._plain(), "text/html": self._html()}
@@ -234,6 +253,14 @@ class ModelResult:
 
     def __repr__(self) -> str:
         return f"<ModelResult {self.engine} {self.model} n={self.nobs} r2={self.r2}>"
+
+    def __str__(self) -> str:
+        """The same text the notebook shows.
+
+        Without this, ``print(result)`` in a script or the CLI gives only the
+        debugging repr while a notebook shows the full table.
+        """
+        return self._plain()
 
     def _repr_mimebundle_(self, include=None, exclude=None):
         return {"text/plain": self._plain(), "text/html": self._html()}

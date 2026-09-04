@@ -54,6 +54,15 @@ batch mode, which is what 0.1.5 claimed.
 
 ### Also fixed
 
+- **`print(result)` showed a debugging repr, not the result.** Every result
+  class — `ExecutionResult`, `ModelResult`, `ComparisonResult`, `Figure` —
+  defined `_repr_mimebundle_` but no `__str__`. So a notebook rendered the full
+  comparison table while the same object printed as `<ComparisonResult ...>` in
+  a script or from the CLI. The text was already being built; it just was not
+  reachable outside a notebook. `str()` now returns exactly what the notebook
+  shows, and `repr()` stays terse. `Figure` describes itself rather than
+  printing raw PNG bytes to a terminal.
+
 - **`doctor` reported PASS for an rpy2 that cannot be imported.** The check used
   `find_spec`, so a package that is present but raises on import — an rpy2 built
   for an older Python, which is what `pip install rpy2` leaves on Windows —
@@ -66,7 +75,7 @@ batch mode, which is what 0.1.5 claimed.
 
 ### Notes
 
-- 162 tests, up from 150. 136 catalogue entries, 94 verified.
+- 164 tests, up from 150. 136 catalogue entries, 94 verified.
 
 ## [0.1.5] — 2026-09-04
 

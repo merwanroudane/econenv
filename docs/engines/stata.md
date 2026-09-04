@@ -120,3 +120,34 @@ see [../comparison.md](../comparison.md).
 ```python
 %econ config stata.graph_format svg    # svg | png | pdf
 ```
+
+
+## `%%stata` is StataCorp's own magic
+
+EconEnv does not wrap `%stata` / `%%stata` / `%mata` — it loads the official
+ones that ship with Stata 17+, because reimplementing them would be strictly
+worse (brief §8).
+
+The practical consequence: **EconEnv flags do not apply to it.** This fails:
+
+```python
+%%stata --result          # SyntaxError: option --result not allowed
+regress y x
+```
+
+Use Stata's own options, and move data with `%econ`:
+
+```python
+%econ push stata df       # Python -> Stata
+```
+
+```python
+%%stata
+regress y x, robust
+```
+
+```python
+%econ pull stata          # Stata -> Python
+```
+
+`%%stata?` lists what the official magic does accept.
