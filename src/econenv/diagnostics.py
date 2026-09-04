@@ -415,17 +415,29 @@ def check_eviews(deep: bool = False) -> List[Check]:
 
     checks: List[Check] = []
     comtypes = importlib.util.find_spec("comtypes") is not None
+    installs = discovery.find_eviews()
+
+    # Not an ERROR. `doctor` exits 1 on any error, and a perfectly good
+    # Python + R + Stata installation must not fail a CI gate because the user
+    # never asked for EViews support. ERROR is reserved for "you configured
+    # this and it is broken".
+    if comtypes:
+        comtypes_status, comtypes_detail = Status.PASS, _module_version("comtypes") or "installed"
+    elif installs:
+        comtypes_status = Status.WARN
+        comtypes_detail = "not installed, but EViews is present on this machine"
+    else:
+        comtypes_status, comtypes_detail = Status.SKIP, "not installed (no EViews found either)"
     checks.append(
         Check(
             "comtypes",
-            Status.PASS if comtypes else Status.ERROR,
-            _module_version("comtypes") or "not installed",
-            "pip install 'econenv[eviews]'",
+            comtypes_status,
+            comtypes_detail,
+            "pip install 'econenv[eviews]' to enable the EViews engine.",
             group="eviews",
         )
     )
 
-    installs = discovery.find_eviews()
     if installs:
         checks.append(
             Check(

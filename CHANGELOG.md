@@ -83,6 +83,20 @@ literally. Four were:
 Evidence for each is in
 [`docs/audit/PHASE0_TECHNOLOGY_AUDIT.md`](docs/audit/PHASE0_TECHNOLOGY_AUDIT.md).
 
+### Pre-release fixes found by clean-install testing
+
+Installing the built wheel into an empty virtual environment — rather than
+testing only against the development environment — caught two packaging defects
+that would have shipped:
+
+- `statsmodels` was not a core dependency, so `compare_ols` (the headline
+  feature, and the first example in the README) silently produced a comparison
+  table with the Python column missing. It is now a core dependency.
+- `econenv doctor` returned exit code 1 on a perfectly good Python + R + Stata
+  installation, because a missing `comtypes` was classified as an ERROR. A
+  missing optional extra is now a WARNING when EViews is present and a SKIP when
+  it is not, so `doctor` stays usable as a CI gate.
+
 ### Known limitations
 
 - The rpy2 R backend is implemented but **not verified** — rpy2 is not

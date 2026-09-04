@@ -43,6 +43,10 @@ dependencies = [
     "pandas>=1.5",
     "numpy>=1.22",
     "ipython>=8.0",
+    # Python is one of the four comparable engines, and `compare_ols` — the
+    # headline feature — needs its OLS adapter. Without this a fresh install
+    # silently produces a comparison table with the Python column missing.
+    "statsmodels>=0.13",
 ]
 
 [project.optional-dependencies]

@@ -379,3 +379,28 @@ def test_doctor_findings_carry_a_fix():
 
 def test_doctor_for_an_unknown_engine_is_an_error_not_a_crash():
     assert econenv.doctor("julia").errors
+
+
+def test_doctor_does_not_error_on_a_working_install_without_optional_extras():
+    """`doctor` exits 1 on any ERROR.
+
+    A Python + R + Stata machine that never asked for EViews must not fail a CI
+    gate because `comtypes` is absent. ERROR is reserved for "you configured
+    this and it is broken".
+    """
+    report = econenv.doctor()
+    for check in report.errors:
+        assert "comtypes" not in check.name, (
+            "a missing optional extra must not be an ERROR: " + check.detail
+        )
+
+
+def test_statsmodels_is_a_core_dependency():
+    """`compare_ols` is the headline feature and Python is one of its engines.
+
+    Without statsmodels a fresh `pip install econenv` silently produces a
+    comparison table with the Python column missing.
+    """
+    import importlib.util
+
+    assert importlib.util.find_spec("statsmodels") is not None
