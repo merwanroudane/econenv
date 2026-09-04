@@ -50,8 +50,6 @@ recursive options are `c`, `n`, `o`, `q`, `r` and `v`, and all six work.
 
 - 160 tests, up from 150.
 
-Published to PyPI: <https://pypi.org/project/econenv/0.1.6/>
-
 ## [0.1.5] — 2026-09-04
 
 A full audit of EViews graph and output forms, pre- and post-estimation,
@@ -128,7 +126,7 @@ Published to PyPI: <https://pypi.org/project/econenv/0.1.5/>
   return both, a cell with a series named `line_test` produces no spurious
   figure, and `--no-graphs` still suppresses images.
 
-Published to PyPI: <https://pypi.org/project/econenv/0.1.4/>
+Not released to PyPI on its own — these fixes reached users in 0.1.5.
 
 ## [0.1.3] — 2026-09-04
 
