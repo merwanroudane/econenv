@@ -126,6 +126,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["N802", "N806"]
+# These scripts are mostly prose destined for a notebook or a documentation
+# page, where en dashes and typographic quotes are correct rather than suspect.
+"scripts/*" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.mypy]
 # The package runs on 3.9; recent mypy releases refuse to target below 3.10,

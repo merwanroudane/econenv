@@ -14,6 +14,7 @@ file you do not have (brief §44).
 | [07_data_transfer.ipynb](07_data_transfer.ipynb) | R and Stata |
 | [08_time_series.ipynb](08_time_series.ipynb) | R, Stata, EViews |
 | [09_panel_data.ipynb](09_panel_data.ipynb) | R, Stata |
+| **[10_real_data_four_engines.ipynb](10_real_data_four_engines.ipynb)** | **all four** — a complete worked analysis on real US macro data, with every output executed |
 
 Notebook 5 is the acceptance test from the project brief: a Python cell, an R
 cell, a Stata cell and an EViews cell, in sequence, in **one** Python kernel.
@@ -38,3 +39,17 @@ jupyter lab examples/
 Each starts with `%load_ext econenv`. Nothing is started until you use it, so a
 notebook for an engine you do not have will fail on that cell and leave the rest
 of your kernel intact — the error will say what is missing and what to do.
+
+## The one to start with
+
+[`10_real_data_four_engines.ipynb`](10_real_data_four_engines.ipynb) is the fullest example: **real US quarterly macroeconomic data, 1959Q1–2009Q3**, shipped with statsmodels so it needs no download and no private file.
+
+It uses each program for what it is actually best at — pandas to build the data, R to plot and diagnose, Stata's `newey` for HAC standard errors, EViews for unit roots, cointegration, stability and forecasting — then compares the same regression across all four.
+
+Every output in it was produced by executing it against real installations of R 4.5.2, StataNow 19.5 MP and EViews 13. It is regenerated with:
+
+```bash
+python scripts/build_example_notebook.py --run
+```
+
+so it cannot quietly stop being true.

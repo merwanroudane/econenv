@@ -17,14 +17,35 @@ from pathlib import Path
 
 #: File types that must never enter the repository.
 FORBIDDEN_SUFFIXES = {
-    ".exe", ".dll", ".so", ".dylib", ".lic", ".key", ".pem", ".p12", ".pfx",
-    ".dta", ".wf1", ".wf2", ".edb", ".prg", ".ado", ".mlib", ".stpr",
+    ".exe",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".lic",
+    ".key",
+    ".pem",
+    ".p12",
+    ".pfx",
+    ".dta",
+    ".wf1",
+    ".wf2",
+    ".edb",
+    ".prg",
+    ".ado",
+    ".mlib",
+    ".stpr",
 }
 
 #: Filenames that carry licence material for the two commercial engines.
 FORBIDDEN_NAMES = {
-    "stata.lic", "stata.key", "eviews.lic", "license.dat", "licence.dat",
-    "serial.txt", ".env", "credentials.json",
+    "stata.lic",
+    "stata.key",
+    "eviews.lic",
+    "license.dat",
+    "licence.dat",
+    "serial.txt",
+    ".env",
+    "credentials.json",
 }
 
 PATTERNS = [
@@ -34,7 +55,9 @@ PATTERNS = [
     # `token = compute()` are ordinary code, not secrets, so the value must be a
     # quoted string with no interpolation or call syntax in it.
     (
-        re.compile(r"""(?i)\b(api[_-]?key|secret|password|passwd|token)\s*[:=]\s*['"][^'"{}()$\s]{12,}['"]"""),
+        re.compile(
+            r"""(?i)\b(api[_-]?key|secret|password|passwd|token)\s*[:=]\s*['"][^'"{}()$\s]{12,}['"]"""
+        ),
         "a hard-coded credential",
     ),
     (re.compile(r"\b\d{4}-\d{4}-\d{4}-\d{4}\b"), "something shaped like a serial number"),
@@ -51,7 +74,19 @@ ALLOWLIST = {
     "CHANGELOG.md",
 }
 
-TEXT_SUFFIXES = {".py", ".md", ".toml", ".yaml", ".yml", ".cfg", ".txt", ".ipynb", ".cff", ".r", ".R"}
+TEXT_SUFFIXES = {
+    ".py",
+    ".md",
+    ".toml",
+    ".yaml",
+    ".yml",
+    ".cfg",
+    ".txt",
+    ".ipynb",
+    ".cff",
+    ".r",
+    ".R",
+}
 
 
 def check(path: Path) -> list[str]:

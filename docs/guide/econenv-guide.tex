@@ -1,0 +1,848 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks,breaklinks]{hyperref}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+\definecolor{codebg}{HTML}{F6F8FA}
+\definecolor{codeframe}{HTML}{D8DEE4}
+\definecolor{accent}{HTML}{1F4E79}
+\definecolor{warnbg}{HTML}{FFF6E5}
+\definecolor{warnframe}{HTML}{E0A800}
+\definecolor{okbg}{HTML}{EEF7EE}
+\definecolor{okframe}{HTML}{4C8C4A}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  framesep=5pt,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  literate={-}{{-}}1 {_}{{\_}}1
+}
+
+\newtcolorbox{note}[1][]{colback=okbg,colframe=okframe,boxrule=0.6pt,
+  left=6pt,right=6pt,top=5pt,bottom=5pt,breakable,#1}
+\newtcolorbox{warn}[1][]{colback=warnbg,colframe=warnframe,boxrule=0.6pt,
+  left=6pt,right=6pt,top=5pt,bottom=5pt,breakable,#1}
+
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{accent}}{\chaptertitlename\ \thechapter}{16pt}{\Huge}
+\setlist{itemsep=2pt,parsep=0pt,topsep=4pt}
+
+\title{
+  \vspace{-1.5cm}
+  {\Huge\bfseries EconEnv}\\[8pt]
+  {\Large One Notebook. Multiple Econometric Engines.}\\[18pt]
+  {\large Python, R, Stata and EViews in a single Jupyter workflow}\\[26pt]
+  {\large\bfseries Installation and User Guide}
+}
+\author{Dr Merwan Roudane}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\begin{minipage}{0.86\textwidth}
+\small
+\textbf{About this guide.} It assumes nothing. Chapter~\ref{ch:install} starts
+from a computer with no Python on it and finishes with all four programs
+talking to each other in one notebook. If you already have Python and Jupyter,
+skip to Section~\ref{sec:installecon}.
+
+\medskip
+\textbf{EconEnv does not contain, bundle or redistribute Stata or EViews.}
+Those are commercial products which you must install and license yourself. R and
+Python are free and open source. EconEnv only connects to what is already on
+your machine.
+\end{minipage}
+\end{center}
+
+\vfill
+\begin{center}
+\small
+Repository: \url{https://github.com/merwanroudane/econenv} \quad$\cdot$\quad
+Package: \url{https://pypi.org/project/econenv/}
+\end{center}
+
+\tableofcontents
+
+% ======================================================================
+\chapter{What EconEnv is, and why}
+
+\section{The problem}
+
+An applied econometrics paper rarely lives inside one program. The unit-root
+test is done in EViews because that is where the output is readable. The panel
+estimator is in Stata because \texttt{xtreg} is the reference implementation.
+The plots are in R because \texttt{ggplot2} is better. The data cleaning is in
+Python because pandas is better.
+
+So the working day looks like this:
+
+\begin{center}
+\texttt{Python $\rightarrow$ to\_csv() $\rightarrow$ Stata $\rightarrow$ export
+delimited $\rightarrow$ R $\rightarrow$ write.csv $\rightarrow$ EViews}
+\end{center}
+
+Four programs open, four windows, four copies of the same data slowly drifting
+apart. A missing value that meant \texttt{.a} in Stata arrives as an empty cell
+in R. A quarterly index becomes a string. And when a referee asks why your
+robust standard error differs from theirs, there is no way to answer without
+redoing the whole chain by hand.
+
+\section{What EconEnv does}
+
+EconEnv turns the four programs into \emph{execution engines behind one Python
+kernel}. You write:
+
+\begin{lstlisting}
+%load_ext econenv
+
+df = pd.read_csv("data.csv")        # Python, as usual
+\end{lstlisting}
+
+\begin{lstlisting}
+%%R -i df
+fit <- lm(y ~ x1 + x2, data = df)
+summary(fit)
+\end{lstlisting}
+
+\begin{lstlisting}
+%%stata
+regress y x1 x2, robust
+\end{lstlisting}
+
+\begin{lstlisting}
+%%eviews -i df
+equation eq1.ls y c x1 x2
+eq1.output
+\end{lstlisting}
+
+One notebook. One kernel. One dataset. No CSV round-trip.
+
+And then the part that is genuinely hard to do any other way:
+
+\begin{lstlisting}
+econenv.compare_ols(df, "y ~ x1 + x2")
+\end{lstlisting}
+
+which estimates the same specification in every engine you have and puts the
+results side by side --- reporting where they differ, and why, instead of
+quietly picking one.
+
+\section{What it is not}
+
+\begin{itemize}
+  \item It is \textbf{not} a new Jupyter kernel. It is a Python package and an
+        IPython extension. Your notebook stays a normal Python notebook.
+  \item It does \textbf{not} reimplement \texttt{\%\%stata}. Stata~17 and later
+        ship official IPython magics, and EconEnv loads those rather than
+        writing worse ones.
+  \item It does \textbf{not} ship any commercial software, licence file or
+        binary.
+  \item It does \textbf{not} try to make the programs agree. Where their
+        defaults differ, it says so.
+\end{itemize}
+
+% ======================================================================
+\chapter{Requirements}
+
+\section{Minimum}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Component} & \textbf{Version} & \textbf{Needed for} \\
+\midrule
+Python & 3.9 or newer & everything \\
+pandas, numpy, IPython & installed automatically & everything \\
+statsmodels & installed automatically & the Python engine \\
+JupyterLab or Notebook & any recent & running notebooks \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Optional engines}
+
+Install only what you use. None of these is required to install EconEnv.
+
+\begin{center}
+\begin{tabular}{@{}llp{6.6cm}@{}}
+\toprule
+\textbf{Engine} & \textbf{Version} & \textbf{Notes} \\
+\midrule
+R & 4.0+ & Free. EconEnv finds it automatically; no \texttt{PATH} setup needed. \\
+Stata & \textbf{17 or newer} & Commercial. PyStata ships with Stata~17+; earlier versions cannot be driven this way. \\
+EViews & 12, 13 or 14 & Commercial. \textbf{Windows only} --- automation is COM-based. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Operating systems}
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+ & \textbf{Windows} & \textbf{Linux} & \textbf{macOS} \\
+\midrule
+Python & yes & yes & yes \\
+R      & yes & yes & yes \\
+Stata  & yes & yes & yes \\
+EViews & yes & no  & no \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{warn}
+EViews automation uses Microsoft COM, which exists only on Windows. On Linux
+and macOS EconEnv installs and runs normally; the EViews engine simply reports
+itself unavailable and everything else works. Linux and macOS are supported by
+design but have not yet been exercised by the author --- reports are welcome.
+\end{warn}
+
+% ======================================================================
+\chapter{Installation from zero}
+\label{ch:install}
+
+This chapter assumes a Windows machine with nothing installed. Adapt the paths
+if yours differ.
+
+\section{Step 1 --- Python}
+
+Two reasonable routes.
+
+\subsection*{Route A: python.org (simplest)}
+
+\begin{enumerate}
+  \item Go to \url{https://www.python.org/downloads/} and download Python 3.11
+        or 3.12 for Windows.
+  \item Run the installer. \textbf{Tick ``Add python.exe to PATH''} on the first
+        screen --- this is the single most common thing people miss.
+  \item Open a new Command Prompt and check:
+\end{enumerate}
+
+\begin{lstlisting}
+python --version
+\end{lstlisting}
+
+\subsection*{Route B: Anaconda / Miniconda}
+
+Convenient if you also want conda packages. Download from
+\url{https://www.anaconda.com/download}, then create a dedicated environment so
+you do not disturb the base one:
+
+\begin{lstlisting}
+conda create -n econ python=3.12
+conda activate econ
+\end{lstlisting}
+
+\begin{note}
+Whichever route you choose, remember \emph{which} Python it is. If you install
+EconEnv into one interpreter and start Jupyter from another, the extension will
+not be found --- and the error will not obviously say why. Section~\ref{sec:wrongpython}
+covers this.
+\end{note}
+
+\section{Step 2 --- Jupyter}
+
+\begin{lstlisting}
+pip install jupyterlab
+\end{lstlisting}
+
+Start it with:
+
+\begin{lstlisting}
+jupyter lab
+\end{lstlisting}
+
+\section{Step 3 --- EconEnv}
+\label{sec:installecon}
+
+\begin{lstlisting}
+pip install econenv
+\end{lstlisting}
+
+That is the whole core installation. It pulls in pandas, numpy, IPython and
+statsmodels, and nothing commercial.
+
+Optional extras, installed only if you need them:
+
+\begin{lstlisting}
+pip install "econenv[eviews]"   # comtypes, for EViews (Windows)
+pip install "econenv[arrow]"    # faster data transfer to R
+pip install "econenv[stata]"    # helper for locating PyStata
+pip install "econenv[all]"      # all of the above
+\end{lstlisting}
+
+Check it worked:
+
+\begin{lstlisting}
+econenv doctor
+\end{lstlisting}
+
+This prints a diagnosis of every layer --- Python, Jupyter, R, Stata, EViews ---
+and, for anything wrong, what to do about it.
+
+\section{Step 4 --- R (optional, free)}
+
+\begin{enumerate}
+  \item Download R from \url{https://cran.r-project.org/bin/windows/base/}.
+  \item Run the installer and accept the defaults. It lands in
+        \texttt{C:\textbackslash Program Files\textbackslash R\textbackslash R-4.x.x}.
+  \item Nothing else is needed. EconEnv searches the registry and the usual
+        install locations; you do not have to set \texttt{R\_HOME} or touch
+        \texttt{PATH}.
+\end{enumerate}
+
+If you have several versions installed and want a specific one:
+
+\begin{lstlisting}
+%econ config r.home "C:/Program Files/R/R-4.5.2"
+\end{lstlisting}
+
+\begin{note}
+\textbf{You do not need rpy2.} EconEnv's default R backend is a persistent
+\texttt{Rterm} child process, which needs no compiler and no \texttt{R\_HOME}
+gymnastics. rpy2 publishes no Windows wheels, so \texttt{pip install rpy2}
+typically leaves you with a broken build. If you want it anyway, use
+conda-forge --- see Section~\ref{sec:rpy2}.
+\end{note}
+
+\section{Step 5 --- Stata (optional, commercial)}
+
+You need \textbf{Stata 17 or newer}, because that is when StataCorp began
+shipping PyStata.
+
+\begin{enumerate}
+  \item Install and licence Stata normally.
+  \item Nothing else. EconEnv finds the installation, validates the executable
+        and detects the edition (BE, SE or MP).
+\end{enumerate}
+
+To pin a specific installation or edition:
+
+\begin{lstlisting}
+%econ config stata.home "C:/Program Files/StataNow19"
+%econ config stata.edition mp
+\end{lstlisting}
+
+\section{Step 6 --- EViews (optional, commercial, Windows only)}
+
+\begin{enumerate}
+  \item Install and licence EViews normally.
+  \item \textbf{Open EViews once, by hand, and close it.} This registers its
+        COM automation server and validates the licence. Until you have done
+        this, automation will not connect.
+  \item Install the COM bridge:
+\end{enumerate}
+
+\begin{lstlisting}
+pip install "econenv[eviews]"
+\end{lstlisting}
+
+\begin{warn}
+\textbf{If you have more than one EViews version installed}, the generic
+\texttt{EViews.Manager} identifier binds to whichever registered \emph{last} ---
+not the newest. On a machine with EViews 12, 13 and 14, it may well be 13 that
+answers. \texttt{\%econ status} shows the version actually connected. To pin one:
+
+\begin{lstlisting}
+%econ config eviews.progid EViews.Manager.14
+\end{lstlisting}
+
+Note the format: \texttt{EViews.Manager.14}, not \texttt{EViews14.Manager}.
+\end{warn}
+
+\section{Step 7 --- Verify everything}
+
+In a notebook:
+
+\begin{lstlisting}
+%load_ext econenv
+%econ status
+\end{lstlisting}
+
+You should see a table like this:
+
+\begin{center}
+\ttfamily\footnotesize
+\begin{tabular}{@{}llllll@{}}
+\toprule
+engine & state & version & edition & backend & location \\
+\midrule
+Python & configured & 3.11.0 & & cpython & C:\textbackslash ...\textbackslash Python311 \\
+EViews & configured & 13 & & comtypes & C:\textbackslash Program Files\textbackslash EViews 13 \\
+R & configured & 4.5.2 & & subprocess & C:\textbackslash Program Files\textbackslash R\textbackslash R-4.5.2 \\
+Stata & configured & 19.5 & mp & pystata & C:\textbackslash Program Files\textbackslash StataNow19 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Then the full diagnosis:
+
+\begin{lstlisting}
+%econ doctor
+\end{lstlisting}
+
+Every check reports PASS, WARNING or ERROR, and every warning and error carries
+a suggested fix.
+
+% ======================================================================
+\chapter{First steps}
+
+\section{Loading the extension}
+
+Once per notebook:
+
+\begin{lstlisting}
+%load_ext econenv
+\end{lstlisting}
+
+It prints which magics it registered and who owns each one:
+
+\begin{lstlisting}
+EconEnv 0.1.6 loaded - one notebook, multiple econometric engines.
+  %econ                  econenv
+  %Rec / %%Rec           econenv
+  %R / %%R               econenv (rpy2 not installed)
+  %eviews / %%eviews     econenv
+  %stata / %%stata       pystata (official)
+\end{lstlisting}
+
+\begin{note}
+Note the last line. \texttt{\%\%stata} belongs to StataCorp, not to EconEnv.
+That means it takes \emph{Stata's} options, not EconEnv's: \texttt{\%\%stata
+-{}-result} is a syntax error. Move data with \texttt{\%econ push} instead.
+\end{note}
+
+\section{Sending data to an engine}
+
+Three equivalent ways:
+
+\begin{lstlisting}
+%econ push r df           # line magic
+\end{lstlisting}
+
+\begin{lstlisting}
+%%R -i df                 # inline, when running R code anyway
+summary(df)
+\end{lstlisting}
+
+\begin{lstlisting}
+econenv.push("r", "df", df)   # from Python
+\end{lstlisting}
+
+\section{Getting results back}
+
+\begin{lstlisting}
+back = econenv.pull("stata")          # the current Stata dataset
+one  = econenv.pull("eviews", "yf")   # one EViews series
+frame = econenv.pull("r", "mydata")   # a named R data frame
+\end{lstlisting}
+
+\begin{warn}
+R has no notion of a ``current dataset'' the way Stata and EViews do --- every
+data frame is just a variable. \texttt{econenv.pull("r")} therefore returns the
+frame EconEnv last transferred; if there is none, it tells you so and lists the
+frames R actually holds. Name the frame explicitly when in doubt.
+\end{warn}
+
+\section{Moving data between two engines directly}
+
+\begin{lstlisting}
+econenv.move("stata", "eviews", "mydata")
+\end{lstlisting}
+
+No file is written, and no manual step is involved.
+
+% ======================================================================
+\chapter{The magic commands}
+
+\section{\texttt{\%econ} --- managing everything}
+
+\begin{center}
+\begin{longtable}{@{}lp{9.2cm}@{}}
+\toprule
+\textbf{Command} & \textbf{What it does} \\
+\midrule
+\endhead
+\texttt{\%econ status} & Table of every engine: state, version, backend, location \\
+\texttt{\%econ engines} & The same, in detail, with capabilities \\
+\texttt{\%econ doctor} & Full diagnosis with a fix for every problem \\
+\texttt{\%econ versions} & Version of EconEnv and of each engine \\
+\texttt{\%econ capabilities} & What each engine can do on this machine \\
+\texttt{\%econ models} & Which estimators are available in which engine \\
+\texttt{\%econ start r} & Start an engine explicitly \\
+\texttt{\%econ stop} / \texttt{restart} / \texttt{reset} & Session control \\
+\texttt{\%econ config r.home "..."} & Show or set a configuration value \\
+\texttt{\%econ push <engine> <name>} & Send a Python object to an engine \\
+\texttt{\%econ pull <engine> [name]} & Fetch an object back \\
+\texttt{\%econ move <from> <to> <name>} & Engine to engine \\
+\texttt{\%econ snapshot} & Reproducibility snapshot of every version \\
+\texttt{\%econ eviews [topic]} & Look up EViews commands (see below) \\
+\texttt{\%econ ols y \textasciitilde{} x} & Run one OLS across every engine \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{\texttt{\%\%R} --- R}
+
+\begin{lstlisting}
+%%R -i df -o results
+fit <- lm(y ~ x, data = df)
+results <- coef(fit)
+\end{lstlisting}
+
+\texttt{-i} sends objects in, \texttt{-o} brings them back. \texttt{-q}
+suppresses output, \texttt{-{}-no-graphics} suppresses plot capture.
+
+If rpy2 is installed, EconEnv loads \emph{rpy2's own} \texttt{\%R} magics rather
+than shadowing them, and its own are always available as \texttt{\%Rec} /
+\texttt{\%\%Rec}.
+
+\section{\texttt{\%\%stata} --- Stata}
+
+This is StataCorp's official magic. Use Stata's own syntax and options:
+
+\begin{lstlisting}
+%%stata
+regress y x1 x2, robust
+estat ic
+\end{lstlisting}
+
+\section{\texttt{\%\%eviews} --- EViews}
+
+\begin{lstlisting}
+%%eviews -i df
+equation eq1.ls y c x1 x2
+eq1.output
+line y
+\end{lstlisting}
+
+\texttt{-i} pushes a DataFrame in as a workfile, \texttt{-o} pulls series out,
+\texttt{-p} selects a page, \texttt{-{}-no-graphs} suppresses figures.
+
+% ======================================================================
+\chapter{EViews for people who use the GUI}
+
+This is the chapter most EViews users need, because in EViews you normally
+click, and in a notebook there is nothing to click.
+
+\section{Look commands up without leaving the notebook}
+
+\begin{lstlisting}
+%econ eviews                      # the list of tasks
+%econ eviews graph                # everything about plotting
+%econ eviews find cointegration   # search all of it
+\end{lstlisting}
+
+Each result gives the menu path you already know, the command, what it does, and
+an example:
+
+\begin{lstlisting}
+g.coint(e)
+    Johansen system cointegration test - trace and maximum-eigenvalue
+    statistics for how many cointegrating relations exist.
+    GUI: Group > View > Cointegration Test > Johansen
+    e.g. g1.coint(e)
+\end{lstlisting}
+
+The catalogue holds 136 commands, 94 of them verified against EViews 13.
+
+\section{The one rule that makes EViews commands guessable}
+
+EViews objects work like this:
+
+\begin{center}
+\texttt{object\_name.what\_you\_want}
+\end{center}
+
+\begin{itemize}
+  \item Anything in an object's \textbf{View} menu is \texttt{object.thatview}.
+  \item Anything in its \textbf{Proc} menu is \texttt{object.thatproc}, usually
+        followed by a name for whatever it creates.
+\end{itemize}
+
+So \texttt{eq1.output} shows an equation's results, \texttt{x.line} plots a
+series, \texttt{v1.impulse} draws impulse responses.
+
+\section{Three ways to draw the same plot}
+
+All three work, and the GUI hides the distinction:
+
+\begin{lstlisting}
+line x            % command form  - quickest
+x.line            % view form     - matches the View menu
+graph gr1.line x  % object form   - keeps the graph so you can edit it
+\end{lstlisting}
+
+\section{The commands you will need first}
+
+\begin{center}
+\begin{longtable}{@{}llp{5.4cm}@{}}
+\toprule
+\textbf{You would click} & \textbf{Command} & \textbf{What it does} \\
+\midrule
+\endhead
+File $>$ New $>$ Workfile & \texttt{wfcreate q 1990Q1 2020Q4} & Quarterly workfile \\
+Quick $>$ Generate Series & \texttt{series ly = log(y)} & Create or transform \\
+Quick $>$ Sample & \texttt{smpl 1995Q1 2015Q4} & Restrict the sample \\
+Open as Group & \texttt{group g1 x y} & Bundle series \\
+Series $>$ View $>$ Graph $>$ Line & \texttt{x.line} & Plot \\
+Descriptive Statistics & \texttt{x.stats} & Summary table \\
+Correlogram & \texttt{x.correl} & ACF/PACF with Q-stats \\
+Unit Root Test $>$ ADF & \texttt{x.uroot(adf)} & Dickey--Fuller \\
+Cointegration $>$ Johansen & \texttt{g1.coint(e)} & Trace and max-eigen \\
+Estimate Equation $>$ LS & \texttt{equation eq1.ls y c x} & OLS; \texttt{c} is the constant \\
+Estimate Equation $>$ ARCH & \texttt{equation eq1.arch(1,1) y c x} & GARCH(1,1) \\
+Estimate VAR & \texttt{var v1.ls 1 2 x y} & VAR, lags 1 to 2 \\
+Equation $>$ View $>$ Output & \texttt{eq1.output} & Results table \\
+Actual, Fitted, Residual & \texttt{eq1.resids} & The first thing to look at \\
+Serial Correlation LM & \texttt{eq1.auto(2)} & Breusch--Godfrey \\
+Heteroskedasticity, White & \texttt{eq1.white} & White's test \\
+Recursive $>$ CUSUM & \texttt{eq1.rls(q)} & Parameter stability \\
+Recursive $>$ CUSUM squares & \texttt{eq1.rls(v)} & Variance stability \\
+Forecast & \texttt{eq1.forecast(g) yf} & Forecast and plot \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+The complete reference is in \texttt{docs/engines/eviews-commands.md}.
+
+\begin{note}
+\textbf{If a command runs but you see nothing}, that is a bug in EconEnv, not in
+what you typed. Every display command should produce output, a plot, or a
+warning saying it could not be read. Silence is never correct --- please report
+it.
+\end{note}
+
+% ======================================================================
+\chapter{A worked example}
+
+The notebook \texttt{examples/10_real_data_four_engines.ipynb} works through a
+complete exercise on \textbf{real US quarterly macroeconomic data, 1959Q1 to
+2009Q3} --- 203 observations, shipped with statsmodels, so it needs no download.
+
+\section{What it does}
+
+\begin{center}
+\begin{tabular}{@{}llp{6.2cm}@{}}
+\toprule
+\textbf{Step} & \textbf{Engine} & \textbf{Why that one} \\
+\midrule
+Load and transform & Python & pandas is the best tool for this \\
+Describe, plot, diagnose & R & \texttt{plot(fit)} and R's diagnostic vocabulary \\
+HAC standard errors & Stata & \texttt{newey} is the reference implementation \\
+Unit roots, cointegration & EViews & this is what EViews is for \\
+Forecast and stability & EViews & CUSUM, forecast bands \\
+Compare all four & EconEnv & one specification, four engines, one table \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{The model}
+
+A textbook consumption function,
+\[
+  \log C_t = \beta_0 + \beta_1 \log Y_t + \beta_2 r_t + \varepsilon_t ,
+\]
+with $C$ real consumption, $Y$ real GDP and $r$ the real interest rate.
+
+Both series trend strongly, so the interesting questions --- are they
+non-stationary, are they cointegrated, are the standard errors trustworthy ---
+are exactly the ones each program answers differently. That is what makes it a
+good test of the whole idea.
+
+\section{A representative result}
+
+EViews, on log real GDP:
+
+\begin{lstlisting}
+Null Hypothesis: LRGDP has a unit root
+Exogenous: Constant
+Lag Length: 1 (Automatic - based on SIC, maxlag=14)
+
+                                        t-Statistic   Prob.*
+Augmented Dickey-Fuller test statistic   -1.820451    0.3698
+Test critical values:    1% level        -3.462901
+                         5% level        -2.875752
+\end{lstlisting}
+
+and the four-engine comparison of the same regression:
+
+\begin{lstlisting}
+Coefficients
+              python         eviews              r          stata
+term
+_cons      1.4805338      1.4805338      1.4805338      1.4805338
+lrgdp      0.8863268      0.8863268      0.8863268      0.8863268
+realint   -0.0936228     -0.0936228     -0.0936228     -0.0936228
+\end{lstlisting}
+
+Maximum disagreement across the four: of the order of $10^{-15}$ --- floating
+point noise and nothing more.
+
+\section{What deliberately does not agree}
+
+The information criteria differ, and EconEnv reports why rather than choosing
+one:
+
+\begin{itemize}
+  \item \texttt{statsmodels}: $-2\ell + 2k$
+  \item R: counts $\sigma^2$ as a parameter, so $k+1$
+  \item EViews: divides by $n$
+  \item Stata: from \texttt{estat ic}, with $k = e(\text{rank}) + 1$
+\end{itemize}
+
+None is wrong. They answer slightly different questions, and a comparison that
+hid that would be worse than useless.
+
+% ======================================================================
+\chapter{Reproducibility}
+
+\section{Snapshots}
+
+\begin{lstlisting}
+econenv.snapshot()
+\end{lstlisting}
+
+records the EconEnv version, the Python version and packages, the R version,
+the Stata version and edition, the EViews version, the operating system,
+architecture and timestamp. Export it as JSON and keep it with your results.
+
+\section{Why this matters here more than usual}
+
+A result produced across four programs has four times as many ways to become
+irreproducible. A snapshot taken at the time of estimation is the difference
+between ``we used Stata'' and ``we used StataNow 19.5 MP with PyStata, on
+Windows, in March''.
+
+% ======================================================================
+\chapter{Troubleshooting}
+
+\section{The extension will not load}
+\label{sec:wrongpython}
+
+\begin{lstlisting}
+ModuleNotFoundError: No module named 'econenv'
+\end{lstlisting}
+
+Almost always: Jupyter is running on a different Python from the one you
+installed EconEnv into. Check from inside the notebook:
+
+\begin{lstlisting}
+import sys; print(sys.executable)
+\end{lstlisting}
+
+then install into exactly that interpreter:
+
+\begin{lstlisting}
+!{sys.executable} -m pip install econenv
+\end{lstlisting}
+
+\section{An engine will not start}
+
+\begin{lstlisting}
+%econ doctor
+\end{lstlisting}
+
+Every failing check names a fix. The usual causes:
+
+\begin{itemize}
+  \item \textbf{EViews}: never opened by hand, so its COM server is not
+        registered. Open it once and close it.
+  \item \textbf{EViews}: \texttt{comtypes} not installed ---
+        \texttt{pip install "econenv[eviews]"}.
+  \item \textbf{Stata}: version 16 or earlier. PyStata requires Stata~17.
+  \item \textbf{R}: installed somewhere unusual --- set \texttt{r.home}.
+\end{itemize}
+
+\section{EViews reports the wrong version}
+
+With several versions installed, the generic identifier binds to whichever
+registered last. \texttt{\%econ status} always shows the one actually connected.
+Pin a version with \texttt{\%econ config eviews.progid EViews.Manager.14}.
+
+\section{rpy2 is installed but broken}
+\label{sec:rpy2}
+
+A typical symptom:
+
+\begin{lstlisting}
+ImportError: cannot import name 'SexpVectorCCompatibleAbstract'
+    from 'rpy2.rinterface_lib.sexp'
+\end{lstlisting}
+
+This means a version built for an older Python. PyPI has no Windows wheels for
+rpy2, so \texttt{pip install rpy2} cannot fix it. Use conda-forge:
+
+\begin{lstlisting}
+pip uninstall -y rpy2
+conda install -c conda-forge rpy2
+\end{lstlisting}
+
+\begin{warn}
+conda-forge's rpy2 brings \emph{its own R} with it, separate from any R already
+installed. Packages in your existing R will not be visible to it. Unless you
+specifically need rpy2, stay on EconEnv's subprocess backend, which works
+without any of this.
+\end{warn}
+
+\section{A cell runs and shows nothing}
+
+Report it. Every display command should produce output, a plot, or a warning.
+Silence is a bug:
+\url{https://github.com/merwanroudane/econenv/issues}
+
+% ======================================================================
+\chapter{Licensing and citation}
+
+\section{EconEnv}
+
+MIT licence. Free for any use, including commercial.
+
+\section{The commercial programs}
+
+EconEnv's licence says nothing about Stata or EViews. It contains no part of
+either, and connects only to installations you have licensed yourself. Your
+obligations under those licences are unchanged.
+
+\section{Citation}
+
+\begin{lstlisting}
+Roudane, M. (2026). EconEnv: One Notebook, Multiple Econometric
+Engines. Python package. https://github.com/merwanroudane/econenv
+\end{lstlisting}
+
+A \texttt{CITATION.cff} file in the repository is kept up to date, and GitHub
+will format a citation from it automatically.
+
+\vfill
+\begin{center}
+\rule{0.4\textwidth}{0.4pt}\\[8pt]
+\textbf{EconEnv} --- Dr Merwan Roudane\\
+\url{https://github.com/merwanroudane/econenv}
+\end{center}
+
+\end{document}

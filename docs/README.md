@@ -11,6 +11,7 @@
 | [engines/stata.md](engines/stata.md) | PyStata delegation, editions, frames |
 | [engines/eviews.md](engines/eviews.md) | COM automation and its traps |
 | [engines/eviews-commands.md](engines/eviews-commands.md) | The menu path you know, and the command it becomes |
+| [guide/econenv-guide.pdf](guide/econenv-guide.pdf) | **Installation and User Guide (PDF)** — everything from zero |
 | [data-exchange.md](data-exchange.md) | Push, pull, move; transports per engine |
 | [data-types.md](data-types.md) | The full type mapping table |
 | [results.md](results.md) | `ExecutionResult` and `ModelResult` |
