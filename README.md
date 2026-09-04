@@ -299,7 +299,8 @@ and tested. The API may still change before v1.0.
 
 | Version | | What changed |
 |---|---|---|
-| **0.1.3** | [PyPI](https://pypi.org/project/econenv/0.1.3/) · [notes](CHANGELOG.md#013--2026-09-04) | EViews plotting views (`x.line`) now render; no duplicate or repeated figures |
+| **0.1.4** | [PyPI](https://pypi.org/project/econenv/0.1.4/) · [notes](CHANGELOG.md#014--2026-09-04) | EViews graph commands (`line x`) now render |
+| 0.1.3 | [PyPI](https://pypi.org/project/econenv/0.1.3/) · [notes](CHANGELOG.md#013--2026-09-04) | EViews plotting views (`x.line`) now render; no duplicate or repeated figures |
 | 0.1.2 | [PyPI](https://pypi.org/project/econenv/0.1.2/) · [notes](CHANGELOG.md#012--2026-09-04) | Correct EViews ProgID discovery; stop guessing the EViews version before connecting |
 | 0.1.1 | [PyPI](https://pypi.org/project/econenv/0.1.1/) · [notes](CHANGELOG.md#011--2026-09-04) | EViews cell output and graph capture; honest engine reporting |
 | 0.1.0 | [PyPI](https://pypi.org/project/econenv/0.1.0/) · [notes](CHANGELOG.md#010--2026-09-04) | First release |

@@ -4,6 +4,34 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] — 2026-09-04
+
+`line x` — the most direct way to plot in EViews — still produced no graph.
+
+### Fixed
+
+- **Standalone graph commands showed nothing.** `line x`, `scat x y`,
+  `bar(l) x` and the rest are neither views nor objects: EViews rejects
+  `freeze(t) line x` with "LINE is not a view", and a bare `line x` leaves
+  nothing in the workfile — the graph listing is identical before and after.
+  So there was no view to freeze and no object to sweep for. Such a command is
+  now run in its object form, `graph <temp>.line x`, exported, and the
+  temporary object deleted. Options are preserved: `bar(l) x` works.
+
+  0.1.3 fixed the *view* form (`x.line`); this covers the *command* form. Both
+  now render.
+
+### Notes
+
+- 147 tests, up from 135.
+- Verified through the `%%eviews` magic against EViews 13, using the reported
+  cell verbatim: `wfcreate u 100` / `series x = nrnd` / `line x` returns a
+  30 KB PNG. `scat x y` and `bar(l) x` render, a table and a plot in one cell
+  return both, a cell with a series named `line_test` produces no spurious
+  figure, and `--no-graphs` still suppresses images.
+
+Published to PyPI: <https://pypi.org/project/econenv/0.1.4/>
+
 ## [0.1.3] — 2026-09-04
 
 EViews plots made the ordinary EViews way produced nothing. Reported from a
@@ -216,6 +244,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[0.1.4]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.4
 [0.1.3]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.3
 [0.1.2]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.2
 [0.1.1]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.1

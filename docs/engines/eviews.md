@@ -222,6 +222,24 @@ showed nothing before 0.1.3.
 Each named graph is shown once, not again under every later cell. `show g1`
 always re-exports, and `--no-graphs` suppresses images while keeping the text.
 
+The third way to plot is a standalone **graph command**:
+
+```python
+%%eviews
+line x          # also: scat x y, bar(l) x, xyline a b, boxplot x
+```
+
+This is neither a view nor an object — EViews rejects `freeze(t) line x` with
+*"LINE is not a view"*, and it leaves nothing in the workfile. EconEnv runs it
+as `graph <temp>.line x`, exports the result and deletes the temporary object,
+so all three forms render:
+
+| You write | What it is | How it is captured |
+|---|---|---|
+| `line x` | command | run as a temporary graph object |
+| `x.line` | view | frozen, exported as an image |
+| `graph g1.line x` | object | exported by the end-of-cell sweep |
+
 Very large views are capped:
 
 ```python

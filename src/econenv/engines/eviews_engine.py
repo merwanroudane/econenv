@@ -272,6 +272,12 @@ class EViewsEngine(BaseEngine):
         views: List[List[List[str]]] = []
         want_graphs = bool(kwargs.get("capture_graphs", True))
         for line in lines:
+            if want_graphs:
+                figure = self._capture_graph_command(line)
+                if figure is not None:
+                    result.figures.append(figure)
+                    executed.append(line)
+                    continue
             expression = _view_expression(line)
             captured = (
                 self._capture_view(expression, graphs=want_graphs)
@@ -323,6 +329,32 @@ class EViewsEngine(BaseEngine):
                 if (figure.name or "").upper() not in seen
             )
         return result
+
+    def _capture_graph_command(self, line: str) -> Optional[Figure]:
+        """Run a standalone graph command as a named object so it can be shown.
+
+        ``line x`` draws a plot in EViews' own window and leaves nothing in the
+        workfile, so there was never anything for the figure sweep to find. It
+        is run as ``graph <temp>.line x`` instead, exported, and the temporary
+        object deleted.
+        """
+        suffix = _graph_command(line)
+        if suffix is None:
+            return None
+        name = f"_ee_g{uuid.uuid4().hex[:8]}"
+        try:
+            self._run_command(f"graph {name}{suffix}")
+        except Exception as exc:
+            self.log.debug("not a graph command: %s (%s)", line, com_message(exc) or exc)
+            return None
+        try:
+            figure = self.capture_graph(name)
+        finally:
+            with contextlib.suppress(Exception):
+                self._run_command(f"delete {name}")
+        if figure is not None:
+            figure.name = line.strip()
+        return figure
 
     def _capture_view(self, expression: str, graphs: bool = True) -> Optional[tuple]:
         """Freeze a display view and read it back — as text, or as an image.
@@ -694,6 +726,52 @@ def _render_grid(grid: List[List[str]]) -> str:
             continue
         lines.append("  ".join(row[i].ljust(widths[i]) for i in range(last + 1)).rstrip())
     return "\n".join(lines)
+
+
+# EViews' standalone graph commands. `line x` draws a plot but is neither a
+# view (freeze rejects it: "LINE is not a view") nor an object — it leaves
+# nothing in the workfile — so it is rewritten to the object form, which can be
+# exported. Kept in sync with the EViews command reference.
+_GRAPH_COMMANDS = (
+    "area",
+    "band",
+    "bar",
+    "boxplot",
+    "distplot",
+    "dot",
+    "errbar",
+    "hilo",
+    "line",
+    "mixed",
+    "pie",
+    "plot",
+    "qqplot",
+    "scat",
+    "scatmat",
+    "seasplot",
+    "spike",
+    "xyarea",
+    "xybar",
+    "xyline",
+    "xypair",
+)
+_GRAPH_CMD_RE = re.compile(
+    r"^(" + "|".join(_GRAPH_COMMANDS) + r")(\([^()]*\))?\s+(\S.*)$",
+    re.IGNORECASE,
+)
+
+
+def _graph_command(line: str) -> Optional[str]:
+    """The object-form equivalent of a standalone graph command.
+
+    ``line x`` -> ``.line x``; ``scat(s) x y`` -> ``.scat(s) x y``. The caller
+    prefixes ``graph <name>``. Returns ``None`` when the line is not one.
+    """
+    match = _GRAPH_CMD_RE.match(line.strip())
+    if not match:
+        return None
+    kind, options, arguments = match.groups()
+    return f".{kind}{options or ''} {arguments.strip()}"
 
 
 def _split_commands(code: str) -> List[str]:

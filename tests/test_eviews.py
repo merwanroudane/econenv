@@ -148,3 +148,41 @@ class TestGraphViews:
     def test_plotting_views_reach_the_capture_path(self, line):
         """They must be recognised as views, or they are simply run and lost."""
         assert eviews_engine._view_expression(line) == line
+
+
+class TestGraphCommands:
+    """`line x` is a command, not a view and not an object.
+
+    EViews rejects `freeze(t) line x` with "LINE is not a view", and a bare
+    `line x` leaves nothing in the workfile — verified against EViews 13, where
+    the graph listing was identical before and after. So it is rewritten to the
+    object form, which can be exported.
+    """
+
+    @pytest.mark.parametrize(
+        "line, expected",
+        [
+            ("line x", ".line x"),
+            ("scat x y", ".scat x y"),
+            ("bar(l) x", ".bar(l) x"),
+            ("  xyline a b  ", ".xyline a b"),
+            ("LINE X", ".LINE X"),
+            ("boxplot x", ".boxplot x"),
+        ],
+    )
+    def test_graph_commands_become_object_form(self, line, expected):
+        assert eviews_engine._graph_command(line) == expected
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "series x = nrnd",
+            "wfcreate u 100",
+            "equation eq1.ls y c x",
+            "delete x",
+            "linear x",  # starts with "line" but is not the line command
+            "line",  # no series to plot
+        ],
+    )
+    def test_ordinary_commands_are_left_alone(self, line):
+        assert eviews_engine._graph_command(line) is None
