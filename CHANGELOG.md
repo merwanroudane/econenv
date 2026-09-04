@@ -41,6 +41,8 @@ against them on every release.
 author's request. PyPI orders releases numerically, so 1.0.7 supersedes every
 0.x version permanently — a later 0.x would never be served as latest.
 
+Published to PyPI: <https://pypi.org/project/econenv/1.0.7/>
+
 ## [0.1.7] — 2026-09-04
 
 Google Colab support, and a correction to what I had claimed about it.
