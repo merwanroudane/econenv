@@ -17,11 +17,14 @@ from __future__ import annotations
 
 import html
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import nbformat as nbf
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 DOCS = ROOT / "docs"
 TARGET = DOCS / "index.html"
 NOTEBOOK = ROOT / "examples" / "10_real_data_four_engines.ipynb"
@@ -30,6 +33,36 @@ REPO = "https://github.com/merwanroudane/econenv"
 PYPI = "https://pypi.org/project/econenv/"
 AUTHOR_GH = "https://github.com/merwanroudane"
 COLAB = "https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb"
+
+
+def project_facts() -> dict:
+    """Numbers the page quotes, read from the project rather than typed in.
+
+    The version and the test count were hand-written and went stale within one
+    release. Anything the page asserts about itself is now derived.
+    """
+    from econenv import __version__
+    from econenv.engines import eviews_commands as catalogue
+
+    try:
+        collected = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-q"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        ).stdout
+        match = re.search(r"(\d+)\s+tests? collected", collected)
+        tests = match.group(1) if match else "?"
+    except Exception:
+        tests = "?"
+
+    return {
+        "version": __version__,
+        "tests": tests,
+        "commands": str(len(catalogue.COMMANDS)),
+        "verified": str(sum(1 for c in catalogue.COMMANDS if c.verified)),
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -229,7 +262,7 @@ def engine_pill(name: str, cls: str, colour: str) -> str:
     return f'<span class="pill"><i style="background:{colour}"></i>{name}</span>'
 
 
-def build(outputs: dict) -> str:
+def build(outputs: dict, facts: dict) -> str:
     o = lambda needle, n=24, skip=0: find(outputs, needle, n, skip)  # noqa: E731
 
     return f"""<!doctype html>
@@ -324,8 +357,8 @@ def build(outputs: dict) -> str:
   <div class="grid g4" style="margin-top:24px">
     <div class="card kpi"><div class="n">4</div><div class="l">engines, one kernel</div></div>
     <div class="card kpi"><div class="n">0</div><div class="l">CSV files written</div></div>
-    <div class="card kpi"><div class="n">166</div><div class="l">tests</div></div>
-    <div class="card kpi"><div class="n">136</div><div class="l">EViews commands catalogued</div></div>
+    <div class="card kpi"><div class="n">{facts["tests"]}</div><div class="l">tests</div></div>
+    <div class="card kpi"><div class="n">{facts["commands"]}</div><div class="l">EViews commands catalogued</div></div>
   </div>
 </div></section>
 
@@ -416,7 +449,7 @@ pip install "econenv[all]"</pre>
   <span class="label lab-py">notebook</span>
   <pre>%load_ext econenv</pre>
   <span class="label lab-out">real output</span>
-  <pre class="out">EconEnv 0.1.6 loaded — one notebook, multiple econometric engines.
+  <pre class="out">EconEnv {facts["version"]} loaded — one notebook, multiple econometric engines.
   %econ                  econenv
   %Rec / %%Rec           econenv
   %R / %%R               econenv (rpy2 not installed)
@@ -676,7 +709,7 @@ eq_ev.output</pre>
     GUI: Group &gt; View &gt; Cointegration Test &gt; Johansen
     e.g. g1.coint(e)</pre>
 
-  <p class="sub"><b>136 commands, 94 verified</b> against EViews 13. Each entry
+  <p class="sub"><b>{facts["commands"]} commands, {facts["verified"]} verified</b> against EViews 13. Each entry
   gives the menu path you already know, the command, what it does, and a line to
   copy.</p>
 
@@ -909,7 +942,8 @@ conda install -c conda-forge rpy2</pre>
 
 def main() -> int:
     outputs = notebook_outputs()
-    page = build(outputs)
+    facts = project_facts()
+    page = build(outputs, facts)
     TARGET.write_text(page, encoding="utf-8")
     missing = len(re.findall(r"\[no captured output for", page))
     assets = sorted((DOCS / "assets").glob("*"))
