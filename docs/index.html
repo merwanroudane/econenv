@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EconEnv — Python, R, Stata and EViews in one Jupyter notebook</title>
+<meta name="description" content="EconEnv runs Python, R, Stata and EViews inside a single Jupyter notebook on one Python kernel, with a shared dataset, real plots and cross-engine model comparison. Developed by Dr Merwan Roudane.">
+<meta name="author" content="Dr Merwan Roudane">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<style>
+:root{
+  --bg:#FBFAF7; --panel:#FFFFFF; --ink:#1C2430; --muted:#5B6672;
+  --line:#E4E2DC; --soft:#F4F2EC;
+  --accent:#2B5CA8; --accent-dark:#1E4380; --accent-soft:#EAF1FB;
+  --gold:#B8860B; --gold-soft:#FBF3E0;
+  --py:#3776AB; --r:#1F65B7; --stata:#7A2E2E; --ev:#1B7A43;
+  --ok:#2E7D4F; --ok-soft:#EDF7F0;
+  --warn:#A76A00; --warn-soft:#FDF4E3;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(28,36,48,.05), 0 8px 24px rgba(28,36,48,.05);
+}
+/* Deliberately light only: this page does not follow the OS dark setting. */
+html{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code,pre,.mono{font-family:"SF Mono",SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+.grid{display:grid;gap:18px}
+@media(min-width:820px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}}
+
+/* ---------- top bar ---------- */
+.bar{position:sticky;top:0;z-index:50;background:rgba(251,250,247,.92);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-weight:700;letter-spacing:-.02em;font-size:18px;color:var(--ink)}
+.brand span{color:var(--accent)}
+.bar nav{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
+.bar nav a{color:var(--muted);font-size:14.5px;font-weight:500}
+.bar nav a:hover{color:var(--accent);text-decoration:none}
+@media(max-width:760px){.bar nav{display:none}}
+
+/* ---------- hero ---------- */
+.hero{padding:64px 0 52px;
+  background:
+    radial-gradient(900px 380px at 12% -8%, #EAF1FB 0%, rgba(234,241,251,0) 62%),
+    radial-gradient(760px 340px at 92% 4%, #FBF3E0 0%, rgba(251,243,224,0) 60%);
+  border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(38px,6vw,60px);line-height:1.03;letter-spacing:-.035em;margin:0 0 14px}
+.hero .tag{font-size:clamp(18px,2.4vw,23px);color:var(--accent-dark);font-weight:600;margin:0 0 10px}
+.hero .lede{font-size:18.5px;color:var(--muted);max-width:70ch;margin:0 0 26px}
+.pills{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:26px}
+.pill{display:inline-flex;align-items:center;gap:7px;background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px;
+  font-weight:600;box-shadow:var(--shadow)}
+.pill i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:12px 22px;border-radius:11px;font-weight:650;font-size:15.5px;
+  border:1px solid transparent;transition:transform .12s ease, box-shadow .12s ease}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(43,92,168,.28)}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-ghost{background:var(--panel);color:var(--ink);border-color:var(--line);box-shadow:var(--shadow)}
+
+.byline{margin-top:32px;padding-top:20px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.byline .who{font-size:15px;color:var(--muted)}
+.byline .who b{color:var(--ink);font-size:16.5px}
+
+/* ---------- sections ---------- */
+section{padding:60px 0;border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:0}
+h2{font-size:clamp(26px,3.4vw,34px);letter-spacing:-.025em;margin:0 0 10px}
+h3{font-size:20px;letter-spacing:-.015em;margin:30px 0 10px}
+h4{font-size:16.5px;margin:22px 0 8px}
+.sub{color:var(--muted);font-size:17px;max-width:74ch;margin:0 0 26px}
+.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:12px;font-weight:750;
+  color:var(--accent);margin:0 0 8px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;box-shadow:var(--shadow)}
+.card h3{margin-top:0}
+.card.tint-py{border-top:3px solid var(--py)}
+.card.tint-r{border-top:3px solid var(--r)}
+.card.tint-stata{border-top:3px solid var(--stata)}
+.card.tint-ev{border-top:3px solid var(--ev)}
+
+pre{background:#F7F6F2;border:1px solid var(--line);border-radius:11px;padding:15px 17px;
+  overflow-x:auto;font-size:13.6px;line-height:1.55;margin:12px 0}
+pre.out{background:#FCFCFA;color:#2A3340;font-size:12.9px}
+pre.sh{background:#F2F5FA;border-color:#D9E3F2}
+code:not(pre code){background:var(--soft);padding:2px 6px;border-radius:6px;font-size:.9em;
+  border:1px solid var(--line)}
+.label{display:inline-block;font-size:11.5px;font-weight:750;letter-spacing:.07em;
+  text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-bottom:8px}
+.lab-py{background:#EAF2FA;color:var(--py)} .lab-r{background:#E9F0FB;color:var(--r)}
+.lab-stata{background:#F8ECEC;color:var(--stata)} .lab-ev{background:#E9F6EE;color:var(--ev)}
+.lab-out{background:var(--soft);color:var(--muted)}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.8px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden}
+th{background:var(--soft);text-align:left;padding:11px 14px;font-weight:700;font-size:13.5px;
+  letter-spacing:.02em;border-bottom:1px solid var(--line)}
+td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FCFBF8}
+td code{white-space:nowrap}
+.scroll{overflow-x:auto}
+
+.note,.warn{border-radius:11px;padding:15px 18px;margin:18px 0;font-size:15px}
+.note{background:var(--ok-soft);border:1px solid #CFE6D8}
+.warn{background:var(--warn-soft);border:1px solid #F0DDB4}
+.note b,.warn b{display:block;margin-bottom:3px}
+
+.steps{counter-reset:s;list-style:none;padding:0;margin:22px 0}
+.steps>li{counter-increment:s;position:relative;padding:0 0 26px 52px;
+  border-left:2px solid var(--line);margin-left:16px}
+.steps>li:last-child{border-left-color:transparent;padding-bottom:0}
+.steps>li::before{content:counter(s);position:absolute;left:-18px;top:-2px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;
+  font-weight:750;font-size:15px;box-shadow:0 2px 8px rgba(43,92,168,.3)}
+.steps h3{margin:0 0 6px;font-size:18.5px}
+
+figure{margin:20px 0;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+figure img{width:100%;height:auto;display:block;border-radius:8px}
+figcaption{font-size:13.6px;color:var(--muted);margin-top:10px;text-align:center}
+
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  padding:22px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  margin:22px 0;box-shadow:var(--shadow)}
+.node{padding:9px 16px;border-radius:10px;font-weight:650;font-size:14.5px;border:1px solid}
+.n-py{background:#EAF2FA;border-color:#C6DDF2;color:var(--py)}
+.n-r{background:#E9F0FB;border-color:#C4D8F3;color:var(--r)}
+.n-stata{background:#F8ECEC;border-color:#EBCFCF;color:var(--stata)}
+.n-ev{background:#E9F6EE;border-color:#C6E5D4;color:var(--ev)}
+.arrow{color:var(--muted);font-size:19px}
+
+.kpi{text-align:center;padding:20px}
+.kpi .n{font-size:34px;font-weight:760;letter-spacing:-.03em;color:var(--accent);line-height:1}
+.kpi .l{font-size:13.6px;color:var(--muted);margin-top:6px}
+
+footer{padding:52px 0 40px;background:var(--soft)}
+footer .dev{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:26px;box-shadow:var(--shadow);margin-bottom:26px}
+footer .dev h3{margin:0 0 4px;font-size:21px}
+footer .muted{color:var(--muted);font-size:14.5px}
+.linkcols{display:grid;gap:22px;margin-top:8px}
+@media(min-width:760px){.linkcols{grid-template-columns:repeat(3,1fr)}}
+.linkcols h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted)}
+.linkcols ul{list-style:none;padding:0;margin:0}
+.linkcols li{margin:5px 0;font-size:14.8px}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="wrap">
+  <span class="brand">Econ<span>Env</span></span>
+  <nav>
+    <a href="#install">Install</a>
+    <a href="#start">First steps</a>
+    <a href="#magics">Magic commands</a>
+    <a href="#example">Worked example</a>
+    <a href="#eviews">EViews for GUI users</a>
+    <a href="#compare">Comparison</a>
+    <a href="#help">Troubleshooting</a>
+  </nav>
+</div></div>
+
+<div class="hero"><div class="wrap">
+  <p class="tag">One Notebook. Multiple Econometric Engines.</p>
+  <h1>Python, R, Stata and EViews<br>in a single notebook</h1>
+  <p class="lede">One dataset, one kernel, four programs. No CSV round-trip, no
+  switching windows, and results you can compare side by side — with the
+  differences explained instead of hidden.</p>
+
+  <div class="pills">
+    <span class="pill"><i style="background:#3776AB"></i>Python</span>
+    <span class="pill"><i style="background:#1F65B7"></i>R</span>
+    <span class="pill"><i style="background:#7A2E2E"></i>Stata 17+</span>
+    <span class="pill"><i style="background:#1B7A43"></i>EViews 12–14</span>
+  </div>
+
+  <div class="btns">
+    <a class="btn btn-primary" href="#install">Install from zero</a>
+    <a class="btn btn-ghost" href="https://pypi.org/project/econenv/">View on PyPI</a>
+    <a class="btn btn-ghost" href="https://github.com/merwanroudane/econenv">GitHub</a>
+    <a class="btn btn-ghost" href="guide/econenv-guide.pdf">User Guide (PDF)</a>
+  </div>
+
+  <div class="byline">
+    <div class="who">Developed by <b>Dr Merwan Roudane</b> &nbsp;·&nbsp;
+      <a href="https://github.com/merwanroudane">github.com/merwanroudane</a></div>
+  </div>
+</div></div>
+
+<!-- ============================ THE PROBLEM ============================ -->
+<section><div class="wrap">
+  <p class="eyebrow">Why this exists</p>
+  <h2>The four-program problem</h2>
+  <p class="sub">An applied econometrics paper rarely lives in one program. The
+  unit-root test is in EViews because that is where the output is readable. The
+  panel estimator is in Stata. The plots are in R. The data cleaning is in
+  Python. So the working day looks like this:</p>
+
+  <div class="flow">
+    <span class="node n-py">Python</span><span class="arrow">→</span>
+    <span class="node" style="background:#F6F5F1;border-color:#E4E2DC;color:#5B6672">to_csv()</span><span class="arrow">→</span>
+    <span class="node n-stata">Stata</span><span class="arrow">→</span>
+    <span class="node" style="background:#F6F5F1;border-color:#E4E2DC;color:#5B6672">export</span><span class="arrow">→</span>
+    <span class="node n-r">R</span><span class="arrow">→</span>
+    <span class="node" style="background:#F6F5F1;border-color:#E4E2DC;color:#5B6672">write.csv</span><span class="arrow">→</span>
+    <span class="node n-ev">EViews</span>
+  </div>
+
+  <p class="sub">Four windows, four copies of the same data slowly drifting
+  apart. A missing value that meant <code>.a</code> in Stata arrives as an empty
+  cell in R. A quarterly index becomes a string. And when a referee asks why
+  your robust standard error differs from theirs, there is no way to answer
+  without redoing the chain by hand.</p>
+
+  <h3>What EconEnv does instead</h3>
+  <div class="flow">
+    <span class="node n-py">Python kernel</span><span class="arrow">→</span>
+    <span class="node n-r">R</span>
+    <span class="node n-stata">Stata</span>
+    <span class="node n-ev">EViews</span>
+    <span class="arrow">→</span><span class="node n-py">back to Python</span>
+  </div>
+
+  <div class="grid g4" style="margin-top:24px">
+    <div class="card kpi"><div class="n">4</div><div class="l">engines, one kernel</div></div>
+    <div class="card kpi"><div class="n">0</div><div class="l">CSV files written</div></div>
+    <div class="card kpi"><div class="n">166</div><div class="l">tests</div></div>
+    <div class="card kpi"><div class="n">136</div><div class="l">EViews commands catalogued</div></div>
+  </div>
+</div></section>
+
+<!-- ============================ INSTALL ============================ -->
+<section id="install"><div class="wrap">
+  <p class="eyebrow">From zero</p>
+  <h2>Installation</h2>
+  <p class="sub">This assumes a computer with nothing installed. If you already
+  have Python and Jupyter, jump to step&nbsp;3 — that is the only required one.</p>
+
+  <ol class="steps">
+    <li>
+      <h3>Python 3.9 or newer</h3>
+      <p>Download from <a href="https://www.python.org/downloads/">python.org</a>.
+      On the first installer screen, <b>tick “Add python.exe to PATH”</b> — the
+      single most commonly missed step.</p>
+      <pre class="sh">python --version</pre>
+      <p>Or, if you prefer conda:</p>
+      <pre class="sh">conda create -n econ python=3.12
+conda activate econ</pre>
+    </li>
+
+    <li>
+      <h3>Jupyter</h3>
+      <pre class="sh">pip install jupyterlab</pre>
+      <pre class="sh">jupyter lab</pre>
+    </li>
+
+    <li>
+      <h3>EconEnv</h3>
+      <p>This is the only step that is required. It installs pandas, numpy,
+      IPython and statsmodels, and nothing commercial.</p>
+      <pre class="sh">pip install econenv</pre>
+      <p>From inside a notebook cell, use this form instead — it installs into
+      <b>the kernel actually running</b>, rather than whichever Python happens to
+      be first on your PATH:</p>
+      <pre class="sh">%pip install econenv</pre>
+      <h4>Optional extras</h4>
+      <pre class="sh">pip install "econenv[eviews]"   # comtypes, for EViews on Windows
+pip install "econenv[arrow]"    # faster data transfer to R
+pip install "econenv[all]"</pre>
+    </li>
+
+    <li>
+      <h3>R — optional, free</h3>
+      <p>Install from <a href="https://cran.r-project.org/">CRAN</a> and accept
+      the defaults. Nothing else is needed: EconEnv searches the registry and
+      the usual install locations, so you do not have to set <code>R_HOME</code>
+      or touch <code>PATH</code>.</p>
+      <div class="note"><b>You do not need rpy2.</b>
+      EconEnv's default R backend is a persistent <code>Rterm</code> child
+      process — no compiler, no wheels to hunt for. rpy2 publishes no Windows
+      wheels, so <code>pip install rpy2</code> usually leaves a broken build.</div>
+    </li>
+
+    <li>
+      <h3>Stata — optional, commercial</h3>
+      <p>You need <b>Stata 17 or newer</b>, because that is when StataCorp began
+      shipping PyStata. Install and licence it normally; EconEnv finds it,
+      validates the executable and detects the edition (BE, SE or MP).</p>
+      <pre>%econ config stata.home "C:/Program Files/StataNow19"
+%econ config stata.edition mp</pre>
+    </li>
+
+    <li>
+      <h3>EViews — optional, commercial, Windows only</h3>
+      <p>Install and licence EViews, then <b>open it once by hand and close
+      it</b>. That registers its COM automation server; until you have done it,
+      automation cannot connect.</p>
+      <pre class="sh">pip install "econenv[eviews]"</pre>
+      <div class="warn"><b>Several EViews versions installed?</b>
+      The generic identifier binds to whichever registered <i>last</i> — not the
+      newest. Pin one with
+      <code>%econ config eviews.progid EViews.Manager.14</code>.
+      Note the format: <code>EViews.Manager.14</code>, not
+      <code>EViews14.Manager</code>.</div>
+    </li>
+  </ol>
+</div></section>
+
+<!-- ============================ FIRST STEPS ============================ -->
+<section id="start"><div class="wrap">
+  <p class="eyebrow">Verify</p>
+  <h2>Your first cell</h2>
+  <p class="sub">Load the extension once per notebook. It reports which magics it
+  registered and, importantly, <i>who owns each one</i>.</p>
+
+  <span class="label lab-py">notebook</span>
+  <pre>%load_ext econenv</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">EconEnv 0.1.6 loaded — one notebook, multiple econometric engines.
+  %econ                  econenv
+  %Rec / %%Rec           econenv
+  %R / %%R               econenv (rpy2 not installed)
+  %eviews / %%eviews     econenv
+  %stata / %%stata       pystata (official)
+  %econ status · %econ doctor · %econ help</pre>
+
+  <div class="note"><b>Note the last line.</b>
+  <code>%%stata</code> belongs to StataCorp, not to EconEnv — Stata 17+ ships
+  official IPython magics and EconEnv loads those rather than writing worse
+  ones. It therefore takes <i>Stata's</i> options, not EconEnv's.</div>
+
+  <h3>What is available on this machine</h3>
+  <pre>%econ status</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">             state version edition     backend  \
+engine
+Python  configured  3.11.0             cpython
+EViews  configured      13            comtypes
+R       configured   4.5.2          subprocess
+Stata      running    19.5      mp     pystata
+
+                                                 location
+engine
+Python  C:\Users\HP\AppData\Local\Programs\Python\Pyth...
+EViews                         C:\Program Files\EViews 13
+R                              C:\Program Files\R\R-4.5.2
+...</pre>
+
+  <h3>And if something will not start</h3>
+  <p class="sub"><code>%econ doctor</code> checks every layer — Python, Jupyter,
+  R, Stata, EViews, COM, temp directories, permissions — and every warning or
+  error carries a suggested fix. That is enforced by a test.</p>
+  <pre>%econ doctor</pre>
+</div></section>
+
+<!-- ============================ MAGICS ============================ -->
+<section id="magics"><div class="wrap">
+  <p class="eyebrow">Reference</p>
+  <h2>Every magic command</h2>
+  <p class="sub">Line magics start with <code>%</code> and act on one line. Cell
+  magics start with <code>%%</code> and take the whole cell.</p>
+
+  <h3><code>%econ</code> — managing everything</h3>
+  <div class="scroll"><table>
+    <thead><tr><th style="width:32%">Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>%econ status</code></td><td>Table of every engine: state, version, edition, backend, location</td></tr>
+      <tr><td><code>%econ engines</code></td><td>The same in detail, with each engine's capabilities</td></tr>
+      <tr><td><code>%econ doctor</code></td><td>Full diagnosis of every layer, with a fix for each problem</td></tr>
+      <tr><td><code>%econ versions</code></td><td>Version of EconEnv and of each engine</td></tr>
+      <tr><td><code>%econ capabilities</code></td><td>What each engine can actually do on this machine</td></tr>
+      <tr><td><code>%econ models</code></td><td>Estimator × engine matrix — what is supported where</td></tr>
+      <tr><td><code>%econ start r</code></td><td>Start an engine explicitly (they start on first use anyway)</td></tr>
+      <tr><td><code>%econ stop</code> · <code>restart</code> · <code>reset</code></td><td>Session control</td></tr>
+      <tr><td><code>%econ config r.home "..."</code></td><td>Show or set a configuration value</td></tr>
+      <tr><td><code>%econ push &lt;engine&gt; &lt;name&gt;</code></td><td>Send a Python object to an engine</td></tr>
+      <tr><td><code>%econ pull &lt;engine&gt; [name]</code></td><td>Fetch an object back into Python</td></tr>
+      <tr><td><code>%econ move &lt;from&gt; &lt;to&gt; &lt;name&gt;</code></td><td>Move data engine to engine, no file</td></tr>
+      <tr><td><code>%econ snapshot</code></td><td>Reproducibility snapshot of every version involved</td></tr>
+      <tr><td><code>%econ eviews [topic]</code></td><td>Look up EViews commands without leaving the notebook</td></tr>
+      <tr><td><code>%econ ols y ~ x</code></td><td>Run one OLS across every available engine</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid g2">
+    <div class="card tint-r">
+      <span class="label lab-r">R</span>
+      <h3><code>%%R</code> / <code>%%Rec</code></h3>
+      <pre>%%R -i df -o results
+fit &lt;- lm(y ~ x1 + x2, data = df)
+results &lt;- coef(fit)</pre>
+      <table>
+        <tr><td><code>-i NAME</code></td><td>send a Python object in</td></tr>
+        <tr><td><code>-o NAME</code></td><td>bring an R object back</td></tr>
+        <tr><td><code>-q</code></td><td>suppress output</td></tr>
+        <tr><td><code>--no-graphics</code></td><td>do not capture plots</td></tr>
+        <tr><td><code>-r</code></td><td>return the result object</td></tr>
+      </table>
+      <p class="muted" style="font-size:14.5px;color:var(--muted)">If rpy2 is
+      installed, EconEnv loads <b>rpy2's own</b> <code>%R</code> rather than
+      shadowing it; its own stay available as <code>%Rec</code>.</p>
+    </div>
+
+    <div class="card tint-stata">
+      <span class="label lab-stata">Stata</span>
+      <h3><code>%%stata</code></h3>
+      <pre>%econ push stata df</pre>
+      <pre>%%stata
+regress y x1 x2, robust
+estat ic</pre>
+      <div class="warn" style="margin-top:14px"><b>This is StataCorp's magic.</b>
+      It takes Stata's options, not EconEnv's — <code>%%stata --result</code> is
+      a syntax error. Move data with <code>%econ push</code> /
+      <code>%econ pull</code>. Type <code>%%stata?</code> for its own help.</div>
+    </div>
+
+    <div class="card tint-ev">
+      <span class="label lab-ev">EViews</span>
+      <h3><code>%%eviews</code></h3>
+      <pre>%%eviews -i df
+equation eq1.ls y c x1 x2
+eq1.output
+line y</pre>
+      <table>
+        <tr><td><code>-i NAME</code></td><td>push a DataFrame in as a workfile</td></tr>
+        <tr><td><code>-o NAME</code></td><td>pull a series back out</td></tr>
+        <tr><td><code>-p PAGE</code></td><td>select a workfile page</td></tr>
+        <tr><td><code>--no-graphs</code></td><td>suppress figures</td></tr>
+        <tr><td><code>--result</code></td><td>return the result object</td></tr>
+      </table>
+    </div>
+
+    <div class="card tint-py">
+      <span class="label lab-py">Python</span>
+      <h3>The API</h3>
+      <pre>import econenv
+
+econenv.push("r", "df", df)
+econenv.pull("stata")
+econenv.move("stata", "eviews", "mydata")
+econenv.compare_ols(df, "y ~ x1 + x2")
+econenv.doctor()
+econenv.snapshot()</pre>
+      <p style="font-size:14.5px;color:var(--muted)">Everything the magics do is
+      available as plain Python, so scripts and the <code>econenv</code>
+      command-line tool share exactly one implementation.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============================ EXAMPLE ============================ -->
+<section id="example"><div class="wrap">
+  <p class="eyebrow">Real data, real output</p>
+  <h2>A complete worked analysis</h2>
+  <p class="sub">Everything below is genuine output from
+  <a href="https://github.com/merwanroudane/econenv/blob/main/examples/10_real_data_four_engines.ipynb">the example
+  notebook</a>, executed against R 4.5.2, StataNow 19.5 MP and EViews 13. The
+  data is <b>real US quarterly macroeconomic data, 1959Q1–2009Q3</b> (203
+  observations), shipped with statsmodels — so the notebook needs no download
+  and no private file.</p>
+
+  <h3>1 · Python builds the data</h3>
+  <span class="label lab-py">Python</span>
+  <pre>import numpy as np, pandas as pd, statsmodels.api as sm, econenv
+
+raw = sm.datasets.macrodata.load_pandas().data
+idx = pd.PeriodIndex(year=raw.year.astype(int),
+                     quarter=raw.quarter.astype(int), freq='Q').to_timestamp()
+
+macro = pd.DataFrame({
+    'lrgdp':  np.log(raw.realgdp.values),
+    'lrcons': np.log(raw.realcons.values),
+    'realint': raw.realint.values,
+}, index=idx)</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">         lrgdp   lrcons    lrinv    unemp     infl    tbill  realint
+count  203.000  203.000  203.000  203.000  203.000  203.000  203.000
+mean     8.781    8.362    6.750    5.885    3.961    5.312    1.337
+std      0.466    0.501    0.596    1.459    3.253    2.803    2.669
+min      7.905    7.443    5.560    3.400   -8.790    0.120   -6.790
+25%      8.398    7.963    6.252    4.900    2.270    3.515   -0.085
+50%      8.789    8.366    6.798    5.700    3.240    5.010    1.340
+75%      9.173    8.764    7.270    6.800    4.975    6.665    2.630
+max      9.504    9.145    7.725   10.700   14.620   15.330   10.950</pre>
+
+  <div class="note"><b>Why the index matters.</b>
+  The quarterly <code>DatetimeIndex</code> is what lets EViews create a
+  <i>dated</i> workfile page. Without it EViews treats the observations as
+  unordered and every time-series test below becomes meaningless.</div>
+
+  <h3>2 · R estimates and diagnoses</h3>
+  <span class="label lab-r">R</span>
+  <pre>%%R -i macro
+fit_r &lt;- lm(lrcons ~ lrgdp + realint, data = macro)
+summary(fit_r)</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">Call:
+lm(formula = lrcons ~ lrgdp + realint, data = macro)
+
+Residuals:
+      Min        1Q    Median        3Q       Max
+-0.030434 -0.011066 -0.000498  0.009559  0.038223
+
+Coefficients:
+              Estimate Std. Error t value Pr(&gt;|t|)
+(Intercept) -1.0735725  0.0189306 -56.711  &lt; 2e-16 ***
+lrgdp        1.0746806  0.0021514 499.527  &lt; 2e-16 ***
+realint     -0.0010893  0.0003754  -2.902  0.00412 **
+---
+Signif. codes:  0 &#x27;***&#x27; 0.001 &#x27;**&#x27; 0.01 &#x27;*&#x27; 0.05 &#x27;.&#x27; 0.1 &#x27; &#x27; 1
+
+Residual standard error: 0.01424 on 200 degrees of freedom
+Multiple R-squared:  0.9992,	Adjusted R-squared:  0.9992
+F-statistic: 1.248e+05 on 2 and 200 DF,  p-value: &lt; 2.2e-16</pre>
+
+  <p>R's four-panel diagnostic view, rendered straight into the notebook:</p>
+  <figure><img src="assets/r01.svg" alt="R diagnostic plots: residuals vs fitted, Q-Q, scale-location, leverage">
+    <figcaption><code>par(mfrow = c(2, 2)); plot(fit_r)</code> — captured from R and displayed inline</figcaption></figure>
+
+  <figure><img src="assets/r02.svg" alt="US real consumption 1959-2009, plotted in R">
+    <figcaption>US real consumption, plotted in R from the same DataFrame</figcaption></figure>
+
+  <h3>3 · Stata supplies HAC standard errors</h3>
+  <p class="sub">Those residuals are strongly autocorrelated, so ordinary
+  standard errors are too small. <code>newey</code> is Stata's reference
+  implementation of Newey–West.</p>
+  <span class="label lab-stata">Stata</span>
+  <pre>%econ push stata macro</pre>
+  <pre>%%stata
+tsset t
+newey lrcons lrgdp realint, lag(4)</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">. tsset, clear
+
+. gen t = _n
+
+. tsset t
+
+Time variable: t, 1 to 203
+        Delta: 1 unit
+
+. newey lrcons lrgdp realint, lag(4)</pre>
+
+  <h3>4 · EViews does the time-series work</h3>
+  <span class="label lab-ev">EViews</span>
+  <pre>%%eviews -i macro
+lrgdp.uroot(adf)</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">Null Hypothesis: LRGDP has a unit root
+Exogenous: Constant
+Lag Length: 1 (Automatic - based on SIC, maxlag=14)
+
+                                                                                         t-Statistic  Prob.*
+
+Augmented Dickey-Fuller test statistic                                                   -1.820451    0.3698
+Test critical values:                                1% level                            -3.462901
+                                                     5% level                            -2.875752
+                                                     10% level                           -2.574423
+
+*MacKinnon (1996) one-sided p-values.
+...</pre>
+  <p>Log real GDP fails to reject a unit root — exactly as it should on trending
+  macro data. Next, whether the two series move together in the long run:</p>
+
+  <pre>%%eviews
+group gci lrcons lrgdp
+gci.coint(e)</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">                   Johansen Cointegration Test
+=================================================================
+Date: 09/04/26   Time: 13:51
+Sample: 1959Q1 2009Q3
+Included observations: 203
+Lags interval (in first differences): 1 to 4
+Endogenous variables: LRCONS LRGDP
+Deterministic assumptions: Case 5 (Johansen-Hendry-Juselius): Both the
+        cointegrating relationship and short-run dynamics include a constan
+        trend.
+=================================================================
+
+=================================================================
+Unrestricted Cointegration Rank Test (Trace)
+=================================================================
+Hypothesized                  Trace        0.05        Prob.**
+...</pre>
+
+  <pre>%%eviews
+equation eq_ev.ls lrcons c lrgdp realint
+eq_ev.output</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">Dependent Variable: LRCONS
+Method: Least Squares
+Date: 09/04/26   Time: 13:51
+Sample: 1959Q1 2009Q3
+Included observations: 203
+
+Variable                      Coefficient  Std. Error             t-Statistic  Prob.
+
+C                             -1.073573    0.018931               -56.71091    0.0000
+LRGDP                         1.074681     0.002151               499.5275     0.0000
+REALINT                       -0.001089    0.000375               -2.902182    0.0041
+
+R-squared                     0.999199     Mean dependent var                  8.361722
+Adjusted R-squared            0.999191     S.D. dependent var                  0.500639
+S.E. of regression            0.014236     Akaike info criterion               -5.651383
+Sum squared resid             0.040534     Schwarz criterion                   -5.602419
+Log likelihood                576.6154     Hannan-Quinn criter.                -5.631574
+F-statistic                   124805.2     Durbin-Watson stat                  0.278552
+...</pre>
+
+  <h3>5 · EViews plots, captured into the notebook</h3>
+  <div class="grid g2">
+    <figure><img src="assets/fig01.png" alt="EViews actual, fitted and residual plot">
+      <figcaption><code>eq_ev.resids</code> — actual, fitted, residual</figcaption></figure>
+    <figure><img src="assets/fig02.png" alt="EViews CUSUM stability test">
+      <figcaption><code>eq_ev.rls(q)</code> — CUSUM test for parameter stability</figcaption></figure>
+    <figure><img src="assets/fig03.png" alt="EViews CUSUM of squares test">
+      <figcaption><code>eq_ev.rls(v)</code> — CUSUM of squares</figcaption></figure>
+    <figure><img src="assets/fig04.png" alt="EViews out-of-sample forecast with two standard error bands">
+      <figcaption><code>eq_fc.forecast(g)</code> — forecast ± 2 s.e.</figcaption></figure>
+    <figure><img src="assets/fig05.png" alt="EViews line plot of log real consumption">
+      <figcaption><code>line lrcons</code> — the command form</figcaption></figure>
+    <figure><img src="assets/fig06.png" alt="EViews group line plot of consumption and GDP">
+      <figcaption><code>gplot.line</code> — two series on one graph</figcaption></figure>
+  </div>
+</div></section>
+
+<!-- ============================ COMPARE ============================ -->
+<section id="compare"><div class="wrap">
+  <p class="eyebrow">The part that is hard to do any other way</p>
+  <h2>The same model in all four engines</h2>
+  <p class="sub">One specification, four programs, one table — and an honest
+  account of where they differ.</p>
+
+  <span class="label lab-py">Python</span>
+  <pre>econenv.compare_ols(macro, "lrcons ~ lrgdp + realint")</pre>
+  <span class="label lab-out">real output</span>
+  <pre class="out">C:\Users\HP\Documents\econenv\src\econenv\engines\stata_engine.py:356: UserWarning: EconEnv push -&gt; stata: [warning] date: datetime converted to Stata %tc (ms since 1960-01-01); apply `format ... %tc` in Stata to display it as a date
+  push_frame(self, &quot;__econenv_ols&quot;, data.loc[:, columns], clear=True)</pre>
+
+  <div class="note"><b>The coefficients agree to machine precision.</b>
+  Maximum disagreement across the four engines is of the order of 10⁻¹⁵ —
+  floating-point noise and nothing more.</div>
+
+  <div class="warn"><b>The information criteria deliberately do not agree.</b>
+  <code>statsmodels</code> uses −2ℓ + 2k; R counts σ² as a parameter, so k+1;
+  EViews divides by n; Stata takes them from <code>estat ic</code> with
+  k = e(rank) + 1. None is wrong — they answer slightly different questions, and
+  EconEnv reports the reason rather than silently picking one.</div>
+</div></section>
+
+<!-- ============================ EVIEWS GUI ============================ -->
+<section id="eviews"><div class="wrap">
+  <p class="eyebrow">For researchers who click</p>
+  <h2>EViews without the menus</h2>
+  <p class="sub">In EViews you normally click. In a notebook there is nothing to
+  click, and that — not any missing feature — is the real obstacle. So the
+  command reference lives <i>inside</i> the notebook, where the question gets
+  asked.</p>
+
+  <pre>%econ eviews                      # the list of tasks
+%econ eviews graph                # everything about plotting
+%econ eviews find cointegration   # search all of it</pre>
+
+  <span class="label lab-out">real output</span>
+  <pre class="out">✓ g.coint(e)
+    Johansen system cointegration test — trace and maximum-eigenvalue
+    statistics for how many cointegrating relations exist.
+    GUI: Group &gt; View &gt; Cointegration Test &gt; Johansen
+    e.g. g1.coint(e)</pre>
+
+  <p class="sub"><b>136 commands, 94 verified</b> against EViews 13. Each entry
+  gives the menu path you already know, the command, what it does, and a line to
+  copy.</p>
+
+  <h3>The one rule that makes EViews guessable</h3>
+  <p class="sub">EViews objects work as
+  <code>object_name.what_you_want</code>. Anything in an object's <b>View</b>
+  menu is <code>object.thatview</code>; anything in <b>Proc</b> is
+  <code>object.thatproc</code>. That single rule covers most of the language.</p>
+
+  <div class="scroll"><table>
+    <thead><tr><th>You would click</th><th>Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>File → New → Workfile</td><td><code>wfcreate q 1990Q1 2020Q4</code></td><td>Quarterly workfile</td></tr>
+      <tr><td>Quick → Generate Series</td><td><code>series ly = log(y)</code></td><td>Create or transform</td></tr>
+      <tr><td>Quick → Sample</td><td><code>smpl 1995Q1 2015Q4</code></td><td>Restrict the sample</td></tr>
+      <tr><td>Series → View → Graph → Line</td><td><code>x.line</code></td><td>Plot a series</td></tr>
+      <tr><td>Descriptive Statistics</td><td><code>x.stats</code></td><td>Summary table</td></tr>
+      <tr><td>Correlogram</td><td><code>x.correl</code></td><td>ACF/PACF with Q-statistics</td></tr>
+      <tr><td>Unit Root Test → ADF</td><td><code>x.uroot(adf)</code></td><td>Augmented Dickey–Fuller</td></tr>
+      <tr><td>Cointegration → Johansen</td><td><code>g1.coint(e)</code></td><td>Trace and max-eigenvalue</td></tr>
+      <tr><td>Estimate Equation → LS</td><td><code>equation eq1.ls y c x</code></td><td>OLS; <code>c</code> is the constant</td></tr>
+      <tr><td>Estimate Equation → ARCH</td><td><code>equation eq1.arch(1,1) y c x</code></td><td>GARCH(1,1)</td></tr>
+      <tr><td>Estimate VAR</td><td><code>var v1.ls 1 2 x y</code></td><td>VAR, lags 1 to 2</td></tr>
+      <tr><td>View → Estimation Output</td><td><code>eq1.output</code></td><td>The results table</td></tr>
+      <tr><td>Actual, Fitted, Residual</td><td><code>eq1.resids</code></td><td>The first thing to look at</td></tr>
+      <tr><td>Serial Correlation LM</td><td><code>eq1.auto(2)</code></td><td>Breusch–Godfrey</td></tr>
+      <tr><td>Heteroskedasticity → White</td><td><code>eq1.white</code></td><td>White's test</td></tr>
+      <tr><td>Recursive → CUSUM</td><td><code>eq1.rls(q)</code></td><td>Parameter stability</td></tr>
+      <tr><td>Recursive → CUSUM squares</td><td><code>eq1.rls(v)</code></td><td>Variance stability</td></tr>
+      <tr><td>Forecast</td><td><code>eq1.forecast(g) yf</code></td><td>Forecast and plot</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Three ways to draw the same plot</h3>
+  <p class="sub">All three work, and the GUI hides the distinction:</p>
+  <pre>line x            ' command form  — quickest
+x.line            ' view form     — matches the View menu
+graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
+
+  <p><a href="https://github.com/merwanroudane/econenv/blob/main/docs/engines/eviews-commands.md">The complete
+  command reference →</a></p>
+</div></section>
+
+<!-- ============================ HELP ============================ -->
+<section id="help"><div class="wrap">
+  <p class="eyebrow">When something goes wrong</p>
+  <h2>Troubleshooting</h2>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>The extension will not load</h3>
+      <pre class="out">ModuleNotFoundError: No module named 'econenv'</pre>
+      <p>Almost always: Jupyter runs a different Python from the one you
+      installed into. Check, then install into exactly that interpreter:</p>
+      <pre>import sys; print(sys.executable)
+!{sys.executable} -m pip install econenv</pre>
+    </div>
+
+    <div class="card">
+      <h3>An engine will not start</h3>
+      <pre>%econ doctor</pre>
+      <p>Every failing check names a fix. Usually:</p>
+      <ul>
+        <li><b>EViews</b> was never opened by hand, so COM is unregistered</li>
+        <li><b>EViews</b> needs <code>pip install "econenv[eviews]"</code></li>
+        <li><b>Stata</b> is version 16 or older — PyStata needs 17+</li>
+        <li><b>R</b> is somewhere unusual — set <code>r.home</code></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>EViews reports the wrong version</h3>
+      <p>With several versions installed, the generic identifier binds to
+      whichever registered last. <code>%econ status</code> always shows the one
+      actually connected. Pin it:</p>
+      <pre>%econ config eviews.progid EViews.Manager.14</pre>
+    </div>
+
+    <div class="card">
+      <h3>rpy2 is installed but broken</h3>
+      <pre class="out">ImportError: cannot import name
+'SexpVectorCCompatibleAbstract'</pre>
+      <p>A build for an older Python. PyPI has no Windows wheels, so pip cannot
+      fix it:</p>
+      <pre class="sh">pip uninstall -y rpy2
+conda install -c conda-forge rpy2</pre>
+      <p style="font-size:14.5px;color:var(--muted)">conda-forge's rpy2 brings
+      its own R, separate from any you have. Unless you need rpy2, stay on the
+      subprocess backend.</p>
+    </div>
+  </div>
+
+  <div class="warn"><b>A cell runs and shows nothing?</b>
+  That is a bug in EconEnv, not in what you typed. Every display command should
+  produce output, a plot, or a warning saying it could not be read — silence is
+  never correct. <a href="https://github.com/merwanroudane/econenv/issues">Please report it</a>.</div>
+</div></section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer><div class="wrap">
+  <div class="dev">
+    <h3>Dr Merwan Roudane</h3>
+    <p class="muted">Developer and maintainer of EconEnv</p>
+    <p style="margin:12px 0 0">
+      <a href="https://github.com/merwanroudane">github.com/merwanroudane</a> &nbsp;·&nbsp;
+      <a href="https://github.com/merwanroudane/econenv/issues">Report an issue</a> &nbsp;·&nbsp;
+      <a href="https://github.com/merwanroudane/econenv/blob/main/CITATION.cff">Cite EconEnv</a>
+    </p>
+  </div>
+
+  <div class="linkcols">
+    <div>
+      <h4>Get it</h4>
+      <ul>
+        <li><a href="https://pypi.org/project/econenv/">PyPI package</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv">GitHub repository</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md">Changelog</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/releases">Releases</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Learn it</h4>
+      <ul>
+        <li><a href="guide/econenv-guide.pdf">Installation &amp; User Guide (PDF)</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/examples/10_real_data_four_engines.ipynb">Worked example notebook</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/tree/main/examples">All examples</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/docs/engines/eviews-commands.md">EViews command reference</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Engine notes</h4>
+      <ul>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/docs/engines/python.md">Python</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/docs/engines/r.md">R</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/docs/engines/stata.md">Stata</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/docs/engines/eviews.md">EViews</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="muted" style="margin-top:32px;padding-top:20px;border-top:1px solid var(--line)">
+    EconEnv is MIT licensed. It does not contain, bundle or redistribute Stata or
+    EViews — those are commercial products you install and licence yourself.
+    R and Python are free and open source.
+  </p>
+</div></footer>
+
+</body>
+</html>
