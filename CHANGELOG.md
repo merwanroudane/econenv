@@ -43,6 +43,8 @@ visible output at all.
   decisions the adapter makes before it reaches COM, and the COM behaviour they
   encode was measured against EViews 13.
 
+Published to PyPI: <https://pypi.org/project/econenv/0.1.1/>
+
 ## [0.1.0] — 2026-09-04
 
 First release. Execution, engine management, the data bridge, results, graphs,

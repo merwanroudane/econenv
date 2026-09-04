@@ -150,6 +150,13 @@ Released on PyPI: **<https://pypi.org/project/econenv/>**
 pip install econenv
 ```
 
+Already on **0.1.0**? Upgrade — EViews cell output and graph capture were both
+broken in that release.
+
+```bash
+pip install --upgrade econenv
+```
+
 Optional extras — install only what you use:
 
 ```bash
