@@ -56,7 +56,11 @@
   {\large Python, R, Stata and EViews in a single Jupyter workflow}\\[26pt]
   {\large\bfseries Installation and User Guide}
 }
-\author{Dr Merwan Roudane}
+\author{
+  {\large Developed by}\\[6pt]
+  {\Large\bfseries Dr Merwan Roudane}\\[8pt]
+  {\normalsize \url{https://github.com/merwanroudane}}
+}
 \date{\today}
 
 \begin{document}
@@ -75,6 +79,21 @@ skip to Section~\ref{sec:installecon}.
 Those are commercial products which you must install and license yourself. R and
 Python are free and open source. EconEnv only connects to what is already on
 your machine.
+\end{minipage}
+\end{center}
+
+\vspace{10pt}
+\begin{center}
+\begin{minipage}{0.86\textwidth}
+\textbf{Quick start.} If you already have Python:
+\begin{lstlisting}
+pip install econenv
+\end{lstlisting}
+then, in a notebook:
+\begin{lstlisting}
+%load_ext econenv
+%econ doctor
+\end{lstlisting}
 \end{minipage}
 \end{center}
 
@@ -640,7 +659,7 @@ it.
 % ======================================================================
 \chapter{A worked example}
 
-The notebook \texttt{examples/10_real_data_four_engines.ipynb} works through a
+The notebook \texttt{examples/10\_real\_data\_four\_engines.ipynb} works through a
 complete exercise on \textbf{real US quarterly macroeconomic data, 1959Q1 to
 2009Q3} --- 203 observations, shipped with statsmodels, so it needs no download.
 
@@ -827,6 +846,21 @@ MIT licence. Free for any use, including commercial.
 EconEnv's licence says nothing about Stata or EViews. It contains no part of
 either, and connects only to installations you have licensed yourself. Your
 obligations under those licences are unchanged.
+
+\section{Developer}
+
+\textbf{Dr Merwan Roudane} --- author and maintainer of EconEnv.
+
+\begin{itemize}
+  \item GitHub: \url{https://github.com/merwanroudane}
+  \item Repository: \url{https://github.com/merwanroudane/econenv}
+  \item Package: \url{https://pypi.org/project/econenv/}
+  \item Issues and feature requests: \url{https://github.com/merwanroudane/econenv/issues}
+\end{itemize}
+
+Contributions are welcome. If EconEnv reports something incorrectly, or a
+command runs and shows nothing, that is a bug worth reporting --- silence is
+never the intended behaviour.
 
 \section{Citation}
 

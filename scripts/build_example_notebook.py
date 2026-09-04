@@ -52,8 +52,46 @@ def cells():
         "installed and licensed. Cells for an engine you do not have will fail "
         "with a clear message; the rest still run. See the *Installation Guide* "
         "PDF in `docs/` for setting each one up from zero."
+        "\n"
+        "---\n"
+        "\n"
+        "**Developed by Dr Merwan Roudane**  \n"
+        "GitHub: <https://github.com/merwanroudane>  \n"
+        "Package: <https://pypi.org/project/econenv/>  \n"
+        "Repository: <https://github.com/merwanroudane/econenv>\n"
     )
 
+    yield md(
+        "## Installation\n"
+        "\n"
+        "EconEnv is on PyPI. If it is not already in the Python that runs this\n"
+        "notebook:\n"
+        "\n"
+        "```bash\n"
+        "pip install econenv\n"
+        "```\n"
+        "\n"
+        "Or, from inside a notebook cell, which installs into **the kernel actually\n"
+        "running** rather than whichever Python happens to be first on your PATH:\n"
+        "\n"
+        "```python\n"
+        "%pip install econenv\n"
+        "```\n"
+        "\n"
+        "Optional extras, only if you need them:\n"
+        "\n"
+        "```bash\n"
+        'pip install "econenv[eviews]"   # comtypes, for EViews on Windows\n'
+        'pip install "econenv[arrow]"    # faster transfer to R\n'
+        'pip install "econenv[all]"\n'
+        "```\n"
+        "\n"
+        "The core install pulls in only pandas, numpy, IPython and statsmodels.\n"
+        "Nothing commercial is downloaded or bundled: R, Stata and EViews must be\n"
+        "installed and licensed by you. The *Installation and User Guide* PDF in\n"
+        "`docs/guide/` walks through all of them from zero.\n"
+    )
+    yield code("# Uncomment if econenv is not installed in this kernel:\n# %pip install econenv")
     yield md("## 0. Load the extension and check what is available")
     yield code("%load_ext econenv")
     yield code("%econ status")
