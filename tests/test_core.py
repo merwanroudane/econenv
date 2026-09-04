@@ -442,3 +442,49 @@ def test_printing_a_figure_describes_it_rather_than_dumping_bytes():
     assert "PNG" in rendered and "eviews" in rendered and "x.line" in rendered
     assert "5,004" in rendered, "say how big it is"
     assert "\x89" not in rendered, "never print raw image bytes to a terminal"
+
+
+def test_pulling_from_r_without_a_name_never_returns_an_empty_frame():
+    """R has no "current dataset" the way Stata and EViews do.
+
+    The default was R's `.Last.value` — the last top-level expression — which
+    after a plot or a model fit is not a data frame, so `pull("r")` silently
+    returned an empty frame instead of the data. Failing loudly with the names
+    R actually holds is the only safe behaviour.
+    """
+    from econenv.engines.r_engine import REngine
+    from econenv.exceptions import DataTransferError
+
+    engine = object.__new__(REngine)
+    engine._last_frame = None
+    engine.name = "r"
+    engine._frames_hint = lambda: "Data frames in R: cars"
+
+    with pytest.raises(DataTransferError) as caught:
+        engine._pull_frame(None)
+
+    assert "needs a name" in str(caught.value)
+    assert ".Last.value" not in str(caught.value)
+
+
+def test_r_remembers_the_frame_econenv_last_transferred():
+    from econenv.engines.r_engine import REngine
+
+    engine = object.__new__(REngine)
+    engine._last_frame = None
+    engine.name = "r"
+    pulled = {}
+    engine._pull_frame_impl = None
+
+    import econenv.bridges.r_bridge as bridge
+
+    original = bridge.pull_frame
+    bridge.pull_frame = lambda eng, name, **kw: pulled.setdefault("name", name)
+    try:
+        engine._push_frame_called = True
+        engine._last_frame = "macro"  # what a push would have recorded
+        engine._pull_frame(None)
+    finally:
+        bridge.pull_frame = original
+
+    assert pulled["name"] == "macro", "the default must be the frame we transferred"

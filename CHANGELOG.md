@@ -54,6 +54,14 @@ batch mode, which is what 0.1.5 claimed.
 
 ### Also fixed
 
+- **`pull("r")` without a name returned an empty frame.** Stata and EViews have
+  a current dataset; R does not — every frame is just a variable. The default
+  was R's `.Last.value`, the last top-level expression, which after a plot or a
+  model fit is not a data frame at all, so the pull silently produced a `(0, 1)`
+  result instead of the data. The default is now the frame EconEnv last
+  transferred, and when there is none the error names the data frames R
+  actually holds.
+
 - **`print(result)` showed a debugging repr, not the result.** Every result
   class — `ExecutionResult`, `ModelResult`, `ComparisonResult`, `Figure` —
   defined `_repr_mimebundle_` but no `__str__`. So a notebook rendered the full
@@ -75,7 +83,7 @@ batch mode, which is what 0.1.5 claimed.
 
 ### Notes
 
-- 164 tests, up from 150. 136 catalogue entries, 94 verified.
+- 166 tests, up from 150. 136 catalogue entries, 94 verified.
 
 ## [0.1.5] — 2026-09-04
 

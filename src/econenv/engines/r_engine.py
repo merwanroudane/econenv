@@ -40,6 +40,7 @@ import pandas as pd
 from .. import config as _config
 from .. import discovery
 from ..exceptions import (
+    DataTransferError,
     EngineExecutionError,
     EngineStartError,
     EngineTimeoutError,
@@ -197,6 +198,7 @@ class REngine(BaseEngine):
         self._home = str(install.home)
         self._executable = str(self._console_executable(install.home) or install.executable)
         self._backend = self._choose_backend()
+        self._last_frame: Optional[str] = None
         return True
 
     @staticmethod
@@ -523,11 +525,44 @@ class REngine(BaseEngine):
         from ..bridges.r_bridge import push_frame
 
         push_frame(self, name, df, **kwargs)
+        self._last_frame = name
 
     def _pull_frame(self, name: Optional[str], **kwargs: Any) -> pd.DataFrame:
+        """Read a data frame out of R.
+
+        Unlike Stata and EViews, R has no "current dataset": every frame is
+        just a variable. The old default was ``.Last.value``, the last
+        top-level expression — which after a plot or a model fit is not a data
+        frame at all, and quietly produced an empty result. So the default is
+        the frame EconEnv last transferred, and when there is none the user is
+        told what R actually holds rather than handed an empty frame.
+        """
         from ..bridges.r_bridge import pull_frame
 
-        return pull_frame(self, name or ".Last.value", **kwargs)
+        target = name or self._last_frame
+        if target is None:
+            raise DataTransferError(
+                "R has no current data frame, so `pull` needs a name: econenv.pull('r', 'mydata').",
+                engine=self.name,
+                hint=self._frames_hint(),
+            )
+        frame = pull_frame(self, target, **kwargs)
+        if name:
+            self._last_frame = name
+        return frame
+
+    def _frames_hint(self) -> str:
+        """Name the data frames R currently holds, so the error is actionable."""
+        try:
+            listing = self.execute(
+                "cat(paste(Filter(function(n) is.data.frame(get(n)), ls()), collapse=' '))",
+                graphics="off",
+            ).stdout.strip()
+        except Exception:  # pragma: no cover - diagnostics must never raise
+            return "Push one first with `%%R -i df`, or name an existing frame."
+        if not listing:
+            return "R currently holds no data frames. Send one with `%%R -i df`."
+        return f"Data frames in R: {listing}"
 
     def _push_scalar(self, name: str, value: Any, **kwargs: Any) -> None:
         self.execute(f"{name} <- {_r_literal(value)}", graphics="off")
