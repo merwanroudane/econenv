@@ -1,0 +1,51 @@
+MIT License
+
+Copyright (c) 2026 Merwan Roudane
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---------------------------------------------------------------------------
+THIRD-PARTY SOFTWARE
+---------------------------------------------------------------------------
+
+The MIT licence above covers the EconEnv source code only. It grants no rights
+whatsoever in the third-party programs EconEnv can talk to.
+
+EconEnv contains, bundles and redistributes NO part of:
+
+  * Stata      (c) StataCorp LLC       - https://www.stata.com
+  * EViews     (c) IHS Global Inc.     - https://www.eviews.com
+  * R          (c) The R Foundation    - GPL-2 / GPL-3
+
+No binaries, no libraries, no licence files, no serial numbers, no activation
+keys. EconEnv locates software that is already installed on the user's own
+machine and drives it through each vendor's documented automation interface
+(PyStata for Stata, COM for EViews, the R console or rpy2 for R).
+
+Users are solely responsible for obtaining, installing and licensing Stata and
+EViews, and for complying with those licences - including any restriction on
+concurrent sessions, server deployment or automated use. Nothing in this
+licence modifies, waives or supersedes the terms of the Stata, EViews or R
+licences.
+
+R is free software distributed under the GNU General Public Licence. EconEnv's
+default R backend runs R as a separate process over its documented command-line
+interface and does not link against R, so EconEnv is not a derivative work of
+R. The optional rpy2 backend is a separate package, installed by the user, and
+is governed by rpy2's own licence.

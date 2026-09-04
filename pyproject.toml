@@ -1,0 +1,146 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "econenv"
+dynamic = ["version"]
+description = "One Notebook. Multiple Econometric Engines. Python, R, Stata and EViews in a single Jupyter session."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [{ name = "Merwan Roudane", email = "merwanroudane920@gmail.com" }]
+maintainers = [{ name = "Merwan Roudane", email = "merwanroudane920@gmail.com" }]
+keywords = [
+    "econometrics",
+    "jupyter",
+    "ipython",
+    "stata",
+    "eviews",
+    "r",
+    "polyglot",
+    "reproducibility",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: IPython",
+    "Framework :: Jupyter",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: R",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "pandas>=1.5",
+    "numpy>=1.22",
+    "ipython>=8.0",
+]
+
+[project.optional-dependencies]
+# R via the in-process rpy2 bridge. NOTE: rpy2 publishes no Windows wheels;
+# on Windows EconEnv uses its own subprocess R backend instead, which needs
+# nothing from PyPI. See docs/engines/r.md.
+r = ["rpy2>=3.5; platform_system != 'Windows'"]
+# Stata: pystata is NOT on PyPI. It ships inside the Stata installation.
+# stata_setup only puts it on sys.path.
+stata = ["stata-setup>=0.1.3"]
+# EViews automation is COM-based and therefore Windows-only.
+eviews = ["comtypes>=1.2; platform_system == 'Windows'"]
+arrow = ["pyarrow>=12"]
+all = [
+    "econenv[stata]",
+    "econenv[arrow]",
+    "rpy2>=3.5; platform_system != 'Windows'",
+    "comtypes>=1.2; platform_system == 'Windows'",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.5",
+    "mypy>=1.8",
+    "pre-commit>=3.5",
+    "pandas-stubs",
+    "types-setuptools",
+]
+docs = ["mkdocs>=1.5", "mkdocs-material>=9.5"]
+
+[project.urls]
+Homepage = "https://github.com/merwanroudane/econenv"
+Repository = "https://github.com/merwanroudane/econenv"
+Issues = "https://github.com/merwanroudane/econenv/issues"
+Documentation = "https://github.com/merwanroudane/econenv/tree/main/docs"
+
+[project.scripts]
+econenv = "econenv.cli:main"
+
+[project.entry-points."econenv.engines"]
+python = "econenv.engines.python_engine:PythonEngine"
+r = "econenv.engines.r_engine:REngine"
+stata = "econenv.engines.stata_engine:StataEngine"
+eviews = "econenv.engines.eviews_engine:EViewsEngine"
+
+[tool.hatch.version]
+path = "src/econenv/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/econenv"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/docs", "/examples", "/README.md", "/LICENSE", "/CITATION.cff"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = [
+    "E501",   # line length is handled by the formatter
+    "B008",
+    "RUF012", # mutable class attrs are used deliberately for registries
+    # The package supports Python 3.9. `from __future__ import annotations`
+    # covers annotations, but typing.Dict/Optional are also used in runtime
+    # positions (dataclass defaults, isinstance-adjacent code), where the PEP
+    # 585/604 spellings are not available on 3.9. Revisit when the floor moves.
+    "UP006",  # non-pep585-annotation  (Dict -> dict)
+    "UP007",  # non-pep604-annotation-union
+    "UP035",  # deprecated typing import
+    "UP045",  # non-pep604-annotation-optional (Optional[X] -> X | None)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["N802", "N806"]
+
+[tool.mypy]
+# The package runs on 3.9; recent mypy releases refuse to target below 3.10,
+# so type checking runs at 3.10 while the runtime floor stays 3.9. The ruff
+# UP006/UP045 ignores above are what actually keep the 3.9 syntax honest.
+python_version = "3.10"
+packages = ["econenv"]
+mypy_path = "src"
+ignore_missing_imports = true
+warn_unused_ignores = false
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "r: requires a working R installation",
+    "stata: requires a licensed Stata installation",
+    "eviews: requires a licensed EViews installation on Windows",
+    "windows: requires Microsoft Windows",
+    "slow: takes more than a couple of seconds",
+]
