@@ -1,3 +1,5 @@
+> **Full documentation site:** <https://merwanroudane.github.io/econenv/>
+
 # EconEnv documentation
 
 | Page | What it covers |

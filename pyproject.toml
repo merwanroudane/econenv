@@ -83,7 +83,7 @@ PyPI = "https://pypi.org/project/econenv/"
 Changelog = "https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md"
 Repository = "https://github.com/merwanroudane/econenv"
 Issues = "https://github.com/merwanroudane/econenv/issues"
-Documentation = "https://github.com/merwanroudane/econenv/tree/main/docs"
+Documentation = "https://merwanroudane.github.io/econenv/"
 
 [project.scripts]
 econenv = "econenv.cli:main"

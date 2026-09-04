@@ -9,7 +9,7 @@ authors:
     orcid: ""
 repository-code: "https://github.com/merwanroudane/econenv"
 repository-artifact: "https://pypi.org/project/econenv/"
-url: "https://github.com/merwanroudane/econenv"
+url: "https://merwanroudane.github.io/econenv/"
 abstract: >-
   EconEnv is an IPython extension that lets a researcher run Python, R, Stata
   and EViews inside a single Jupyter notebook on one Python kernel. It provides
