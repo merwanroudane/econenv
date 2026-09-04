@@ -94,6 +94,7 @@ class EViewsEngine(BaseEngine):
         self._progids: List[str] = []
         self._connected_progid: Optional[str] = None
         self._target: Optional[Dict[str, str]] = None
+        self._emitted_graphs: set = set()
         self._tempdir: Optional[Path] = None
 
     # ------------------------------------------------------------------ #
@@ -223,6 +224,7 @@ class EViewsEngine(BaseEngine):
     def _stop(self) -> None:
         """Release the COM reference — the interface exposes no ``Quit``."""
         self._app = None
+        self._emitted_graphs.clear()
         self._connected_progid = None
         self._cleanup_tempdir()
         import gc
@@ -268,17 +270,25 @@ class EViewsEngine(BaseEngine):
         executed: List[str] = []
         chunks: List[str] = []
         views: List[List[List[str]]] = []
+        want_graphs = bool(kwargs.get("capture_graphs", True))
         for line in lines:
             expression = _view_expression(line)
-            captured = self._capture_view(expression) if expression is not None else None
+            captured = (
+                self._capture_view(expression, graphs=want_graphs)
+                if expression is not None
+                else None
+            )
             if captured is not None:
-                grid, truncated = captured
-                views.append(grid)
-                chunks.append(_render_grid(grid))
-                if truncated:
-                    result.warnings.append(
-                        f"{line}: output truncated; raise eviews.max_view_cells to see it all."
-                    )
+                if captured[0] == "table":
+                    _, grid, truncated = captured
+                    views.append(grid)
+                    chunks.append(_render_grid(grid))
+                    if truncated:
+                        result.warnings.append(
+                            f"{line}: output truncated; raise eviews.max_view_cells to see it all."
+                        )
+                else:
+                    result.figures.append(captured[1])
                 executed.append(line)
                 continue
             try:
@@ -305,20 +315,33 @@ class EViewsEngine(BaseEngine):
                 "progid": self._connected_progid,
             }
         )
-        if kwargs.get("capture_graphs", True):
-            result.figures.extend(self._collect_new_graphs(kwargs.get("graph_names")))
+        if want_graphs:
+            seen = {(figure.name or "").upper() for figure in result.figures}
+            result.figures.extend(
+                figure
+                for figure in self._collect_new_graphs(kwargs.get("graph_names"))
+                if (figure.name or "").upper() not in seen
+            )
         return result
 
-    def _capture_view(self, expression: str) -> Optional[tuple]:
-        """Freeze a display view into a table and read it back over COM.
+    def _capture_view(self, expression: str, graphs: bool = True) -> Optional[tuple]:
+        """Freeze a display view and read it back — as text, or as an image.
 
-        ``Run`` executes a command but returns nothing — EViews writes output to
+        ``Run`` executes a command but returns nothing: EViews writes output to
         its own window, which is why an ``eq1.output`` cell used to come back
-        empty. ``freeze`` turns the view into a table object whose cells
-        ``Get`` can read, so no temporary file and no path quoting is involved.
+        empty. ``freeze`` turns any view into an object, and the object is then
+        read over COM.
 
-        Returns ``None`` when the line was not a view after all, so the caller
-        falls back to running it normally.
+        A view freezes into one of two things. An estimation or statistics view
+        becomes a **table**, whose cells ``Get`` can read. A plotting view such
+        as ``x.line`` becomes a **graph**, which has no rows and must be
+        exported as an image — and, crucially, leaves no named graph object
+        behind, so the end-of-cell sweep over ``@wlookup("*","graph")`` never
+        saw it. That is why plots produced the EViews way showed nothing.
+
+        Returns ``("table", grid, truncated)``, ``("figure", figure)``, or
+        ``None`` when the line was not a view after all, so the caller falls
+        back to running it normally.
         """
         name = f"_ee_v{uuid.uuid4().hex[:8]}"
         try:
@@ -327,7 +350,17 @@ class EViewsEngine(BaseEngine):
             self.log.debug("not a view: %s (%s)", expression, com_message(exc) or exc)
             return None
         try:
-            return self._read_table(name)
+            table = self._read_table(name)
+            if table is not None:
+                grid, truncated = table
+                return ("table", grid, truncated)
+            if not graphs:
+                return None
+            figure = self.capture_graph(name)
+            if figure is not None:
+                figure.name = expression
+                return ("figure", figure)
+            return None
         finally:
             with contextlib.suppress(Exception):
                 self._run_command(f"delete {name}")
@@ -495,12 +528,25 @@ class EViewsEngine(BaseEngine):
         return str(listing).split() if listing else []
 
     def _collect_new_graphs(self, explicit: Optional[List[str]] = None) -> List[Figure]:
+        """Export graphs this cell created — *new* ones, hence the name.
+
+        The sweep looks at every graph in the workfile, so without a memory of
+        what has already been shown one plot would reappear below every
+        subsequent cell for the rest of the session. An explicit request
+        (``--graph``, or a ``show`` line) bypasses the memory and always
+        exports.
+        """
+        explicit_request = explicit is not None
         names = explicit if explicit is not None else self.graph_names()
         figures = []
         for graph in names:
+            key = graph.upper()
+            if not explicit_request and key in self._emitted_graphs:
+                continue
             figure = self.capture_graph(graph)
             if figure is not None:
                 figures.append(figure)
+                self._emitted_graphs.add(key)
         return figures
 
     # ------------------------------------------------------------------ #

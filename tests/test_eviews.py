@@ -12,6 +12,7 @@ import pytest
 
 from econenv import discovery
 from econenv.engines import eviews_engine
+from econenv.results import Figure
 
 
 # --------------------------------------------------------------------------- #
@@ -106,3 +107,44 @@ class TestProgID:
         monkeypatch.setattr(discovery, "IS_WINDOWS", True)
         monkeypatch.setattr(discovery, "_clsid_for", lambda progid: None)
         assert discovery.eviews_progid_target("EViews.Manager.99") is None
+
+
+class TestGraphViews:
+    """Plots made the EViews way produced nothing at all.
+
+    `x.line` is a *view*: it freezes into a graph, not a table, and leaves no
+    named graph object behind — so the end-of-cell sweep over
+    `@wlookup("*","graph")` never saw it and the figure was discarded.
+    """
+
+    @staticmethod
+    def _engine(names):
+        engine = object.__new__(eviews_engine.EViewsEngine)
+        engine._emitted_graphs = set()
+        engine.graph_names = lambda: list(names)
+        engine.capture_graph = lambda name: Figure(
+            data=b"PNG", mimetype="image/png", engine="eviews", name=name
+        )
+        return engine
+
+    def test_a_graph_is_shown_once_not_under_every_later_cell(self):
+        engine = self._engine(["G1"])
+
+        first = engine._collect_new_graphs()
+        second = engine._collect_new_graphs()
+
+        assert [f.name for f in first] == ["G1"]
+        assert second == [], "an existing graph must not reappear below the next cell"
+
+    def test_an_explicit_request_always_exports(self):
+        engine = self._engine(["G1"])
+        engine._collect_new_graphs()
+
+        again = engine._collect_new_graphs(["G1"])
+
+        assert [f.name for f in again] == ["G1"]
+
+    @pytest.mark.parametrize("line", ["x.line", "x.hist", "eq1.resids"])
+    def test_plotting_views_reach_the_capture_path(self, line):
+        """They must be recognised as views, or they are simply run and lost."""
+        assert eviews_engine._view_expression(line) == line

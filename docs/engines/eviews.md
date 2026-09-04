@@ -206,6 +206,22 @@ cell.
 The frozen table is deleted immediately afterwards, and the raw grid stays on
 `result.metadata["views"]` if you want the cells rather than the text.
 
+A view does not always freeze into a table. A plotting view freezes into a
+**graph**, which has no rows and is exported as an image instead:
+
+```python
+%%eviews
+x.line          # a view: no named graph object is created
+```
+
+This matters because `x.line` leaves nothing behind in the workfile. Capturing
+figures by sweeping for named graph objects finds it only when you name one
+yourself (`graph g1.line x`), which is why plots written the ordinary EViews way
+showed nothing before 0.1.3.
+
+Each named graph is shown once, not again under every later cell. `show g1`
+always re-exports, and `--no-graphs` suppresses images while keeping the text.
+
 Very large views are capped:
 
 ```python

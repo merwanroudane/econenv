@@ -4,6 +4,39 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] — 2026-09-04
+
+EViews plots made the ordinary EViews way produced nothing. Reported from a
+notebook where the estimation table rendered correctly but no graph ever
+appeared.
+
+### Fixed
+
+- **`x.line`, `x.hist` and every other plotting view showed nothing.** In
+  EViews a plot is usually a *view*, not an object: `x.line` draws a graph but
+  leaves no named graph behind. EconEnv captured figures by sweeping the
+  workfile for named graph objects, so there was nothing to find. Worse, 0.1.1
+  froze such a line, discovered it was not a table, and dropped it. A frozen
+  view is now read as a table when it has rows and exported as an image when it
+  does not — so `x.line` returns a PNG.
+- **`show g1` displayed the same graph twice.** The view path keeps the name as
+  typed, the workfile sweep reports EViews' own casing (`G1`), so the
+  deduplication missed. It is now case-insensitive.
+- **One plot reappeared below every later cell.** The sweep exported every
+  graph in the workfile on every execution, with no memory of what had already
+  been shown. It now emits each graph once; an explicit `show` still always
+  exports.
+
+### Notes
+
+- 135 tests, up from 130.
+- Verified end to end through the `%%eviews` magic in a live IPython session
+  against EViews 13: an estimation-plus-plot cell returns both the table and a
+  PNG, a later cell adds no stale figures, and `--no-graphs` still suppresses
+  images while keeping the text.
+
+Published to PyPI: <https://pypi.org/project/econenv/0.1.3/>
+
 ## [0.1.2] — 2026-09-04
 
 Two EViews reporting bugs, both visible in `%econ status` before any engine is
@@ -183,6 +216,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[0.1.3]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.3
 [0.1.2]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.2
 [0.1.1]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.1
 [0.1.0]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.0
