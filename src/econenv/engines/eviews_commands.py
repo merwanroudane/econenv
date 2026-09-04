@@ -930,12 +930,32 @@ COMMANDS: Tuple[Command, ...] = (
         True,
     ),
     _c(
-        "eq.rls(q) / eq.rls(v)",
+        "eq.rls(q)",
         "test",
-        "Recursive Estimates > CUSUM tests",
-        "The CUSUM family, for parameter stability. EViews 13 accepts the "
-        "recursive options c, n, o, q, r and v — rls(s) is not one of them.",
+        "Stability Diagnostics > Recursive Estimates > CUSUM Test",
+        "CUSUM test — the standardised cumulative sum of recursive residuals, "
+        "with 5% critical lines. If the line leaves the band, the coefficients "
+        "are not stable over the sample.",
         "eq1.rls(q)",
+        True,
+    ),
+    _c(
+        "eq.rls(v)",
+        "test",
+        "Stability Diagnostics > Recursive Estimates > CUSUM of Squares Test",
+        "CUSUM of squares test, with 5% critical lines. More sensitive than "
+        "CUSUM to a sudden change in variance rather than in the coefficients.",
+        "eq1.rls(v)",
+        True,
+    ),
+    _c(
+        "eq.rls(r,s)",
+        "test",
+        "Recursive Estimates dialog, tick the save box",
+        "Add s to any recursive option to also save the results as series. "
+        "Name the series after the command: here the recursive residuals and "
+        "their standard errors. s is a modifier, never an option on its own.",
+        "eq1.rls(r,s) r_res r_resse",
         True,
     ),
     # ---------------------------------------------------------------- forecast

@@ -42,13 +42,19 @@ any missing feature.
 
 ### Resolved
 
-The CUSUM gap reported in 0.1.5 was a mistake in EconEnv's own notes, not a
-limitation. `rls(s)` is not a valid EViews 13 option at all — the accepted
-recursive options are `c`, `n`, `o`, `q`, `r` and `v`, and all six work.
+The CUSUM gap reported in 0.1.5 does not exist, and the explanation given for
+it was also wrong. EViews' own *Object Reference* (page 202) settles it:
+`rls(q)` is the CUSUM test and `rls(v)` is CUSUM of squares, both working.
+
+`s` is not an option at all but a **modifier** meaning *save*: combine it with
+another option and name the series, as in `eq1.rls(r,s) r_res r_resse`, which
+plots the recursive residuals and keeps them. `rls(s)` alone fails because it
+asks to save without saying what to plot — not because CUSUM is unavailable in
+batch mode, which is what 0.1.5 claimed.
 
 ### Notes
 
-- 160 tests, up from 150.
+- 160 tests, up from 150. 136 catalogue entries, 94 verified.
 
 ## [0.1.5] — 2026-09-04
 

@@ -303,7 +303,9 @@ Look these up from a cell with `%econ eviews test`.
 | Stability Diagnostics > Recursive Estimates > Residuals | `eq1.rls(r)` | Recursive residuals with two-standard-error bands. | ✓ |
 | Recursive Estimates > One-Step Forecast Test | `eq1.rls(o)` | One-step-ahead forecast test for parameter stability. | ✓ |
 | Recursive Estimates > N-Step Forecast Test | `eq1.rls(n)` | N-step-ahead forecast test. | ✓ |
-| Recursive Estimates > CUSUM tests | `eq1.rls(q)` | The CUSUM family, for parameter stability. EViews 13 accepts the recursive options c, n, o, q, r and v — rls(s) is not one of them. | ✓ |
+| Stability Diagnostics > Recursive Estimates > CUSUM Test | `eq1.rls(q)` | CUSUM test — the standardised cumulative sum of recursive residuals, with 5% critical lines. If the line leaves the band, the coefficients are not stable over the sample. | ✓ |
+| Stability Diagnostics > Recursive Estimates > CUSUM of Squares Test | `eq1.rls(v)` | CUSUM of squares test, with 5% critical lines. More sensitive than CUSUM to a sudden change in variance rather than in the coefficients. | ✓ |
+| Recursive Estimates dialog, tick the save box | `eq1.rls(r,s) r_res r_resse` | Add s to any recursive option to also save the results as series. Name the series after the command: here the recursive residuals and their standard errors. s is a modifier, never an option on its own. | ✓ |
 
 
 ## Forecasting and fitted values
