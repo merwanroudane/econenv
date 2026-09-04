@@ -305,19 +305,40 @@ def check_r(deep: bool = False) -> List[Check]:
         )
     )
 
-    rpy2 = importlib.util.find_spec("rpy2") is not None
-    checks.append(
-        Check(
+    from .engines.r_engine import rpy2_state
+
+    installed, importable, rpy2_error = rpy2_state()
+    if importable:
+        rpy2_check = Check(
             "rpy2",
-            Status.PASS if rpy2 else Status.SKIP,
-            "importable — the in-process backend and the official %R magics are available"
-            if rpy2
-            else "not installed; EconEnv uses its subprocess backend instead",
-            "rpy2 publishes no Windows wheels; the subprocess backend is the supported "
-            "route on Windows and needs nothing extra.",
+            Status.PASS,
+            "importable — the in-process backend and the official %R magics are available",
             group="r",
         )
-    )
+    elif installed:
+        # Present but unusable is its own state. Reporting it as "not installed"
+        # sends people to install what they already have.
+        rpy2_check = Check(
+            "rpy2",
+            Status.WARN,
+            f"installed but cannot be imported — {rpy2_error or 'unknown error'}",
+            "Usually a build for a different Python. On Windows the working route is "
+            "conda-forge: pip uninstall rpy2, then "
+            "`conda install -c conda-forge rpy2` — note it brings its own R, separate "
+            "from any R already installed. EconEnv works without it, using the "
+            "subprocess backend.",
+            group="r",
+        )
+    else:
+        rpy2_check = Check(
+            "rpy2",
+            Status.SKIP,
+            "not installed; EconEnv uses its subprocess backend instead",
+            "PyPI has no Windows wheels for rpy2. The subprocess backend is the "
+            "supported route on Windows and needs nothing extra.",
+            group="r",
+        )
+    checks.append(rpy2_check)
 
     if deep:
         checks.append(_deep_engine_check("r"))

@@ -52,9 +52,21 @@ plots the recursive residuals and keeps them. `rls(s)` alone fails because it
 asks to save without saying what to plot — not because CUSUM is unavailable in
 batch mode, which is what 0.1.5 claimed.
 
+### Also fixed
+
+- **`doctor` reported PASS for an rpy2 that cannot be imported.** The check used
+  `find_spec`, so a package that is present but raises on import — an rpy2 built
+  for an older Python, which is what `pip install rpy2` leaves on Windows —
+  passed. Installed, importable and usable are now three states rather than two:
+  a broken rpy2 is a WARNING carrying the real ImportError and the conda-forge
+  repair, instead of "not installed", which sent people to install what they
+  already had.
+- `docs/engines/r.md` explains the Windows situation, including the catch that
+  conda-forge's rpy2 brings its own R alongside any already installed.
+
 ### Notes
 
-- 160 tests, up from 150. 136 catalogue entries, 94 verified.
+- 162 tests, up from 150. 136 catalogue entries, 94 verified.
 
 ## [0.1.5] — 2026-09-04
 

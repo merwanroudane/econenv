@@ -144,3 +144,45 @@ IRkernel is R's own Jupyter kernel. It is excellent and completely legitimate �
 but it is a *separate kernel*, so a notebook using it is an R notebook, not a
 polyglot one. Use IRkernel when you want a pure-R notebook; use EconEnv when
 you want R alongside Python, Stata and EViews in the same kernel.
+
+
+## rpy2 on Windows
+
+You do not need rpy2. EconEnv's subprocess backend gives you `%R`, `%%R`, data
+transfer and plots without it, and is the supported route on Windows.
+
+If you want rpy2 anyway — for its official magics, or slightly faster
+transfers — PyPI is the wrong place to get it: there are no Windows wheels for
+any 3.6.x release, so `pip install rpy2` either fails or leaves you with an old
+version built for an older Python. That produces an rpy2 that is *present* but
+raises on import, typically:
+
+```
+ImportError: cannot import name 'SexpVectorCCompatibleAbstract'
+    from 'rpy2.rinterface_lib.sexp'
+```
+
+`econenv doctor` reports that case as **installed but cannot be imported**,
+rather than as missing, and gives the repair:
+
+```bash
+pip uninstall -y rpy2
+conda install -c conda-forge rpy2
+```
+
+conda-forge does build rpy2 for Windows — 3.6.4 has builds for Python 3.10
+through 3.14.
+
+**The catch, and it matters.** conda-forge's rpy2 brings its own R with it
+(the `r44` in the build string means R 4.4). That is a second R, separate from
+any R already installed under `C:\Program Files\R`. Packages you installed in
+your existing R will not be visible to the rpy2 backend, and EconEnv's
+subprocess backend will still use the R it discovered on the system — so the
+two backends can see different libraries.
+
+If that sounds like more trouble than it is worth, it usually is. Stay on the
+subprocess backend:
+
+```python
+%econ config r.backend subprocess
+```

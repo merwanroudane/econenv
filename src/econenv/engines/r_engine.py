@@ -663,6 +663,7 @@ econenv_ols_stats <- data.frame(
 # helpers
 # --------------------------------------------------------------------------- #
 _RPY2_IMPORTABLE: Optional[bool] = None
+_RPY2_ERROR: Optional[str] = None
 
 
 def _rpy2_importable() -> bool:
@@ -676,20 +677,35 @@ def _rpy2_importable() -> bool:
     The import is attempted once and cached; rpy2 loads R itself, so repeating
     it on every status call would be expensive.
     """
-    global _RPY2_IMPORTABLE
+    global _RPY2_IMPORTABLE, _RPY2_ERROR
     if _RPY2_IMPORTABLE is None:
         import importlib.util
 
         try:
             if importlib.util.find_spec("rpy2") is None:
-                _RPY2_IMPORTABLE = False
+                _RPY2_IMPORTABLE, _RPY2_ERROR = False, None
             else:
                 import rpy2.robjects  # noqa: F401
 
-                _RPY2_IMPORTABLE = True
-        except Exception:
+                _RPY2_IMPORTABLE, _RPY2_ERROR = True, None
+        except Exception as exc:
             _RPY2_IMPORTABLE = False
+            _RPY2_ERROR = f"{type(exc).__name__}: {exc}"
     return _RPY2_IMPORTABLE
+
+
+def rpy2_state() -> tuple:
+    """``(installed, importable, error)`` — the three states, not two.
+
+    "Installed" and "usable" are different things, and conflating them made
+    ``doctor`` report PASS for an rpy2 that raises on import. A version built
+    for an older Python is present, has a spec, and cannot be used.
+    """
+    import importlib.util
+
+    installed = importlib.util.find_spec("rpy2") is not None
+    importable = _rpy2_importable()
+    return installed, importable, _RPY2_ERROR
 
 
 def _parse_status(path: Path) -> Dict[str, List[str]]:

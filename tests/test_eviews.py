@@ -302,3 +302,50 @@ class TestCommandCatalogue:
             "docs/engines/eviews-commands.md is out of date — "
             "run: python scripts/gen_eviews_docs.py"
         )
+
+
+class TestRpy2Reporting:
+    """Installed, importable and usable are three states, not two.
+
+    A `find_spec` check reported PASS for an rpy2 that raises on import — which
+    on a real machine told the user to install what they already had, while the
+    load banner in the same session said it was missing.
+    """
+
+    def test_broken_rpy2_is_reported_as_broken_not_missing(self, monkeypatch):
+        from econenv import diagnostics
+        from econenv.engines import r_engine
+
+        monkeypatch.setattr(r_engine, "_RPY2_IMPORTABLE", False)
+        monkeypatch.setattr(
+            r_engine,
+            "_RPY2_ERROR",
+            "ImportError: cannot import name 'SexpVectorCCompatibleAbstract'",
+        )
+        monkeypatch.setattr(
+            r_engine.importlib.util
+            if hasattr(r_engine, "importlib")
+            else diagnostics.importlib.util,
+            "find_spec",
+            lambda name: object() if name == "rpy2" else None,
+        )
+
+        checks = [c for c in diagnostics.check_r() if c.name == "rpy2"]
+        assert checks, "doctor must report on rpy2"
+        check = checks[0]
+        assert check.status is diagnostics.Status.WARN
+        assert "installed but cannot be imported" in check.detail
+        assert "SexpVectorCCompatibleAbstract" in check.detail
+        assert "conda" in check.fix, "the fix must say how to actually repair it"
+
+    def test_absent_rpy2_is_skipped_not_an_error(self, monkeypatch):
+        from econenv import diagnostics
+        from econenv.engines import r_engine
+
+        monkeypatch.setattr(r_engine, "_RPY2_IMPORTABLE", False)
+        monkeypatch.setattr(r_engine, "_RPY2_ERROR", None)
+        monkeypatch.setattr(diagnostics.importlib.util, "find_spec", lambda name: None)
+
+        check = next(c for c in diagnostics.check_r() if c.name == "rpy2")
+        assert check.status is diagnostics.Status.SKIP
+        assert "subprocess backend" in check.detail
