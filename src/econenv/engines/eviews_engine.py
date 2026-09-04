@@ -169,6 +169,7 @@ class EViewsEngine(BaseEngine):
             if app is not None:
                 self._app = app
                 self._connected_progid = progid
+                self._sync_home_to_connection()
                 break
 
         if self._app is None:
@@ -209,6 +210,23 @@ class EViewsEngine(BaseEngine):
 
         gc.collect()
 
+    def _sync_home_to_connection(self) -> None:
+        """Point `home` at the EViews that answered, not the newest installed.
+
+        Detection sorts installs newest-first, so on a machine with 12/13/14 the
+        location column said "EViews 14" while `EViews.Manager` had actually
+        bound to 13.
+        """
+        connected = self._version()
+        if not connected:
+            return
+        major = str(connected).split(".")[0]
+        for install in self._installations:
+            if str(install.version).split(".")[0] == major:
+                self._home = str(install.home)
+                self._executable = str(install.executable)
+                return
+
     def _version(self) -> Optional[str]:
         value = self._eval("@vernum")
         if value is None:
@@ -229,7 +247,21 @@ class EViewsEngine(BaseEngine):
         result = ExecutionResult(engine=self.name, code=code)
         lines = _split_commands(code)
         executed: List[str] = []
+        chunks: List[str] = []
+        views: List[List[List[str]]] = []
         for line in lines:
+            expression = _view_expression(line)
+            captured = self._capture_view(expression) if expression is not None else None
+            if captured is not None:
+                grid, truncated = captured
+                views.append(grid)
+                chunks.append(_render_grid(grid))
+                if truncated:
+                    result.warnings.append(
+                        f"{line}: output truncated; raise eviews.max_view_cells to see it all."
+                    )
+                executed.append(line)
+                continue
             try:
                 self._run_command(line)
             except Exception as exc:
@@ -244,9 +276,10 @@ class EViewsEngine(BaseEngine):
                 ) from exc
             executed.append(line)
 
-        result.stdout = ""
+        result.stdout = "\n\n".join(chunk for chunk in chunks if chunk)
         result.metadata.update(
             {
+                "views": views,
                 "commands": executed,
                 "workfile": self._eval("@wfname"),
                 "page": self._eval("@pagename"),
@@ -256,6 +289,50 @@ class EViewsEngine(BaseEngine):
         if kwargs.get("capture_graphs", True):
             result.figures.extend(self._collect_new_graphs(kwargs.get("graph_names")))
         return result
+
+    def _capture_view(self, expression: str) -> Optional[tuple]:
+        """Freeze a display view into a table and read it back over COM.
+
+        ``Run`` executes a command but returns nothing — EViews writes output to
+        its own window, which is why an ``eq1.output`` cell used to come back
+        empty. ``freeze`` turns the view into a table object whose cells
+        ``Get`` can read, so no temporary file and no path quoting is involved.
+
+        Returns ``None`` when the line was not a view after all, so the caller
+        falls back to running it normally.
+        """
+        name = f"_ee_v{uuid.uuid4().hex[:8]}"
+        try:
+            self._run_command(f"freeze({name}) {expression}")
+        except Exception as exc:
+            self.log.debug("not a view: %s (%s)", expression, com_message(exc) or exc)
+            return None
+        try:
+            return self._read_table(name)
+        finally:
+            with contextlib.suppress(Exception):
+                self._run_command(f"delete {name}")
+
+    def _read_table(self, name: str) -> Optional[tuple]:
+        """Read every cell of an EViews table object. ``None`` if not a table."""
+        rows, cols = self._eval(f"@rows({name})"), self._eval(f"@columns({name})")
+        if rows is None or cols is None:
+            return None
+        n_rows, n_cols = int(rows), int(cols)
+        if n_rows <= 0 or n_cols <= 0:
+            return None
+        limit = int(_config.get_option("eviews", "max_view_cells", 20000))
+        truncated = n_rows * n_cols > limit
+        if truncated:
+            n_rows = max(1, limit // n_cols)
+        grid = []
+        for i in range(1, n_rows + 1):
+            row = []
+            for j in range(1, n_cols + 1):
+                value = self._eval(f"{name}({i},{j})")
+                row.append("" if value is None else str(value).strip())
+            grid.append(row)
+        return grid, truncated
 
     def _run_command(self, line: str) -> None:
         """``Run`` one command, waiting out a transient "currently busy".
@@ -374,7 +451,9 @@ class EViewsEngine(BaseEngine):
         width = _config.get_option("eviews", "width", 6.0)
         height = _config.get_option("eviews", "height", 4.0)
         target = self._tempdir_path() / f"{graph_name}-{uuid.uuid4().hex[:8]}.{fmt}"
-        command = f'{graph_name}.save(t={fmt}, w={width}, h={height}, u=in) "{target.as_posix()}"'
+        # Native separators, NOT as_posix(). EViews parses "C:/Users/..." as the
+        # drive-relative path "C:Users\..." and writes nowhere, reporting success.
+        command = f'{graph_name}.save(t={fmt}, w={width}, h={height}, u=in) "{_native(target)}"'
         try:
             self._app.Run(command)
         except Exception as exc:
@@ -511,6 +590,45 @@ def _execution_hint(message: str, done: int, total: int) -> str:
     if "licen" in lowered:
         return "EViews reported a licence problem. Open EViews once to validate the licence."
     return f"{done} of {total} command(s) ran before this one."
+
+
+# A bare ``object.view`` line is a display view; ``eq1.ls y c x`` carries
+# arguments and is an action. Only the former can be frozen into a table.
+_VIEW_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z][A-Za-z0-9_]*(\([^()]*\))?$")
+_SHOW_RE = re.compile(r"^show\s+(.+)$", re.IGNORECASE)
+
+
+def _native(path: Path) -> str:
+    """Path in the form EViews accepts: native separators, no trailing slash."""
+    return str(path)
+
+
+def _view_expression(line: str) -> Optional[str]:
+    """The view a command displays, or ``None`` if it displays nothing."""
+    stripped = line.strip()
+    match = _SHOW_RE.match(stripped)
+    if match:
+        return match.group(1).strip()
+    return stripped if _VIEW_RE.match(stripped) else None
+
+
+def _render_grid(grid: List[List[str]]) -> str:
+    """Lay a frozen EViews table out as EViews itself would print it."""
+    if not grid:
+        return ""
+    width = max(len(row) for row in grid)
+    widths = [0] * width
+    for row in grid:
+        for index, cell in enumerate(row):
+            widths[index] = max(widths[index], len(cell))
+    lines = []
+    for row in grid:
+        last = max((i for i, cell in enumerate(row) if cell), default=-1)
+        if last < 0:
+            lines.append("")
+            continue
+        lines.append("  ".join(row[i].ljust(widths[i]) for i in range(last + 1)).rstrip())
+    return "\n".join(lines)
 
 
 def _split_commands(code: str) -> List[str]:

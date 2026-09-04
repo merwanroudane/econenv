@@ -154,6 +154,55 @@ time-series operators then treat observations as unordered.
 Graphs are exported to a private temp directory, read into memory, displayed,
 and the file deleted immediately.
 
+## How output gets back to the notebook
+
+The COM `Run` method executes a command but returns no text: EViews writes
+output to its own window, and EconEnv keeps that window hidden. So text has to
+be pulled back deliberately.
+
+A line that names a **display view** — `object.view` with no trailing
+arguments, or `show something` — is frozen into a table object and read back
+cell by cell:
+
+```python
+%%eviews
+equation eq1.ls y c x     # an action: arguments follow, so it just runs
+eq1.output                # a view: frozen, read back, printed
+```
+
+```
+Dependent Variable: Y
+Method: Least Squares
+Sample: 1 100
+Included observations: 100
+
+Variable    Coefficient  Std. Error  t-Statistic  Prob.
+
+C           5.044621     0.105875    47.64697     0.0000
+X           2.056953     0.112013    18.36358     0.0000
+
+R-squared   0.774827     Mean dependent var       4.894231
+...
+```
+
+The distinction matters: freezing an action would silently skip it. So
+`equation eq1.ls y c x` and `eq1.makeresids r1` carry arguments and are run
+normally, while `eq1.output`, `x.stats` and `show eq1` are captured. If a freeze
+fails the line is simply run instead, so an unrecognised view never breaks a
+cell.
+
+The frozen table is deleted immediately afterwards, and the raw grid stays on
+`result.metadata["views"]` if you want the cells rather than the text.
+
+Very large views are capped:
+
+```python
+%econ config eviews.max_view_cells 50000   # default 20000
+```
+
+Reading happens one cell per COM call, so an unbounded table would be slow; when
+the cap trims a view you get a warning saying so rather than silent truncation.
+
 ## EViews' own Jupyter kernel
 
 EViews 14 ships `XeusEViews.exe`. It is a real Jupyter kernel and it works —

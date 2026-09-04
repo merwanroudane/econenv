@@ -4,6 +4,45 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-09-04
+
+Bug fixes for three defects found by running EconEnv in a real notebook against
+EViews 13, StataNow 19.5 and R 4.5.2. Two of them meant EViews produced no
+visible output at all.
+
+### Fixed
+
+- **`%%eviews` printed nothing.** The adapter ran commands through the COM
+  `Run` method, which executes a command but returns no text — EViews writes
+  output to its own window, which is hidden. So `eq1.output` and `show eq1`
+  completed successfully and displayed nothing. Display views are now frozen
+  into a table object and read back cell by cell over COM, which needs no
+  temporary file and no path quoting. A line is treated as a view only when it
+  is `object.view` with no trailing arguments, or `show ...`; `equation eq1.ls
+  y c x` is an action and still runs normally.
+- **No EViews graph was ever captured.** The export path was built with
+  `Path.as_posix()`, and EViews parses `"C:/Users/..."` as the drive-relative
+  path `C:Users\...`. It wrote nowhere, reported success, and the adapter then
+  found no file and returned `None`. Paths now use native separators. This
+  contradicts the 0.1.0 note claiming EViews graphs were captured; they were
+  not.
+- **`%econ status` disagreed with itself about rpy2.** The banner does a real
+  import, but the status column used `find_spec`, so an rpy2 that is installed
+  yet cannot load R — common in conda environments — was reported as the active
+  backend in the same session whose banner said "rpy2 not installed". The check
+  now attempts the import once and caches the result.
+- **`%econ status` reported the wrong EViews location.** Detection sorts
+  installations newest-first, so on a machine with EViews 12, 13 and 14 the
+  location column said "EViews 14" while `EViews.Manager` had actually bound to
+  13. After connecting, the reported location is the installation whose version
+  matches the running one.
+
+### Notes
+
+- 127 tests, up from 114. The new EViews tests need no EViews: they pin the
+  decisions the adapter makes before it reaches COM, and the COM behaviour they
+  encode was measured against EViews 13.
+
 ## [0.1.0] — 2026-09-04
 
 First release. Execution, engine management, the data bridge, results, graphs,
@@ -31,7 +70,8 @@ diagnostics, snapshots and cross-engine OLS comparison.
   the folder; editions BE/SE/MP detected; `%stata`/`%%stata`/`%mata` are
   StataCorp's own.
 - **EViews** — direct COM automation via `comtypes`, Windows only. No
-  dependency on `pyeviews`.
+  dependency on `pyeviews`. (Output and graph capture were broken in this
+  release; see 0.1.1.)
 
 **Data**
 - `push` / `pull` / `move` with `pandas.DataFrame` as the canonical interchange
@@ -110,4 +150,5 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[0.1.1]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.1
 [0.1.0]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.0

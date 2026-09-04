@@ -662,13 +662,34 @@ econenv_ols_stats <- data.frame(
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
-def _rpy2_importable() -> bool:
-    import importlib.util
+_RPY2_IMPORTABLE: Optional[bool] = None
 
-    try:
-        return importlib.util.find_spec("rpy2") is not None
-    except (ImportError, ValueError):
-        return False
+
+def _rpy2_importable() -> bool:
+    """Whether rpy2 can actually be imported — not merely whether it is present.
+
+    A spec-only check disagreed with the magic loader, which does a real import:
+    an rpy2 that is installed but cannot find R (common in conda environments)
+    has a spec but raises on import. `%econ status` then reported backend
+    "rpy2" in the same session whose banner said "rpy2 not installed".
+
+    The import is attempted once and cached; rpy2 loads R itself, so repeating
+    it on every status call would be expensive.
+    """
+    global _RPY2_IMPORTABLE
+    if _RPY2_IMPORTABLE is None:
+        import importlib.util
+
+        try:
+            if importlib.util.find_spec("rpy2") is None:
+                _RPY2_IMPORTABLE = False
+            else:
+                import rpy2.robjects  # noqa: F401
+
+                _RPY2_IMPORTABLE = True
+        except Exception:
+            _RPY2_IMPORTABLE = False
+    return _RPY2_IMPORTABLE
 
 
 def _parse_status(path: Path) -> Dict[str, List[str]]:
