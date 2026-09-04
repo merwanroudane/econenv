@@ -104,7 +104,7 @@ licence. Then retry.
 **It connected to EViews 13 but I have 14 installed**
 The generic `EViews.Manager` ProgID binds to whichever install registered last.
 ```python
-%econ config eviews.progid EViews14.Manager
+%econ config eviews.progid EViews.Manager.14
 ```
 `%econ status` always shows the version actually connected, never the newest on
 disk.

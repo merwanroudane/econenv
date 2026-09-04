@@ -17,7 +17,7 @@ modal dialog you have open.
 
 ```python
 %econ config eviews.instance either    # attach to a running EViews if there is one
-%econ config eviews.progid EViews14.Manager
+%econ config eviews.progid EViews.Manager.14
 %econ config eviews.show_window true
 ```
 
@@ -45,17 +45,29 @@ These are not from a doc page; they were run.
 
 ### 1. The ProgID may bind to the wrong version
 
+On a machine with EViews 12, 13 **and** 14 installed, the generic ProgID
+resolves to whichever install registered last — here, 13:
+
 ```
-EViews.Manager          -> registered
-EViews14.Manager        -> NOT registered
+EViews.Manager     -> {A1B20F57-...}
+                      InprocServer32  C:\Program Files\EViews 13\EViewsMgr.dll
+                      ProgID          EViews.Manager.13
 ```
 
-but the object identifies as `EViews.Application.13` on a machine with EViews
-12, 13 **and** 14 installed. The generic ProgID resolves to whichever install
-registered last.
+Two consequences.
 
-`%econ status` therefore always shows the version EconEnv **connected to**, not
-the newest found on disk. Pin one with `eviews.progid` if it matters.
+**The version is knowable without starting EViews.** The CLSID carries the
+server path and the versioned ProgID it resolves to, so `%econ status` reports
+the real target — 13, not the newest install on disk — before anything is
+launched, and confirms it against the connection once started.
+
+**Versioned ProgIDs are `EViews.Manager.14`,** not `EViews14.Manager`. The
+latter is registered on no machine; EconEnv looked for that form until 0.1.2
+and so recommended pinning a ProgID that does not exist. To pin a version:
+
+```python
+%econ config eviews.progid EViews.Manager.14
+```
 
 ### 2. `Get` needs an `=` prefix for non-series expressions
 

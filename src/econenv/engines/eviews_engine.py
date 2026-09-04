@@ -93,6 +93,7 @@ class EViewsEngine(BaseEngine):
         self._installations: List[discovery.Installation] = []
         self._progids: List[str] = []
         self._connected_progid: Optional[str] = None
+        self._target: Optional[Dict[str, str]] = None
         self._tempdir: Optional[Path] = None
 
     # ------------------------------------------------------------------ #
@@ -119,10 +120,26 @@ class EViewsEngine(BaseEngine):
         if self._installations:
             self._home = str(self._installations[0].home)
             self._executable = str(self._installations[0].executable)
+
+        # The registry says which EViews the ProgID will launch, so the version
+        # and location are known before connecting rather than guessed from the
+        # newest install on disk.
+        wanted = self.options.get("progid") or _config.get_option("eviews", "progid")
+        self._target = discovery.eviews_progid_target(wanted or "EViews.Manager")
+        home = (self._target or {}).get("home")
+        if home:
+            self._home = home
+            for install in self._installations:
+                if str(install.home) == home:
+                    self._executable = str(install.executable)
+                    break
         self._backend = "comtypes"
         return True
 
     def _static_version(self) -> Optional[str]:
+        target = (self._target or {}).get("version")
+        if target:
+            return target
         return self._installations[0].version if self._installations else None
 
     def _info_detail(self) -> Dict[str, Any]:
@@ -130,9 +147,11 @@ class EViewsEngine(BaseEngine):
             "installations": [str(i) for i in self._installations],
             "progids": list(self._progids),
             "connected_progid": self._connected_progid,
+            "progid_target": dict(self._target) if self._target else None,
             "note": (
                 "The generic EViews.Manager ProgID binds to whichever install "
-                "registered last; `version` is the one actually connected."
+                "registered last; the version shown is the one its CLSID "
+                "resolves to, confirmed against the connection once started."
             ),
         }
 
@@ -180,7 +199,7 @@ class EViewsEngine(BaseEngine):
                 hint=(
                     "Open EViews once so it registers and validates its licence, "
                     "then retry. Pin a version with "
-                    "`%econ config eviews.progid EViews14.Manager`."
+                    "`%econ config eviews.progid EViews.Manager.14`."
                 ),
             )
 

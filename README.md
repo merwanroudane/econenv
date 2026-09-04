@@ -150,8 +150,8 @@ Released on PyPI: **<https://pypi.org/project/econenv/>**
 pip install econenv
 ```
 
-Already on **0.1.0**? Upgrade — EViews cell output and graph capture were both
-broken in that release.
+On an older release? Upgrade — EViews cell output and graph capture were broken
+in 0.1.0, and EViews version reporting in 0.1.0 and 0.1.1.
 
 ```bash
 pip install --upgrade econenv
@@ -197,7 +197,7 @@ configure anything. When you do:
 %econ config r.home      "C:/Program Files/R/R-4.5.2"
 %econ config stata.home  "C:/Program Files/Stata19"
 %econ config stata.edition mp
-%econ config eviews.progid EViews14.Manager
+%econ config eviews.progid EViews.Manager.14
 ```
 
 Or persistently, in `~/.econenv/config.toml`:
@@ -211,7 +211,7 @@ home = "C:/Program Files/StataNow19"
 edition = "mp"
 
 [eviews]
-progid = "EViews14.Manager"
+progid = "EViews.Manager.14"
 ```
 
 Environment variables work too: `ECONENV_STATA_EDITION=mp`, `R_HOME`,
@@ -271,7 +271,7 @@ econenv doctor
               → EconEnv picks the newest. Pin one with `%econ config r.home ...`.
 ✔ PASS    PyStata: C:\Program Files\StataNow19\utilities\pystata
 ! WARNING COM version binding: several EViews versions are installed
-              → Pin one: `%econ config eviews.progid EViews14.Manager`.
+              → Pin one: `%econ config eviews.progid EViews.Manager.14`.
 ```
 
 More in [`examples/`](examples/):

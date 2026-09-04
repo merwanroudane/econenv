@@ -350,17 +350,73 @@ def find_eviews() -> List[Installation]:
 def eviews_progids() -> List[str]:
     """COM ProgIDs that resolve on this machine, generic first.
 
+    The versioned form is ``EViews.Manager.14``, *not* ``EViews14.Manager``.
+    EconEnv 0.1.0 and 0.1.1 looked for the latter, found nothing, and so told
+    users to pin a ProgID that does not exist on any machine.
+
     Registration order decides what the generic ``EViews.Manager`` binds to, so
     the caller must report the version it *connected* to (audit §5.1).
     """
     if not IS_WINDOWS:
         return []
-    candidates = ["EViews.Manager"] + [f"EViews{v}.Manager" for v in range(20, 9, -1)]
+    candidates = ["EViews.Manager"] + [f"EViews.Manager.{v}" for v in range(25, 7, -1)]
     resolved = []
     for progid in candidates:
         if _read_registry("HKLM", rf"SOFTWARE\Classes\{progid}\CLSID") or _clsid_for(progid):
             resolved.append(progid)
     return resolved
+
+
+def eviews_progid_target(progid: str = "EViews.Manager") -> Optional[Dict[str, str]]:
+    r"""Which EViews a ProgID will launch — known *without* starting anything.
+
+    The generic ProgID's CLSID carries the server DLL path and the versioned
+    ProgID it resolves to, so the ambiguity that forced EconEnv to report a
+    guessed version before connecting is answerable from the registry:
+
+        EViews.Manager -> {A1B2...} -> InprocServer32 "C:\Program Files\EViews 13\EViewsMgr.dll"
+                                    -> ProgID          EViews.Manager.13
+
+    Returns ``{"version", "home", "progid", "server"}``, or ``None`` off
+    Windows or when the ProgID is not registered.
+    """
+    if not IS_WINDOWS:
+        return None
+    try:
+        import winreg
+    except ImportError:  # pragma: no cover
+        return None
+
+    clsid = _clsid_for(progid)
+    if not clsid:
+        return None
+
+    def _default(path: str) -> Optional[str]:
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, path) as key:
+                return str(winreg.QueryValueEx(key, "")[0])
+        except OSError:
+            return None
+
+    server = _default(rf"CLSID\{clsid}\InprocServer32") or _default(rf"CLSID\{clsid}\LocalServer32")
+    versioned = _default(rf"CLSID\{clsid}\ProgID")
+
+    out: Dict[str, str] = {"progid": progid}
+    if versioned:
+        out["resolved_progid"] = versioned
+        tail = versioned.rsplit(".", 1)[-1]
+        if tail.isdigit():
+            out["version"] = tail
+    if server:
+        path = Path(server.strip().strip('"').split('" ')[0].strip('"'))
+        out["server"] = str(path)
+        if path.parent.is_dir():
+            out["home"] = str(path.parent)
+        if "version" not in out:
+            match = re.search(r"EViews\s*(\d+)", str(path))
+            if match:
+                out["version"] = match.group(1)
+    return out or None
 
 
 def _clsid_for(progid: str) -> Optional[str]:

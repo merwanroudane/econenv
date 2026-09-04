@@ -468,7 +468,7 @@ def check_eviews(deep: bool = False) -> List[Check]:
                     Status.WARN,
                     "several EViews versions are installed and the generic "
                     "EViews.Manager ProgID binds to whichever registered last",
-                    "Pin one: `%econ config eviews.progid EViews14.Manager`. "
+                    "Pin one: `%econ config eviews.progid EViews.Manager.14`. "
                     "`%econ status` always shows the version actually connected.",
                     group="eviews",
                 )

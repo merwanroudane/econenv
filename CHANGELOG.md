@@ -4,6 +4,37 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-09-04
+
+Two EViews reporting bugs, both visible in `%econ status` before any engine is
+started.
+
+### Fixed
+
+- **The documented way to pin an EViews version did not work.** EViews
+  registers its versioned ProgID as `EViews.Manager.14`; EconEnv looked for
+  `EViews14.Manager`, which is registered on no machine. So the versioned
+  ProgIDs were never discovered, and the remedy printed by `econenv doctor`,
+  raised in the start error, and written in the README and three doc pages told
+  users to pin a ProgID that does not exist. Corrected everywhere; on the
+  development machine EconEnv now finds eight versioned ProgIDs where it
+  previously found none.
+- **`%econ status` guessed the EViews version before connecting.** With EViews
+  12, 13 and 14 installed it reported 14 — the newest on disk — while
+  `EViews.Manager` actually binds to 13. The registry answers this without
+  starting anything: the generic ProgID's CLSID carries both the server DLL
+  path and the versioned ProgID it resolves to. Version and location now come
+  from that, and are still confirmed against the live connection once started.
+
+### Notes
+
+- 130 tests, up from 127.
+- The 0.1.0 audit note claiming versioned ProgIDs are "NOT registered" was
+  wrong — it probed the wrong name. `docs/engines/eviews.md` now shows the
+  actual registry resolution.
+
+Published to PyPI: <https://pypi.org/project/econenv/0.1.2/>
+
 ## [0.1.1] — 2026-09-04
 
 Bug fixes for three defects found by running EconEnv in a real notebook against
@@ -152,5 +183,6 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[0.1.2]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.2
 [0.1.1]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.1
 [0.1.0]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.0

@@ -25,7 +25,7 @@ test asserting that no warning or error ships without one.
 ```
 ! WARNING COM version binding: several EViews versions are installed and the
           generic EViews.Manager ProgID binds to whichever registered last
-              → Pin one: `%econ config eviews.progid EViews14.Manager`.
+              → Pin one: `%econ config eviews.progid EViews.Manager.14`.
                 `%econ status` always shows the version actually connected.
 ```
 

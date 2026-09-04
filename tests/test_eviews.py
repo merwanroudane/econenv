@@ -6,9 +6,11 @@ measured against EViews 13 on Windows.
 """
 
 import os
+import re
 
 import pytest
 
+from econenv import discovery
 from econenv.engines import eviews_engine
 
 
@@ -74,3 +76,33 @@ class TestGraphPath:
         if os.name == "nt":
             assert "/" not in rendered
         assert rendered.endswith("g.png")
+
+
+class TestProgID:
+    """EViews registers `EViews.Manager.14`, never `EViews14.Manager`.
+
+    EconEnv looked for the second form, found nothing, and therefore told users
+    to pin a ProgID that exists on no machine — in the doctor hint, the start
+    error, the README and three doc pages.
+    """
+
+    def test_versioned_candidates_use_the_registered_form(self, monkeypatch):
+        tried = []
+        monkeypatch.setattr(discovery, "IS_WINDOWS", True)
+        monkeypatch.setattr(discovery, "_read_registry", lambda *a, **k: None)
+        monkeypatch.setattr(discovery, "_clsid_for", lambda progid: tried.append(progid) or None)
+
+        discovery.eviews_progids()
+
+        assert "EViews.Manager" in tried
+        assert "EViews.Manager.14" in tried
+        assert not [p for p in tried if re.fullmatch(r"EViews\d+\.Manager", p)]
+
+    def test_progid_target_is_silent_off_windows(self, monkeypatch):
+        monkeypatch.setattr(discovery, "IS_WINDOWS", False)
+        assert discovery.eviews_progid_target() is None
+
+    def test_progid_target_is_none_when_unregistered(self, monkeypatch):
+        monkeypatch.setattr(discovery, "IS_WINDOWS", True)
+        monkeypatch.setattr(discovery, "_clsid_for", lambda progid: None)
+        assert discovery.eviews_progid_target("EViews.Manager.99") is None

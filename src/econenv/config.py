@@ -58,7 +58,7 @@ DEFAULTS: Dict[str, Dict[str, Any]] = {
         "use_official_magics": True,
     },
     "eviews": {
-        "progid": "EViews.Manager",  # pin e.g. "EViews14.Manager" if needed
+        "progid": "EViews.Manager",  # pin e.g. "EViews.Manager.14" if needed
         "instance": "new",  # new | either | existing
         "busy_retries": 5,  # COM "EViews is currently busy" backoff attempts
         "show_window": False,
