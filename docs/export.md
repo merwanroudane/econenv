@@ -21,6 +21,43 @@ a cell, without importing anything:
 `cmp` can be a `ModelResult`, a `ComparisonResult` across five engines, a
 `DataFrame`, a `Figure`, or a list mixing them.
 
+## In the notebook
+
+`journal_table` returns a `JournalTable` — a DataFrame that *renders* like a
+journal table: rules instead of gridlines, the standard-error rows tight under
+their estimates and unlabelled, and the significance note underneath.
+
+```python
+from econenv.export import journal_table
+
+journal_table(cmp)      # displays as a journal table
+```
+
+It is still a DataFrame, so slicing, `.to_csv()` and every other pandas
+operation work unchanged, and the exporters take it directly.
+
+### What displays automatically
+
+| | In Jupyter |
+|---|---|
+| Plots from R, EViews, MATLAB, Python | inline images |
+| `ExecutionResult`, `ModelResult`, `ComparisonResult` | rich HTML |
+| `journal_table(...)` | journal-styled HTML |
+| MATLAB `disp(table)` | monospace text, as MATLAB printed it |
+| A MATLAB table pulled back with `-o` | a real Jupyter table |
+
+For a MATLAB table as a proper table rather than text, name it on the way out:
+
+```python
+%%matlab -o coefs
+mdl = fitlm(df, 'y ~ x');
+coefs = mdl.Coefficients;
+```
+
+```python
+coefs      # a DataFrame, rendered as a table
+```
+
 ## Two layouts
 
 ### `style="journal"` — the default

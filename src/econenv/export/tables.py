@@ -41,6 +41,64 @@ FOOT_ORDER = (
 )
 
 
+class JournalTable(pd.DataFrame):
+    """A formatted table that renders in Jupyter the way a journal prints it.
+
+    It *is* a DataFrame — every pandas operation still works, and code that
+    expects one is unaffected — but its notebook display uses rules rather than
+    gridlines, centres the numbers, keeps the standard-error rows unlabelled,
+    and puts the significance note underneath. The generic pandas rendering is
+    perfectly readable but looks nothing like the thing you are about to paste
+    into a paper, which makes it harder to spot a layout problem early.
+    """
+
+    _metadata = ["econenv_note", "econenv_caption"]
+
+    @property
+    def _constructor(self):
+        return JournalTable
+
+    def _repr_html_(self) -> str:
+        import html as _html
+
+        note = getattr(self, "econenv_note", None) or self.attrs.get("econenv_note")
+        caption = getattr(self, "econenv_caption", None) or self.attrs.get("econenv_caption")
+
+        head = "".join(f"<th>{_html.escape(str(c))}</th>" for c in self.columns)
+        body = []
+        for index, row in zip(self.index, self.itertuples(index=False)):
+            label = _html.escape(str(index))
+            cells = "".join(f"<td>{_html.escape('' if v is None else str(v))}</td>" for v in row)
+            # A blank label marks a standard-error line; it sits tight under its
+            # estimate, exactly as it does in print.
+            klass = " class='ee-se'" if not str(index).strip() else ""
+            body.append(f"<tr{klass}><td class='ee-lab'>{label}</td>{cells}</tr>")
+
+        style = (
+            "<style>"
+            ".ee-tab{border-collapse:collapse;font-family:Georgia,'Times New Roman',serif;"
+            "font-size:14px;margin:10px 0;color:#1b1b1b}"
+            ".ee-tab caption{caption-side:top;text-align:left;font-weight:600;"
+            "padding:0 0 8px 0;font-size:14.5px}"
+            ".ee-tab th{padding:6px 16px;text-align:center;font-weight:600;"
+            "border-top:1.5px solid #1b1b1b;border-bottom:1px solid #1b1b1b}"
+            ".ee-tab td{padding:3px 16px;text-align:center}"
+            ".ee-tab td.ee-lab{text-align:left;padding-left:2px}"
+            ".ee-tab tr.ee-se td{padding-top:0;color:#444}"
+            ".ee-tab tbody tr:last-child td{border-bottom:1.5px solid #1b1b1b}"
+            ".ee-note{font-family:Georgia,serif;font-size:12px;color:#444;"
+            "margin:6px 0 14px 0;max-width:42em}"
+            "</style>"
+        )
+        cap = f"<caption>{_html.escape(caption)}</caption>" if caption else ""
+        table = (
+            f"<table class='ee-tab'>{cap}<thead><tr><th></th>{head}</tr></thead>"
+            f"<tbody>{''.join(body)}</tbody></table>"
+        )
+        footer = f"<div class='ee-note'>{_html.escape(note)}</div>" if note else ""
+        return style + table + footer
+
+
 def stars_for(pvalue: Optional[float], levels: Sequence = DEFAULT_STARS) -> str:
     """Significance markers for *pvalue*, or "" when it is unknown."""
     if pvalue is None or (isinstance(pvalue, float) and np.isnan(pvalue)):
@@ -140,10 +198,11 @@ def journal_table(
         index.append(label)
         rows.append([("" if v is None else fmt.format(v)) for v in values])
 
-    table = pd.DataFrame(rows, index=index, columns=labels)
+    table = JournalTable(rows, index=index, columns=labels)
     table.attrs["econenv_style"] = "journal"
     table.attrs["econenv_stars"] = list(stars)
     table.attrs["econenv_depvar"] = next((m.depvar for m in models.values() if m.depvar), None)
+    table.attrs["econenv_note"] = star_note(stars)
     return table
 
 

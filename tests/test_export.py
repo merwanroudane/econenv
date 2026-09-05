@@ -192,3 +192,45 @@ class TestTablesOnly:
         result = export_table([_model(), figure], tmp_path / "t.csv")
         assert result.figures == []
         assert len(result.tables) == 1
+
+
+class TestJupyterDisplay:
+    """A journal table should look like one in the notebook, not like a grid.
+
+    The generic pandas rendering is readable but looks nothing like the thing
+    you are about to paste into a paper, which makes a layout problem harder to
+    catch early.
+    """
+
+    def test_it_is_still_a_dataframe(self):
+        """Subclass, not wrapper — every pandas operation must keep working."""
+        table = journal_table(_model())
+        assert isinstance(table, pd.DataFrame)
+        assert table.shape[0] > 0
+        assert table.to_csv()
+        assert isinstance(table.iloc[:2], pd.DataFrame)
+
+    def test_it_renders_with_rules_rather_than_gridlines(self):
+        html = journal_table(_model())._repr_html_()
+        assert "border-top:1.5px solid #1b1b1b" in html
+        assert "tbody tr:last-child td{border-bottom:1.5px" in html
+
+    def test_standard_error_rows_are_marked_so_they_sit_tight(self):
+        import re
+
+        html = journal_table(_model())._repr_html_()
+        body = re.search(r"<tbody>(.*?)</tbody>", html, re.S).group(1)
+        rows = re.findall(r"(<tr[^>]*>.*?</tr>)", body, re.S)
+        se_rows = [r for r in rows if "ee-se" in r.split(">")[0]]
+        assert len(se_rows) == 2, "one unlabelled SE row under each coefficient"
+
+    def test_the_star_note_travels_with_the_table(self):
+        html = journal_table(_model())._repr_html_()
+        assert "Standard errors in parentheses" in html
+        assert "p &lt; 0.01" in html or "p < 0.01" in html
+
+    def test_every_writer_still_accepts_it(self, tmp_path):
+        """It must remain usable by the exporters, not just pretty."""
+        result = export(_model(), tmp_path / "t", formats=["tex", "csv", "html"])
+        assert len(result.tables) == 3
+        assert all(p.stat().st_size > 0 for p in result.tables)
