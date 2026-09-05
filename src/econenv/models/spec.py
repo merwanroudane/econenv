@@ -104,7 +104,7 @@ class ModelSpec:
         for name in [self.depvar, *self.exog]:
             if not _NAME.match(name):
                 raise ModelSpecificationError(
-                    f"{name!r} is not a usable variable name across all four engines."
+                    f"{name!r} is not a usable variable name across all five engines."
                 )
         if not self.exog and not self.constant:
             raise ModelSpecificationError("A model with no regressors and no constant is empty.")

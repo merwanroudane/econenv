@@ -554,3 +554,53 @@ class TestColab:
         assert "no Linux build" in fix
         assert "Wine" in fix
         assert "web server access to EViews via COM is not allowed" in fix
+
+
+class TestBroadcast:
+    """One dataset into every engine is the common opening move of a session."""
+
+    def test_a_failing_engine_does_not_stop_the_others(self, monkeypatch):
+        from econenv import transfer
+
+        calls = {}
+
+        def fake_push(engine, name, obj, **kwargs):
+            calls[engine] = True
+            if engine == "eviews":
+                raise RuntimeError("EViews is not installed")
+
+        monkeypatch.setattr(transfer, "push", fake_push)
+        outcome = transfer.broadcast("d", pd.DataFrame({"a": [1]}), ["r", "eviews", "stata"])
+
+        assert outcome["r"] is None
+        assert outcome["stata"] is None, "a later engine must still be attempted"
+        assert "not installed" in outcome["eviews"]
+
+    def test_strict_re_raises_instead_of_recording(self, monkeypatch):
+        from econenv import transfer
+
+        monkeypatch.setattr(
+            transfer, "push", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
+        with pytest.raises(RuntimeError, match="boom"):
+            transfer.broadcast("d", pd.DataFrame({"a": [1]}), ["r"], strict=True)
+
+    def test_python_is_not_a_broadcast_target(self, monkeypatch):
+        """The data is already in Python; pushing it to itself is noise."""
+        from econenv import transfer
+
+        pushed = []
+        monkeypatch.setattr(transfer, "push", lambda e, n, o, **k: pushed.append(e))
+        transfer.broadcast("d", pd.DataFrame({"a": [1]}))
+        assert "python" not in pushed
+
+
+def test_transfer_matrix_reports_this_machine_not_the_manual():
+    matrix = econenv.transfer_matrix()
+    assert {"available", "state", "receives", "sends", "version"} <= set(matrix.columns)
+    assert "Python" in matrix.index
+    # every engine that can take a frame must also be able to give one back,
+    # or `move` between them would be a one-way trip
+    for engine, row in matrix.iterrows():
+        if row["receives"]:
+            assert row["sends"], f"{engine} can receive but not send"

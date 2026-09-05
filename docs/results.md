@@ -36,7 +36,7 @@ result = %eviews -r equation eq1.ls y c x
 
 ## `ModelResult`
 
-The harmonised econometric subset (brief §16). Fields present in all four
+The harmonised econometric subset (brief §16). Fields present in all five
 engines are filled; fields an engine does not report stay `None` — **an absent
 value is information, so it is never faked**.
 

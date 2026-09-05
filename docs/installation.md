@@ -126,9 +126,9 @@ Three caveats, none of them technical:
 - Whether your licence permits installation on a disposable cloud VM is a
   question for StataCorp, not for EconEnv. Check before relying on it.
 
-### All four engines in Colab — connect it to your own machine
+### All five engines in Colab — connect it to your own machine
 
-There is a way to get **Python, R, Stata and EViews** while still working in the
+There is a way to get **Python, R, Stata, EViews and MATLAB** while still working in the
 Colab interface, and it sidesteps every objection above: Colab's **local
 runtime**.
 
@@ -179,7 +179,7 @@ Then everything works, because the kernel is your PC:
 
 ```python
 %load_ext econenv
-%econ status      # Python, R, Stata and EViews, all four
+%econ status      # Python, R, Stata, EViews and MATLAB — all five
 ```
 
 Two caveats worth knowing:

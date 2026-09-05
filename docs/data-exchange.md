@@ -95,3 +95,61 @@ econenv.engine("r").pull_scalar("sd(x)")
 
 See [data-types.md](data-types.md) for the full table and the measured
 round-trip results.
+
+## One dataset, every engine
+
+The common opening move of a multi-engine session:
+
+```python
+econenv.broadcast("macro", df)
+```
+
+```
+{'eviews': None, 'matlab': None, 'r': None, 'stata': None}
+```
+
+`None` means it arrived. An engine that is missing or fails is recorded rather
+than stopping the rest — a machine without MATLAB should still get the data into
+R and Stata. Pass `strict=True` to raise instead, or name the engines you want:
+
+```python
+econenv.broadcast("macro", df, ["r", "stata"])
+```
+
+## What can move where, on this machine
+
+```python
+econenv.transfer_matrix()
+```
+
+```
+        available       state  receives  sends version
+engine
+Python       True  configured      True   True  3.11.0
+EViews       True     running      True   True      13
+MATLAB       True     running      True   True  R2024a
+R            True     running      True   True   4.5.2
+Stata        True     running      True   True    19.5
+```
+
+This reports what is possible *here*, not in principle. An engine that is
+installed but not configured cannot take your data, and finding that out before
+you start is cheaper than a failure mid-session.
+
+## Engine to engine
+
+```python
+econenv.move("stata", "matlab", "macro")
+econenv.move("eviews", "r", "macro", target_name="from_eviews")
+```
+
+The frame passes through pandas so the conversion notes from both legs stay
+inspectable, but no file is written and you never handle the intermediate.
+
+## A note on EViews naming
+
+Pushing to EViews creates a **page of series**, not an object named after the
+frame — there is no `macro` object in the workfile, only `X`, `Y`, `Z`. EconEnv
+remembers the name you pushed under so `pull("eviews", "macro")` returns the page
+rather than failing, which keeps the round trip symmetric with the other four.
+Inside a `%%eviews` cell, refer to the series by their own names.

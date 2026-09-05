@@ -4,7 +4,7 @@
 
 **One Notebook. Multiple Econometric Engines.**
 
-Python, R, Stata and EViews in a single Jupyter workflow — on one Python kernel.
+Python, R, Stata, EViews and MATLAB in a single Jupyter workflow — on one Python kernel.
 
 [![Website](https://img.shields.io/badge/docs-econenv-2B5CA8.svg)](https://merwanroudane.github.io/econenv/)
 [![PyPI](https://img.shields.io/pypi/v/econenv.svg?cacheSeconds=1800)](https://pypi.org/project/econenv/)
@@ -30,10 +30,10 @@ pandas is better.
 So the working day looks like this:
 
 ```
-Python  →  to_csv()  →  Stata  →  export delimited  →  R  →  write.csv  →  EViews
+Python → to_csv() → Stata → export → R → write.csv → EViews → MATLAB
 ```
 
-Four programs open. Four windows. Four copies of the same data, drifting apart.
+Five programs open. Five windows. Five copies of the same data, drifting apart.
 A missing value that meant `.a` in Stata arriving as an empty cell in R. A
 quarterly index that became a string. And when a referee asks "why does your
 robust standard error differ from mine?", there is no way to answer without
@@ -41,7 +41,7 @@ redoing the whole chain by hand.
 
 ## The solution
 
-EconEnv makes the four programs **execution engines behind one Python kernel**.
+EconEnv makes the five programs **execution engines behind one Python kernel**.
 
 ```python
 %load_ext econenv
@@ -107,19 +107,21 @@ The coefficients match. The information criteria do not — and EconEnv says
 graph TD
     A[JupyterLab / Notebook] --> B[IPython / Python kernel]
     B --> C[EconEnv extension]
-    C --> D[Magics: %econ · %R · %stata · %eviews]
+    C --> D[Magics: %econ · %R · %stata · %eviews · %matlab]
     C --> E[Engine registry]
     E --> F[Python engine]
     E --> G[R engine]
     E --> H[Stata engine]
     E --> I[EViews engine]
+    E --> M[MATLAB engine]
     G --> G1[subprocess backend<br/>persistent Rterm]
     G --> G2[rpy2 backend<br/>when installed]
     H --> H1[PyStata<br/>official]
     I --> I1[COM automation<br/>comtypes]
+    M --> M1[MATLAB Engine API<br/>matlabengine]
     C --> J[Data bridges<br/>pandas is canonical]
     C --> K[Results · Diagnostics · Snapshots]
-    E -.future.-> L[MATLAB · Julia · SAS · Gretl · Dynare · GAUSS · Ox · RATS]
+    E -.future.-> L[Julia · SAS · Gretl · Dynare · GAUSS · Ox · RATS]
 ```
 
 Three rules hold the design together:
@@ -127,8 +129,8 @@ Three rules hold the design together:
 1. **No custom kernel.** EconEnv is a Python package plus an IPython extension.
    A polyglot kernel is evaluated in the roadmap, not assumed.
 2. **Nothing above the engine layer touches a vendor API.** Magics, the CLI,
-   diagnostics and the model layer speak only to `BaseEngine`. Adding MATLAB
-   means writing one adapter, not editing the core.
+   diagnostics and the model layer speak only to `BaseEngine`. MATLAB was added
+   as one adapter without touching the core, which is the test of that claim.
 3. **Never hide a difference.** Lossy conversions warn. Engine disagreements are
    reported with the defaults that explain them.
 
@@ -138,15 +140,16 @@ Three rules hold the design together:
 
 | | |
 |---|---|
-| **Four engines, one kernel** | Python, R, Stata, EViews — persistent sessions, no kernel switching |
+| **Five engines, one kernel** | Python, R, Stata, EViews, MATLAB — persistent sessions, no kernel switching |
 | **Real data bridge** | `pandas.DataFrame` is canonical; push/pull/move between any two engines with no file round-trip |
 | **Type fidelity** | Factors, categoricals, dates, booleans, integers and missing values survive the trip — or you get a warning saying exactly what changed |
 | **Econometric metadata** | Time variable, panel variable, frequency, labels and conversion history travel with the frame |
 | **Structured results** | `ExecutionResult` and `ModelResult` instead of scraped text; raw engine output always retained |
-| **Cross-engine comparison** | Same specification, four engines, one table, with tolerance-aware agreement testing |
+| **Cross-engine comparison** | Same specification, five engines, one table, with tolerance-aware agreement testing |
 | **Diagnostics** | `econenv doctor` checks every layer and tells you how to fix what is broken |
 | **Reproducibility** | Environment snapshots and provenance records (code hash, data hash, versions, timing) |
-| **Rich output** | HTML tables, PNG/SVG plots from R and EViews rendered inline |
+| **Rich output** | HTML tables, and plots from R, EViews and MATLAB rendered inline |
+| **Publication export** | Tables to LaTeX, Word, Excel, HTML, Markdown and RTF; journal layout with significance stars, or every statistic |
 | **Honest about limits** | Capability matrix reports what each engine can do *on this machine*, not in theory |
 
 ---
@@ -172,6 +175,8 @@ Optional extras — install only what you use:
 pip install "econenv[stata]"    # helper for locating PyStata
 pip install "econenv[eviews]"   # comtypes, Windows only
 pip install "econenv[arrow]"    # fast Arrow transfer to R
+pip install "econenv[matlab]"   # MATLAB Engine API
+pip install "econenv[export]"   # Word and Excel export
 pip install "econenv[all]"
 ```
 
@@ -192,6 +197,7 @@ Then, in a notebook:
 | Stata | optional | **17 or newer** — PyStata ships with Stata 17+ |
 | EViews | optional | **Windows only**; automation is COM-based |
 | `comtypes` | for EViews | `pip install "econenv[eviews]"` |
+| MATLAB | optional | R2019b+; needs the matching `matlabengine` (24.1.x is R2024a) |
 | `rpy2` | never required | no Windows wheels; EconEnv's subprocess backend replaces it |
 
 ### Google Colab
@@ -206,8 +212,9 @@ One line to install, no local setup.
 | R | works | R is on the Colab image |
 | Stata | **possible** | Stata for Linux + a Linux licence, installed from Drive each session |
 | EViews | no | no Linux build; Wine fails licence activation; and EViews forbids remote access — *"web server access to EViews via COM is not allowed"* |
+| MATLAB | **possible** | MATLAB for Linux exists; same licence question as Stata |
 
-**Want all four engines with the Colab interface?** Use Colab's *local runtime*:
+**Want all five engines with the Colab interface?** Use Colab's *local runtime*:
 the notebook UI stays Colab, but the kernel runs on your own PC, so EViews and
 Stata work exactly as they do locally. Nothing is exposed to the internet — your
 browser talks to `localhost`. It needs the classic Jupyter stack
@@ -312,8 +319,8 @@ More in [`examples/`](examples/):
 2. Python + R
 3. Python + Stata
 4. Python + EViews
-5. All four engines
-6. The same OLS in four engines
+5. All engines together
+6. The same OLS across engines
 7. Data transfer and type fidelity
 8. Time series
 9. Panel data

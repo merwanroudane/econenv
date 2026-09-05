@@ -71,6 +71,7 @@ __all__ = [
     "SessionError",
     "UnsupportedDataTypeError",
     "__version__",
+    "broadcast",
     "compare_ols",
     "configure_logging",
     "doctor",
@@ -86,6 +87,7 @@ __all__ = [
     "push",
     "snapshot",
     "status",
+    "transfer_matrix",
     "unload_ipython_extension",
 ]
 
@@ -140,6 +142,20 @@ def pull(engine_name: str, name: Optional[str] = None, **kwargs: Any):
     from . import transfer
 
     return transfer.pull(engine_name, name, **kwargs)
+
+
+def broadcast(name: str, obj: Any, engines: Any = None, **kwargs: Any):
+    """Push one dataset into every available engine at once."""
+    from .transfer import broadcast as _broadcast
+
+    return _broadcast(name, obj, engines, **kwargs)
+
+
+def transfer_matrix():
+    """Which engines can send and receive data on this machine."""
+    from .transfer import transfer_matrix as _matrix
+
+    return _matrix()
 
 
 def move(source: str, target: str, name: str, **kwargs: Any):

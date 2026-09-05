@@ -16,7 +16,7 @@ import hashlib
 import json
 import platform
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import pandas as pd
 
@@ -59,6 +59,73 @@ def move(
     meta = frame.attrs.get("econenv_metadata")
     if isinstance(meta, DatasetMetadata):
         meta.record(f"{source} -> python -> {target}")
+    return frame
+
+
+def broadcast(
+    name: str,
+    obj: Any,
+    engines: Optional[Sequence[str]] = None,
+    *,
+    strict: bool = False,
+) -> Dict[str, Optional[str]]:
+    """Put one dataset into every engine at once.
+
+    The common opening move of a multi-engine session is "here is my data, give
+    it to all of them", and doing that by hand is four lines that are easy to
+    get half-right. An engine that is missing or fails is recorded rather than
+    stopping the rest, because a machine without MATLAB should still get the
+    data into R and Stata.
+
+    Returns ``{engine: None}`` on success and ``{engine: reason}`` on failure.
+
+    >>> econenv.broadcast("macro", df)                       # doctest: +SKIP
+    >>> econenv.broadcast("macro", df, ["r", "stata"])       # doctest: +SKIP
+    """
+    targets = (
+        list(engines)
+        if engines
+        else [
+            name_
+            for name_ in engine_registry.names()
+            if name_ != "python" and engine_registry.get(name_).available
+        ]
+    )
+    outcome: Dict[str, Optional[str]] = {}
+    for engine in targets:
+        try:
+            push(engine, name, obj)
+            outcome[engine] = None
+        except Exception as exc:
+            if strict:
+                raise
+            outcome[engine] = f"{type(exc).__name__}: {exc}"
+    return outcome
+
+
+def transfer_matrix() -> pd.DataFrame:
+    """Which engines can send and receive a DataFrame on this machine.
+
+    Reports what is actually possible here, not what is possible in principle:
+    an engine that is installed but not configured cannot take your data, and
+    saying so up front is cheaper than a failure mid-session.
+    """
+    rows = []
+    for name in engine_registry.names():
+        engine = engine_registry.get(name)
+        info = engine.info()
+        capabilities = {c.value for c in engine.capabilities()}
+        rows.append(
+            {
+                "engine": info.display_name,
+                "available": engine.available,
+                "state": info.state.value,
+                "receives": "push_frame" in capabilities,
+                "sends": "pull_frame" in capabilities,
+                "version": info.version or "",
+            }
+        )
+    frame = pd.DataFrame(rows).set_index("engine")
     return frame
 
 

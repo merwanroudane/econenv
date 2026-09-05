@@ -162,3 +162,48 @@ econ config: unrecognized arguments: --nope
 
 usage: %econ config [key] [value] [--sources]
 ```
+
+## `%%matlab` — MATLAB
+
+```python
+%%matlab -i df -o beta
+fit = fitlm(df, 'y ~ x1 + x2');
+beta = fit.Coefficients.Estimate;
+```
+
+| Flag | Meaning |
+|---|---|
+| `-i NAME` | push a DataFrame in as a MATLAB `table` |
+| `-o NAME` | bring a MATLAB variable back to Python |
+| `-q` | suppress output |
+| `--no-graphs` | do not capture figures this cell draws |
+| `--result` | return the `ExecutionResult` instead of displaying it |
+
+**MATLAB is slow to start** — roughly a minute cold. The first cell that uses it
+pays for the whole session; every later one is fast. That is also why
+`%econ status` never starts it.
+
+If MATLAB is already open, share it and EconEnv will attach instead of starting
+a second copy:
+
+```matlab
+matlab.engine.shareEngine
+```
+
+```python
+%econ config matlab.shared MATLAB_shared
+```
+
+## `%econ export` — results to publication formats
+
+```python
+%econ export cmp paper/table1 --formats tex,docx,xlsx --caption "Table 1"
+```
+
+| Flag | Meaning |
+|---|---|
+| `--formats` | comma-separated: `tex,docx,xlsx,csv,html,md,rtf` |
+| `--style` | `journal` (default) or `full` |
+| `--caption`, `--label` | passed through to LaTeX and Word |
+
+See [export.md](export.md) for the full API.

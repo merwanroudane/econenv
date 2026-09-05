@@ -95,6 +95,7 @@ class EViewsEngine(BaseEngine):
         self._connected_progid: Optional[str] = None
         self._target: Optional[Dict[str, str]] = None
         self._emitted_graphs: set = set()
+        self._last_frame: Optional[str] = None
         self._tempdir: Optional[Path] = None
 
     # ------------------------------------------------------------------ #
@@ -583,10 +584,21 @@ class EViewsEngine(BaseEngine):
         from ..bridges.eviews_bridge import push_frame
 
         push_frame(self, name, df, **kwargs)
+        # Remember it so `pull(name)` can round-trip. A push creates a *page* of
+        # series, not an object called `name`, so without this the obvious
+        # symmetric call fails while the same call works for R, Stata and MATLAB.
+        self._last_frame = name
 
     def _pull_frame(self, name: Optional[str], **kwargs: Any) -> pd.DataFrame:
         from ..bridges.eviews_bridge import pull_frame
 
+        # `pull("eviews", "macro")` after `push("eviews", "macro", df)` should
+        # return the data, not fail: the name identified a page, and asking for
+        # the page is what the user meant.
+        if name and name == getattr(self, "_last_frame", None):
+            listing = self._eval(f'@wlookup("{name}","series")')
+            if not (listing and str(listing).strip()):
+                return pull_frame(self, None, **kwargs)
         return pull_frame(self, name, **kwargs)
 
     def _pull_matrix(self, name: str) -> np.ndarray:

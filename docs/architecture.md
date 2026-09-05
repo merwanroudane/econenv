@@ -36,7 +36,7 @@ engines/registry.py                        ← the extension point
 A polyglot Jupyter kernel means implementing the Jupyter messaging protocol,
 owning completion, introspection, interrupt and display for four languages, and
 maintaining it against four vendors' release schedules. An IPython extension
-gets the same user-visible result — one notebook, four engines — for a fraction
+gets the same user-visible result — one notebook, many engines — for a fraction
 of that. The trade is evaluated again in the roadmap, not assumed away.
 
 Note that EViews 14 ships `XeusEViews.exe`, its own Jupyter kernel. Using it
@@ -125,7 +125,7 @@ broken third-party engine must not take the other four down with it.
 
 ## Why `pandas.DataFrame` is the interchange object
 
-It is the only structure all four ecosystems already convert to and from
+It is the only structure all these ecosystems already convert to and from
 reliably, and it is what the user already has. The transports underneath differ
 per engine (PyStata's in-memory API, COM arrays, Arrow or typed CSV), but the
 `push_frame` / `pull_frame` contract does not — which is what lets

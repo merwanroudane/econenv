@@ -23,7 +23,7 @@ tolerances is reported as a real difference.
 
 ## Measured result
 
-Fifty observations, `y ~ x1 + x2`, all four engines on one machine:
+Fifty observations, `y ~ x1 + x2`, all five engines on one machine:
 
 | engine | max abs. difference vs statsmodels |
 |---|---|
@@ -67,7 +67,7 @@ hole, and the note explaining the normalisation still travels with the result.
 | R `sandwich::vcovHC` | HC3 by default |
 
 `ModelSpec(vcov=...)` passes your choice through, and `ModelResult.vcov_type`
-records what each engine actually used. If you ask four engines for "robust"
+records what each engine actually used. If you ask several engines for "robust"
 and compare, expect the standard errors to differ — the comparison names this.
 
 ### Missing values
@@ -80,7 +80,7 @@ match. They diverge for other estimators; when EconEnv gains those, the same
 
 EViews lists the constant **first** (`ls y c x1 x2`); Stata and statsmodels list
 it last. EconEnv normalises the term order and renames the intercept to `_cons`
-across all four (`const`, `(Intercept)`, `C` all map to it), so the rows line
+across all of them (`const`, `(Intercept)`, `C` all map to it), so the rows line
 up. The original naming is preserved in `ModelResult.raw`.
 
 ## Reading the output

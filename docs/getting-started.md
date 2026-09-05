@@ -129,5 +129,5 @@ string column; Stata value labels are not created
 
 * [magics.md](magics.md) — every magic and flag
 * [data-types.md](data-types.md) — what survives which trip
-* [comparison.md](comparison.md) — why the four engines' AIC differ
+* [comparison.md](comparison.md) — why the engines' AIC differ
 * [`examples/`](../examples/) — nine progressive notebooks

@@ -1,6 +1,6 @@
 # FAQ
 
-**Do I need all four programs?**
+**Do I need all five programs?**
 No. EconEnv works with any subset, including Python alone. A missing engine is
 a warning in `doctor`, never an error.
 

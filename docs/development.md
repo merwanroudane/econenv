@@ -102,7 +102,7 @@ without importing EconEnv at build time.
 4. Add the known-divergence entry to `models/compare.py` if there is one.
 
 Step 3 is the one that matters. The project's value is in reporting differences
-accurately, not in making four programs look identical.
+accurately, not in making five programs look identical.
 
 ## Conventions
 
