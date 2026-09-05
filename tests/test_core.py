@@ -30,7 +30,7 @@ def test_version_is_exposed():
 
 
 def test_all_four_engines_are_registered():
-    assert set(registry.names()) == {"python", "r", "stata", "eviews"}
+    assert set(registry.names()) == {"python", "r", "stata", "eviews", "matlab"}
 
 
 def test_python_is_listed_first():
@@ -344,7 +344,7 @@ def test_frame_hash_notices_a_dtype_change(sample_frame):
 def test_snapshot_is_serialisable():
     payload = transfer.snapshot(include_packages=False)
     json.dumps(payload, default=str)
-    assert set(payload["engines"]) == {"python", "r", "stata", "eviews"}
+    assert set(payload["engines"]) == {"python", "r", "stata", "eviews", "matlab"}
 
 
 def test_provenance_record_has_the_required_fields():

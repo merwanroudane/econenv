@@ -99,10 +99,13 @@ model_registry.add(
             "r": "lm(y ~ x, data)",
             "stata": "regress y x",
             "eviews": "equation eq.ls y c x",
+            "matlab": "fitlm(data, 'y ~ x')",
         },
         notes=(
-            "All four use listwise deletion and a classical covariance by default. "
-            "AIC/BIC normalisations differ — see docs/comparison.md."
+            "All five use listwise deletion and a classical covariance by default. "
+            "AIC/BIC normalisations differ — statsmodels, Stata and MATLAB agree on "
+            "-2ll+2k, R counts sigma^2 as a parameter, EViews divides by n. "
+            "See docs/comparison.md."
         ),
     )
 )

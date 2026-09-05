@@ -57,6 +57,14 @@ DEFAULTS: Dict[str, Dict[str, Any]] = {
         "graph_format": "svg",
         "use_official_magics": True,
     },
+    "matlab": {
+        "home": None,  # MATLAB root; None -> discover
+        "startup": "-nodesktop",  # options passed to start_matlab
+        "shared": None,  # attach to a shared session instead of a cold start
+        "graphics": "png",  # png | svg | pdf | off
+        "dpi": 150,
+        "keep_temp": False,
+    },
     "eviews": {
         "progid": "EViews.Manager",  # pin e.g. "EViews.Manager.14" if needed
         "instance": "new",  # new | either | existing
