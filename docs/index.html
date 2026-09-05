@@ -13,7 +13,7 @@
   --line:#E4E2DC; --soft:#F4F2EC;
   --accent:#2B5CA8; --accent-dark:#1E4380; --accent-soft:#EAF1FB;
   --gold:#B8860B; --gold-soft:#FBF3E0;
-  --py:#3776AB; --r:#1F65B7; --stata:#7A2E2E; --ev:#1B7A43;
+  --py:#3776AB; --r:#1F65B7; --stata:#7A2E2E; --ev:#1B7A43; --ml:#B0521A;
   --ok:#2E7D4F; --ok-soft:#EDF7F0;
   --warn:#A76A00; --warn-soft:#FDF4E3;
   --radius:14px;
@@ -89,6 +89,7 @@ h4{font-size:16.5px;margin:22px 0 8px}
 .card.tint-r{border-top:3px solid var(--r)}
 .card.tint-stata{border-top:3px solid var(--stata)}
 .card.tint-ev{border-top:3px solid var(--ev)}
+.card.tint-ml{border-top:3px solid var(--ml)}
 
 pre{background:#F7F6F2;border:1px solid var(--line);border-radius:11px;padding:15px 17px;
   overflow-x:auto;font-size:13.6px;line-height:1.55;margin:12px 0}
@@ -100,6 +101,7 @@ code:not(pre code){background:var(--soft);padding:2px 6px;border-radius:6px;font
   text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-bottom:8px}
 .lab-py{background:#EAF2FA;color:var(--py)} .lab-r{background:#E9F0FB;color:var(--r)}
 .lab-stata{background:#F8ECEC;color:var(--stata)} .lab-ev{background:#E9F6EE;color:var(--ev)}
+.lab-ml{background:#FBEFE7;color:var(--ml)}
 .lab-out{background:var(--soft);color:var(--muted)}
 
 table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.8px;
@@ -191,15 +193,15 @@ footer .muted{color:var(--muted);font-size:14.5px}
 
   <div class="btns">
     <a class="btn btn-primary" href="#install">Install from zero</a>
-    <a class="btn btn-ghost" href="https://pypi.org/project/econenv/1.0.9/">View on PyPI</a>
+    <a class="btn btn-ghost" href="https://pypi.org/project/econenv/1.1.0/">View on PyPI</a>
     <a class="btn btn-ghost" href="https://github.com/merwanroudane/econenv">GitHub</a>
     <a class="btn btn-ghost" href="guide/econenv-guide.pdf">User Guide (PDF)</a>
     <a class="btn btn-ghost" href="https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb">Try it on Colab</a>
   </div>
 
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 4px">
-    Latest release <b>v1.0.9</b> ·
-    <a href="https://pypi.org/project/econenv/1.0.9/">on PyPI</a> ·
+    Latest release <b>v1.1.0</b> ·
+    <a href="https://pypi.org/project/econenv/1.1.0/">on PyPI</a> ·
     <a href="https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md">what changed</a>
   </p>
 
@@ -246,7 +248,7 @@ footer .muted{color:var(--muted);font-size:14.5px}
   <div class="grid g4" style="margin-top:24px">
     <div class="card kpi"><div class="n">4</div><div class="l">engines, one kernel</div></div>
     <div class="card kpi"><div class="n">0</div><div class="l">CSV files written</div></div>
-    <div class="card kpi"><div class="n">242</div><div class="l">tests</div></div>
+    <div class="card kpi"><div class="n">258</div><div class="l">tests</div></div>
     <div class="card kpi"><div class="n">136</div><div class="l">EViews commands catalogued</div></div>
   </div>
 </div></section>
@@ -325,6 +327,35 @@ pip install "econenv[all]"</pre>
       Note the format: <code>EViews.Manager.14</code>, not
       <code>EViews14.Manager</code>.</div>
     </li>
+
+    <li>
+      <h3>MATLAB — optional, commercial</h3>
+      <p>Driven through the <b>MATLAB Engine API for Python</b>, which MathWorks
+      publishes on PyPI as <code>matlabengine</code>. The package is versioned to
+      the MATLAB release <i>and</i> to your Python, and both windows are
+      narrow — so pick the row that matches the MATLAB you have:</p>
+      <table>
+        <thead><tr><th>MATLAB</th><th>Install</th><th>Python</th></tr></thead>
+        <tbody>
+          <tr><td>R2024a</td><td><code>pip install "matlabengine==24.1.*"</code></td><td>3.9 – <b>3.11</b></td></tr>
+          <tr><td>R2024b</td><td><code>pip install "matlabengine==24.2.*"</code></td><td>3.9 – 3.12</td></tr>
+          <tr><td>R2025a</td><td><code>pip install "matlabengine==25.1.*"</code></td><td>3.9 – 3.12</td></tr>
+          <tr><td>R2025b</td><td><code>pip install "matlabengine==25.2.*"</code></td><td>3.9 – 3.12</td></tr>
+          <tr><td>R2026a</td><td><code>pip install "matlabengine==26.1.*"</code></td><td>3.9 – <b>3.13</b></td></tr>
+        </tbody>
+      </table>
+      <div class="warn"><b>On Python 3.13 you need R2026a or newer.</b>
+      It is the first release whose Engine API supports 3.13. With an earlier
+      MATLAB, run EconEnv on a Python that release can drive:
+      <code>conda create -n econ python=3.11</code>. Run
+      <code>econenv doctor</code> and it works this out for you — it prints the
+      pin for every release you have installed, and if none suits your Python it
+      names the release that would.</div>
+      <p>The first MATLAB cell takes about a minute to start the session; every
+      later one is fast. If MATLAB is already open, run
+      <code>matlab.engine.shareEngine</code> in it and EconEnv attaches to that
+      session instead of launching a second copy.</p>
+    </li>
   </ol>
 </div></section>
 
@@ -338,7 +369,7 @@ pip install "econenv[all]"</pre>
   <span class="label lab-py">notebook</span>
   <pre>%load_ext econenv</pre>
   <span class="label lab-out">real output</span>
-  <pre class="out">EconEnv 1.0.9 loaded — one notebook, multiple econometric engines.
+  <pre class="out">EconEnv 1.1.0 loaded — one notebook, multiple econometric engines.
   %econ                  econenv
   %Rec / %%Rec           econenv
   %R / %%R               econenv (rpy2 not installed)
@@ -450,6 +481,25 @@ line y</pre>
         <tr><td><code>--no-graphs</code></td><td>suppress figures</td></tr>
         <tr><td><code>--result</code></td><td>return the result object</td></tr>
       </table>
+    </div>
+
+    <div class="card tint-ml">
+      <span class="label lab-ml">MATLAB</span>
+      <h3><code>%%matlab</code></h3>
+      <pre>%%matlab -i df -o beta
+fit = fitlm(df, 'y ~ x1 + x2');
+beta = fit.Coefficients.Estimate;
+disp(fit)</pre>
+      <table>
+        <tr><td><code>-i NAME</code></td><td>push a DataFrame in as a MATLAB <code>table</code></td></tr>
+        <tr><td><code>-o NAME</code></td><td>bring a variable back to Python</td></tr>
+        <tr><td><code>-q</code></td><td>suppress output</td></tr>
+        <tr><td><code>--no-graphs</code></td><td>suppress figures</td></tr>
+        <tr><td><code>--result</code></td><td>return the result object</td></tr>
+      </table>
+      <p style="font-size:14.5px;color:var(--muted)">Figures are captured once
+      each — MATLAB keeps them open, so without that memory one plot would
+      reappear under every later cell.</p>
     </div>
 
     <div class="card tint-py">
@@ -835,7 +885,26 @@ colab-runtime/Scripts/pip install "notebook==6.4.12" jupyter_http_over_ws econen
         <li><b>EViews</b> needs <code>pip install "econenv[eviews]"</code></li>
         <li><b>Stata</b> is version 16 or older — PyStata needs 17+</li>
         <li><b>R</b> is somewhere unusual — set <code>r.home</code></li>
+        <li><b>MATLAB</b> needs the engine package pinned to its release</li>
       </ul>
+    </div>
+
+    <div class="card">
+      <h3><code>%%matlab</code> says the engine is unavailable</h3>
+      <pre class="out">EngineUnavailableError: matlab is not available</pre>
+      <p>Nearly always a version mismatch — the <code>matlabengine</code> package
+      against your MATLAB release, or against your <b>Python</b>. Run
+      <code>econenv doctor</code>; it prints the exact pin for every release you
+      have installed rather than guessing at the newest one:</p>
+      <pre class="out">MATLAB is installed (R2025a, R2024a) but its Engine API does not
+support Python 3.13: R2025a needs Python 3.9-3.12; R2024a needs
+Python 3.9-3.11. On Python 3.13 the Engine API ships from R2026a
+onwards (pip install "matlabengine==26.1.*"), which needs that
+MATLAB release installed. To keep the MATLAB you already have, run
+EconEnv on Python 3.12: `conda create -n econ python=3.12`, then
+`pip install econenv "matlabengine==25.1.*"` for R2025a.</pre>
+      <p>Two ways out, and it names both: move MATLAB forward, or move Python
+      back to a version your MATLAB can drive.</p>
     </div>
 
     <div class="card">

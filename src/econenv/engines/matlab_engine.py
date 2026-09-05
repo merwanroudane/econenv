@@ -50,29 +50,76 @@ from .registry import register
 #: Release folders, e.g. ``R2024a``. Sorted newest-first by year then letter.
 _RELEASE_RE = re.compile(r"^R(\d{4})([ab])$", re.IGNORECASE)
 
-#: Engine-API series that matches each release, and the Python versions that
-#: series supports. MathWorks pins these narrowly and a mismatch is an import
-#: error rather than a wrong answer, so the diagnostic has to name both.
-_ENGINE_SERIES = {"2024a": "24.1", "2024b": "24.2", "2025a": "25.1", "2025b": "25.2"}
+#: Python versions each engine series supports, from the ``requires_python``
+#: metadata MathWorks publishes. The ranges are narrow and move with each
+#: release, which is why a mismatch has to be diagnosed rather than guessed at.
 _SERIES_PYTHON = {
+    "9.15": ((3, 9), (3, 12)),  # R2023b
+    "23.2": ((3, 9), (3, 12)),  # R2023b (renamed series)
     "24.1": ((3, 9), (3, 12)),  # R2024a: 3.9-3.11
     "24.2": ((3, 9), (3, 13)),  # R2024b: 3.9-3.12
     "25.1": ((3, 9), (3, 13)),  # R2025a: 3.9-3.12
     "25.2": ((3, 9), (3, 13)),  # R2025b: 3.9-3.12
+    "26.1": ((3, 9), (3, 14)),  # R2026a: 3.9-3.13
 }
+
+#: Assumed range for a release newer than this table. MathWorks has widened the
+#: window with every release, so treating an unknown newer series as at least as
+#: permissive as the newest known one is the useful guess — and it is stated as
+#: a guess rather than presented as fact.
+_NEWEST_KNOWN = "26.1"
+
+
+def _series_for(release: str) -> str:
+    """Engine series for a release folder name, computed rather than tabulated.
+
+    ``R2024a`` -> ``24.1``, ``R2025b`` -> ``25.2``, ``R2026a`` -> ``26.1``.
+    MathWorks numbers these to a rule, so deriving it means a release newer than
+    this file still gets the right pin instead of falling off a lookup table.
+    """
+    match = _RELEASE_RE.match(release.strip())
+    if not match:
+        return ""
+    year, half = int(match.group(1)), match.group(2).lower()
+    return f"{year - 2000}.{1 if half == 'a' else 2}"
+
+
+def _python_range(series: str) -> tuple:
+    """``(low, high, known)`` — the Python window for *series*."""
+    if series in _SERIES_PYTHON:
+        return (*_SERIES_PYTHON[series], True)
+    return (*_SERIES_PYTHON[_NEWEST_KNOWN], False)
 
 
 def _python_ok(series: str) -> bool:
     """Whether the running interpreter is inside that series' supported range."""
-    bounds = _SERIES_PYTHON.get(series)
-    if not bounds:
-        return True
-    low, high = bounds
+    low, high, _ = _python_range(series)
     return low <= sys.version_info[:2] < high
 
 
-def _series_for(release: str) -> str:
-    return _ENGINE_SERIES.get(release.lower().lstrip("r"), "")
+
+def _release_of(series: str) -> str:
+    """``24.1`` -> ``R2024a``. The inverse of :func:`_series_for`."""
+    major, _, minor = series.partition(".")
+    if not major.isdigit() or minor not in ("1", "2"):
+        return ""
+    return f"R{2000 + int(major)}{'a' if minor == '1' else 'b'}"
+
+
+def _releases_supporting_python(version=None) -> list:
+    """Known releases whose Engine API supports *version*, oldest first.
+
+    This is what lets the diagnostic answer the question a blocked user
+    actually has -- "then which MATLAB *would* work here?" -- instead of only
+    saying that the ones they have will not.
+    """
+    version = version or sys.version_info[:2]
+    out = []
+    for series, (low, high) in sorted(_SERIES_PYTHON.items(), key=lambda kv: kv[0]):
+        release = _release_of(series)
+        if release and low <= version < high:
+            out.append((release, series))
+    return out
 
 
 def _release_key(name: str) -> tuple:
@@ -133,10 +180,7 @@ def engine_api_release() -> Optional[str]:
     parts = version.split(".")
     if len(parts) < 2 or not parts[0].isdigit():
         return None
-    for release, series in _ENGINE_SERIES.items():
-        if series == f"{parts[0]}.{parts[1]}":
-            return f"R{release}"
-    return None
+    return _release_of(f"{parts[0]}.{parts[1]}") or None
 
 
 def _engine_importable() -> tuple:
@@ -231,7 +275,7 @@ class MatlabEngine(BaseEngine):
             if _python_ok(series):
                 usable.append((install.name, series))
             else:
-                low, high = _SERIES_PYTHON[series]
+                low, high, _ = _python_range(series)
                 blocked.append(
                     f"{install.name} needs Python {low[0]}.{low[1]}-{high[0]}.{high[1] - 1}"
                 )
@@ -249,11 +293,37 @@ class MatlabEngine(BaseEngine):
                 message += f". Not usable on Python {python}: {'; '.join(blocked)}"
             return message
 
-        return (
-            f"MATLAB is installed ({found}) but no Engine API supports Python {python}: "
-            f"{'; '.join(blocked)}. Use an environment on a supported Python — for "
-            f"example `conda create -n econ python=3.11` — and install econenv there."
+        supported = _releases_supporting_python()
+        message = (
+            f"MATLAB is installed ({found}) but its Engine API does not support "
+            f"Python {python}: {'; '.join(blocked)}."
         )
+        if supported:
+            release, series = supported[0]
+            message += (
+                f" On Python {python} the Engine API ships from {release} onwards "
+                f'(pip install "matlabengine=={series}.*"), which needs that MATLAB '
+                f"release installed."
+            )
+        # Or keep the MATLAB they have and move Python: suggest the newest
+        # interpreter that one of their own installations can actually drive.
+        best = max(
+            (
+                (_python_range(_series_for(p.name))[1], p.name, _series_for(p.name))
+                for p in self._installs
+                if _series_for(p.name)
+            ),
+            default=None,
+        )
+        if best:
+            high, release, series = best
+            usable_python = f"{high[0]}.{high[1] - 1}"
+            message += (
+                f" To keep the MATLAB you already have, run EconEnv on Python "
+                f"{usable_python}: `conda create -n econ python={usable_python}`, then "
+                f'`pip install econenv "matlabengine=={series}.*"` for {release}.'
+            )
+        return message
 
     def _static_version(self) -> Optional[str]:
         return getattr(self, "_release", None) or (

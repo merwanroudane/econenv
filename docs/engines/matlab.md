@@ -8,27 +8,20 @@ route and it exchanges arrays natively, so a DataFrame becomes a real MATLAB
 
 ## Installing the bridge
 
-The engine package is versioned to the MATLAB release and must match it:
+The engine package is versioned to the MATLAB release **and** to your Python,
+and both windows are narrow:
 
-| MATLAB | Install |
-|---|---|
-| R2024a | `pip install "matlabengine==24.1.*"` |
-| R2024b | `pip install "matlabengine==24.2.*"` |
-| R2025a | `pip install "matlabengine==25.1.*"` |
-| R2025b | `pip install "matlabengine==25.2.*"` |
-
-It must also match your **Python**, and the ranges are narrow:
-
-| MATLAB | Package | Python |
+| MATLAB | Install | Python |
 |---|---|---|
-| R2024a | 24.1.x | 3.9 – **3.11** |
-| R2024b | 24.2.x | 3.9 – 3.12 |
-| R2025a | 25.1.x | 3.9 – 3.12 |
-| R2025b | 25.2.x | 3.9 – 3.12 |
+| R2024a | `pip install "matlabengine==24.1.*"` | 3.9 – **3.11** |
+| R2024b | `pip install "matlabengine==24.2.*"` | 3.9 – 3.12 |
+| R2025a | `pip install "matlabengine==25.1.*"` | 3.9 – 3.12 |
+| R2025b | `pip install "matlabengine==25.2.*"` | 3.9 – 3.12 |
+| R2026a | `pip install "matlabengine==26.1.*"` | 3.9 – **3.13** |
 
-**No engine release supports Python 3.13 yet.** An environment on 3.13 cannot
-run MATLAB through EconEnv at all, whichever MATLAB you have. Make one on a
-supported Python instead:
+**Python 3.13 needs R2026a or newer** — it is the first release whose Engine API
+supports it. On an earlier MATLAB, run EconEnv on a Python that release can
+drive:
 
 ```bash
 conda create -n econ python=3.11
@@ -36,9 +29,14 @@ conda activate econ
 pip install econenv "matlabengine==24.1.*"
 ```
 
-`econenv doctor` reports this: it names a pin for every MATLAB release you have
-installed, and when your Python suits none of them it says so rather than
-handing you a command that cannot work.
+A release newer than this table still resolves: MathWorks numbers the series to
+a rule — `R20YYa` is `YY.1`, `R20YYb` is `YY.2` — so EconEnv computes the pin for
+R2026b and beyond rather than falling off the end of a lookup table.
+
+`econenv doctor` works this out for you: it names a pin for every MATLAB
+release you have installed, and when your Python suits none of them it says
+which release *would* work on it and which Python your own MATLAB can drive —
+rather than handing you a command that cannot work.
 
 ## Which release actually starts
 

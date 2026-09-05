@@ -4,6 +4,28 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-09-05
+
+MATLAB release support, worked out rather than tabulated.
+
+### Added
+
+- **MATLAB R2026a.** Its Engine API (`matlabengine 26.1`) is the first that
+  supports **Python 3.13**; EconEnv previously stopped at R2025b and told a
+  3.13 user that no engine release supported them at all, which was true only
+  of the releases they happened to have installed.
+- Releases newer than any table are resolved by rule — MathWorks numbers the
+  series as `R20YYa` → `YY.1` and `R20YYb` → `YY.2` — so R2026b and later get a
+  correct pin instead of falling off the end of a lookup.
+
+### Fixed
+
+- **The unsupported-Python diagnostic was a dead end.** It said which of your
+  installed releases could not run on your Python, then stopped. It now names
+  the MATLAB release whose engine *does* support that Python, and the Python
+  version your own MATLAB can drive, so there are two ways forward instead of
+  none.
+
 ## [1.0.9] — 2026-09-05
 
 A documentation release. No code changed; its purpose is a PyPI page whose links

@@ -153,13 +153,34 @@ class TestApiMissingMessage:
         assert "25.1" in message
         assert "R2024a" in message and "R2025a" in message
 
-    def test_an_unsupported_python_is_stated_rather_than_a_doomed_pip_command(self, monkeypatch):
+    def test_an_unsupported_python_names_the_release_that_would_work(self, monkeypatch):
+        """R2024a and R2025a cannot drive Python 3.13 — but R2026a can.
+
+        The first version of this message said no Engine API supported 3.13 at
+        all, which is untrue for anyone on R2026a and leaves a blocked user with
+        nowhere to go.
+        """
         monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 13))
         message = self._engine("R2025a", "R2024a")._api_missing_message("no module")
 
-        assert "no Engine API supports Python 3.13" in message
-        assert "pip install" not in message, "no command that cannot work"
-        assert "python=3.11" in message, "say what would work instead"
+        assert "does not support Python 3.13" in message
+        assert "R2026a" in message and "26.1" in message, "name the release that works"
+        assert "python=3.12" in message, "or the Python their own MATLAB can drive"
+
+    def test_r2026a_on_python_313_is_simply_supported(self, monkeypatch):
+        """No warning at all: this combination works."""
+        monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 13))
+        message = self._engine("R2026a")._api_missing_message("no module")
+
+        assert 'matlabengine==26.1.*' in message
+        assert "does not support" not in message
+
+    def test_a_release_newer_than_this_table_still_gets_a_pin(self, monkeypatch):
+        """The series follows a rule, so R2027a resolves without a table entry."""
+        monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 13))
+        message = self._engine("R2027a")._api_missing_message("no module")
+
+        assert 'matlabengine==27.1.*' in message
 
     def test_a_release_usable_on_this_python_is_separated_from_one_that_is_not(self, monkeypatch):
         monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 12))
@@ -180,8 +201,23 @@ class TestApiMissingMessage:
             ("24.1", 3, 12, False),
             ("24.2", 3, 12, True),
             ("25.1", 3, 13, False),
+            ("26.1", 3, 13, True),
+            ("26.1", 3, 14, False),
         ],
     )
     def test_python_support_ranges(self, monkeypatch, series, major, minor, ok):
         monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(major, minor))
         assert matlab_engine._python_ok(series) is ok
+
+    @pytest.mark.parametrize(
+        "release, series",
+        [
+            ("R2024a", "24.1"),
+            ("R2025b", "25.2"),
+            ("R2026a", "26.1"),
+            ("R2027b", "27.2"),
+        ],
+    )
+    def test_series_and_release_round_trip(self, release, series):
+        assert matlab_engine._series_for(release) == series
+        assert matlab_engine._release_of(series) == release
