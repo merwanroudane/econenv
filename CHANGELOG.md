@@ -4,6 +4,72 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-09-05
+
+MATLAB as a fifth engine, and a way to get results out of a notebook and into a
+paper.
+
+### Added
+
+**MATLAB.** Driven through the official MATLAB Engine API for Python, so a
+DataFrame becomes a real MATLAB `table` rather than printed text. Verified
+against R2024a with matlabengine 24.1.4: push a 60×6 table with `datetime` and
+`categorical` intact, run `fitlm`, pull back with every dtype preserved,
+exchange scalars and matrices, capture figures without repeats, and get errors
+that name toolboxes and `addpath`.
+
+MATLAB also implements OLS, so **all five engines now agree** on the same
+regression to eight decimals. Detection reports the release the Engine API will
+*start* — not the newest installed — because on a machine with R2024a and
+R2025a those are different, and naming the wrong one is the mistake the EViews
+adapter used to make.
+
+**Publication export.**
+
+```python
+econenv.export(cmp, "paper/table1", formats=["tex", "docx", "xlsx"])
+%econ export cmp paper/table1 --formats tex,docx --caption "Table 1"
+```
+
+Two layouts, selectable per call: `journal` prints what a paper prints —
+coefficient with significance stars, standard error beneath in parentheses, N
+and fit statistics at the foot — and `full` gives every statistic the engine
+reported. Seven writers: LaTeX with booktabs, Word as a real editable table,
+Excel one sheet per result, plus CSV, HTML, Markdown and RTF.
+
+The content decision is made once and the writers only render it, so the LaTeX
+and the Word version of a result cannot disagree about a coefficient. The output
+was **compiled with pdflatex** during development, which is how the escaping
+rules were settled — a raw `²` is written as `	extsuperscript{2}` rather than
+trusting the document's `inputenc`.
+
+**Transfer helpers.** `econenv.broadcast("macro", df)` puts one dataset into
+every available engine in a single call — 13 seconds for four engines here — and
+records rather than raises when one is missing. `econenv.transfer_matrix()`
+reports what can move where *on this machine*.
+
+### Fixed
+
+- **`pull("eviews", name)` failed after `push("eviews", name, df)`**, while the
+  same round trip worked for R, Stata and MATLAB. A push to EViews creates a
+  page of series, not an object named after the frame. EViews now remembers the
+  name and returns the page.
+- **`export` raised on a DataFrame** — `if tables:` is ambiguous for pandas.
+- **`R²` was emitted as a raw Unicode superscript** in LaTeX.
+
+### Changed
+
+- The documentation said "four engines" in twenty-four places. Present-tense
+  claims now say five; release history is unchanged.
+- New chapters in the guide: MATLAB, Exporting results, Moving data between
+  programs. 31 pages, up from 25.
+- New `docs/export.md`; `docs/magics.md` and `docs/data-exchange.md` extended.
+
+### Notes
+
+- 235 tests, up from 170. `matlabengine` and the export writers are optional
+  extras — MATLAB, Word and Excel are never required.
+
 ## [1.0.7] — 2026-09-04
 
 First stable release. The same code as 0.1.7, with the version number and the
@@ -529,6 +595,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[1.1.0]: https://github.com/merwanroudane/econenv/releases/tag/v1.1.0
 [1.0.7]: https://github.com/merwanroudane/econenv/releases/tag/v1.0.7
 [0.1.7]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.7
 [0.1.6]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.6

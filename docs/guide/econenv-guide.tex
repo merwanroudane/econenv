@@ -49,7 +49,7 @@
   {\normalfont\huge\bfseries\color{accent}}{\chaptertitlename\ \thechapter}{16pt}{\Huge}
 \setlist{itemsep=2pt,parsep=0pt,topsep=4pt}
 
-\newcommand{\econenvversion}{1.0.7}
+\newcommand{\econenvversion}{1.1.0}
 
 \title{
   \vspace{-1.5cm}
@@ -445,7 +445,7 @@ Once per notebook:
 It prints which magics it registered and who owns each one:
 
 \begin{lstlisting}
-EconEnv 1.0.7 loaded - one notebook, multiple econometric engines.
+EconEnv 1.1.0 loaded - one notebook, multiple econometric engines.
   %econ                  econenv
   %Rec / %%Rec           econenv
   %R / %%R               econenv (rpy2 not installed)
@@ -659,6 +659,273 @@ what you typed. Every display command should produce output, a plot, or a
 warning saying it could not be read. Silence is never correct --- please report
 it.
 \end{note}
+
+% ======================================================================
+\chapter{MATLAB}
+
+MATLAB joins the other four through the official MATLAB Engine API for Python,
+which MathWorks ships inside every installation and publishes on PyPI.
+
+\section{Installing the bridge}
+
+The engine package must match the MATLAB release:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{MATLAB release} & \textbf{Engine package} \\
+\midrule
+R2024a & \texttt{pip install "matlabengine==24.1.*"} \\
+R2024b & \texttt{pip install "matlabengine==24.2.*"} \\
+R2025a & \texttt{pip install "matlabengine==25.1.*"} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{warn}
+It must also match your \emph{Python}. R2024a's engine supports Python 3.9 to
+3.11 and refuses anything newer, so a mismatch is an import error rather than a
+wrong answer. \texttt{econenv doctor} says which pin you need.
+\end{warn}
+
+\section{Using it}
+
+\begin{lstlisting}
+%%matlab -i df -o beta
+fit = fitlm(df, 'y ~ x1 + x2');
+beta = fit.Coefficients.Estimate;
+disp(fit)
+\end{lstlisting}
+
+\texttt{-i} pushes a DataFrame in as a MATLAB \texttt{table}; \texttt{-o} brings
+a variable back.
+
+\begin{note}
+\textbf{MATLAB is slow to start} --- roughly a minute cold. The first cell that
+uses it pays for the whole session and every later one is fast. That is also why
+\texttt{\%econ status} never starts it.
+
+If MATLAB is already open, share it and EconEnv attaches instead of launching a
+second copy: run \texttt{matlab.engine.shareEngine} in MATLAB, then
+\texttt{\%econ config matlab.shared MATLAB\_shared}.
+\end{note}
+
+\section{Which release will start}
+
+If you have several MATLAB releases installed, the one that starts is the one
+your \emph{engine package} matches --- not the newest on disk.
+\texttt{\%econ status} reports the release that will actually run.
+
+% ======================================================================
+\chapter{Exporting results for publication}
+
+Getting a table out of a notebook and into a paper is where reproducibility
+usually breaks: numbers are retyped, a coefficient is rounded twice, a
+regression is re-run and the manuscript is not. EconEnv exports from the result
+object itself, so the file and the estimation cannot drift apart.
+
+\section{One call}
+
+\begin{lstlisting}
+econenv.export(cmp, "paper/table1", formats=["tex", "docx", "xlsx"])
+\end{lstlisting}
+
+writes \texttt{table1.tex}, \texttt{table1.docx} and \texttt{table1.xlsx} from
+the same object. From a cell, importing nothing:
+
+\begin{lstlisting}
+%econ export cmp paper/table1 --formats tex,docx --caption "Table 1"
+\end{lstlisting}
+
+What you pass can be a single model, a comparison across five engines, a
+DataFrame, a figure, or a list mixing them.
+
+\section{Two layouts}
+
+\subsection*{Journal --- the default}
+
+What a paper prints: one column per model, the coefficient with significance
+stars, the standard error beneath it in parentheses, and a foot of sample size
+and fit statistics.
+
+\begin{lstlisting}
+econenv.export(cmp, "table1.tex", caption="Consumption function",
+               label="tab:cons")
+\end{lstlisting}
+
+produces the following --- and this output was compiled with pdflatex during
+development, which is how the escaping rules were settled:
+
+\begin{center}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+ & Python & EViews & MATLAB & R & Stata \\
+\midrule
+\_cons & 1.4805*** & 1.4805*** & 1.4805*** & 1.4805*** & 1.4805*** \\
+ & (0.0350) & (0.0350) & (0.0350) & (0.0350) & (0.0350) \\
+x1 & 1.9331*** & 1.9331*** & 1.9331*** & 1.9331*** & 1.9331*** \\
+ & (0.0395) & (0.0395) & (0.0395) & (0.0395) & (0.0395) \\
+Observations & 120 & 120 & 120 & 120 & 120 \\
+R\textsuperscript{2} & 0.9597 & 0.9597 & 0.9597 & 0.9597 & 0.9597 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Full --- every statistic}
+
+One row per term per engine, with coefficient, standard error, test statistic,
+p-value and confidence interval as separate columns. For your own checking
+rather than for a paper.
+
+\begin{lstlisting}
+econenv.export(cmp, "check.xlsx", style="full")
+\end{lstlisting}
+
+\section{Formats}
+
+\begin{center}
+\begin{tabular}{@{}lllp{5.0cm}@{}}
+\toprule
+\textbf{Format} & \textbf{Ext} & \textbf{Needs} & \textbf{Notes} \\
+\midrule
+LaTeX & \texttt{.tex} & --- & booktabs rules, ready to input \\
+Word & \texttt{.docx} & \texttt{export} extra & a real editable table, not a picture \\
+Excel & \texttt{.xlsx} & \texttt{export} extra & one sheet per table, full precision \\
+CSV & \texttt{.csv} & --- & \\
+HTML & \texttt{.html} & --- & self-contained, styled like a journal table \\
+Markdown & \texttt{.md} & \texttt{export} extra & \\
+RTF & \texttt{.rtf} & --- & for submission systems that still want it \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}
+pip install "econenv[export]"
+\end{lstlisting}
+
+A filename with a suffix selects that format; a stem gives you the journal
+bundle of \texttt{tex}, \texttt{docx} and \texttt{xlsx}.
+
+\section{Significance stars}
+
+The economics convention is the default --- \texttt{*** p<0.01},
+\texttt{** p<0.05}, \texttt{* p<0.1} --- and the matching note is written under
+the table automatically. For a journal that uses different thresholds:
+
+\begin{lstlisting}
+econenv.export(cmp, "t.tex",
+               stars=((0.001, "***"), (0.01, "**"), (0.05, "*")))
+\end{lstlisting}
+
+\section{Figures, and why vector matters}
+
+A PNG is fixed pixels: print it at column width and it looks fine, print it
+larger and it does not. A PDF or EPS is instructions, so it stays sharp at any
+size --- which is why most economics journals ask for vector figures.
+
+Ask the engine for vector output \emph{before} running the cell, because a
+bitmap cannot be converted into one afterwards:
+
+\begin{lstlisting}
+%econ config matlab.graphics pdf
+%econ config r.graphics pdf
+%econ config eviews.graphics svg
+\end{lstlisting}
+
+\begin{note}
+EconEnv writes figures in whatever the engine actually produced, and the
+extension follows the \emph{content} rather than the filename --- naming a PNG
+\texttt{.pdf} makes a file nothing can open. If you export raster when vector
+was wanted, the result says so and names the setting to change, rather than
+wrapping a bitmap in a PDF container and calling it vector.
+\end{note}
+
+\section{What it will not do}
+
+\begin{itemize}
+  \item \textbf{Invent a statistic.} A number the engine did not report is left
+        blank, not computed here under different assumptions. A table that
+        quietly mixes two engines' conventions is worse than one with a gap.
+  \item \textbf{Fake vector output.}
+  \item \textbf{Round twice.} The journal layout formats once from the
+        full-precision value; the Excel export keeps the unrounded number.
+\end{itemize}
+
+% ======================================================================
+\chapter{Moving data between programs}
+
+This is the feature the whole project exists for: build a dataset once and use
+it everywhere, without a single CSV.
+
+\section{One dataset, every engine}
+
+\begin{lstlisting}
+econenv.broadcast("macro", df)
+\end{lstlisting}
+
+\begin{lstlisting}
+{'eviews': None, 'matlab': None, 'r': None, 'stata': None}
+\end{lstlisting}
+
+\texttt{None} means it arrived. An engine that is missing or fails is recorded
+rather than stopping the rest, because a machine without MATLAB should still get
+the data into R and Stata. Pass \texttt{strict=True} to raise instead, or name
+the engines you want.
+
+\section{One at a time}
+
+\begin{lstlisting}
+econenv.push("stata", "macro", df)          # Python to Stata
+back = econenv.pull("r", "macro")           # R to Python
+econenv.move("stata", "matlab", "macro")    # Stata to MATLAB
+\end{lstlisting}
+
+Or inline, while running code anyway:
+
+\begin{lstlisting}
+%%R -i macro -o results
+%%eviews -i macro
+%%matlab -i macro -o beta
+\end{lstlisting}
+
+\section{What can move where}
+
+\begin{lstlisting}
+econenv.transfer_matrix()
+\end{lstlisting}
+
+reports what is possible on \emph{this} machine rather than in principle. An
+engine that is installed but not configured cannot take your data, and learning
+that before you start is cheaper than a failure mid-session.
+
+\section{What survives the trip}
+
+\begin{center}
+\begin{tabular}{@{}lp{9.2cm}@{}}
+\toprule
+\textbf{Type} & \textbf{Behaviour} \\
+\midrule
+Numeric & exact \\
+Dates & preserved; the index becomes a column in R and MATLAB, and a dated page in EViews \\
+Booleans & preserved, except that MATLAB logicals cannot be missing \\
+Categoricals & become factors in R, categoricals in MATLAB \\
+Strings & preserved; missing strings become empty in MATLAB \\
+Missing values & preserved, with Stata's extended missing values noted \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Anything lossy warns, naming the column and what changed. Anything that would
+alter a value raises instead.
+
+\begin{warn}
+\textbf{EViews names work differently.} Pushing to EViews creates a \emph{page
+of series}, not an object named after the frame --- there is no \texttt{macro}
+object in the workfile, only \texttt{X}, \texttt{Y}, \texttt{Z}. EconEnv
+remembers the name you pushed under so \texttt{pull("eviews", "macro")} returns
+the page, but inside a \texttt{\%\%eviews} cell you refer to the series by their
+own names.
+\end{warn}
 
 % ======================================================================
 \chapter{Google Colab}
