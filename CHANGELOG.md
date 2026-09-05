@@ -4,7 +4,7 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] — 2026-09-05
+## [1.0.8] — 2026-09-05
 
 MATLAB as a fifth engine, and a way to get results out of a notebook and into a
 paper.
@@ -595,7 +595,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
-[1.1.0]: https://github.com/merwanroudane/econenv/releases/tag/v1.1.0
+[1.0.8]: https://github.com/merwanroudane/econenv/releases/tag/v1.0.8
 [1.0.7]: https://github.com/merwanroudane/econenv/releases/tag/v1.0.7
 [0.1.7]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.7
 [0.1.6]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.6

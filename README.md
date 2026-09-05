@@ -340,7 +340,7 @@ breaking change without a major bump.
 
 | Version | | What changed |
 |---|---|---|
-| **1.1.0** | not yet on PyPI · [notes](CHANGELOG.md#110--2026-09-05) | MATLAB as a fifth engine; publication export; broadcast |
+| **1.0.8** | not yet on PyPI · [notes](CHANGELOG.md#108--2026-09-05) | MATLAB as a fifth engine; publication export; broadcast |
 | 1.0.7 | [PyPI](https://pypi.org/project/econenv/1.0.7/) · [notes](CHANGELOG.md#107--2026-09-04) | First stable release; API declared stable |
 | 0.1.7 | [PyPI](https://pypi.org/project/econenv/0.1.7/) · [notes](CHANGELOG.md#017--2026-09-04) | Google Colab support; all four engines via a local runtime |
 | 0.1.6 | [PyPI](https://pypi.org/project/econenv/0.1.6/) · [notes](CHANGELOG.md#016--2026-09-04) | EViews command reference searchable from a cell; forecast plots; worked example on real data; user guide |
