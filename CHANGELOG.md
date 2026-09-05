@@ -4,6 +4,31 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] — 2026-09-05
+
+A documentation release. No code changed; its purpose is a PyPI page whose links
+work.
+
+### Fixed
+
+- **Every link in the README returned 404 on PyPI.** The README is also the PyPI
+  long description, and PyPI resolves a relative link like
+  `docs/guide/econenv-guide.pdf` against `pypi.org/project/econenv/<version>/`
+  rather than against the repository. All twenty were therefore correct on
+  GitHub and broken for anyone arriving from PyPI — including the User Guide,
+  Examples and Changelog links in the header row.
+
+  All twenty are now absolute `https://github.com/...` URLs, and two tests keep
+  them that way: no relative links may appear in the README, and every
+  repository link must point at a file that exists. The check matches on the
+  link target alone, because a `[text](target)` pattern cannot see
+  `[![badge](img)](target)` — which is how the licence badge survived the first
+  pass of the fix.
+
+- The released version is now linked from the site hero, both example notebooks
+  and the guide's title page, each deriving the number from the package rather
+  than repeating it.
+
 ## [1.0.8] — 2026-09-05
 
 MATLAB as a fifth engine, and a way to get results out of a notebook and into a
@@ -597,6 +622,7 @@ that would have shipped:
 
 Published to PyPI: <https://pypi.org/project/econenv/0.1.0/>
 
+[1.0.9]: https://github.com/merwanroudane/econenv/releases/tag/v1.0.9
 [1.0.8]: https://github.com/merwanroudane/econenv/releases/tag/v1.0.8
 [1.0.7]: https://github.com/merwanroudane/econenv/releases/tag/v1.0.7
 [0.1.7]: https://github.com/merwanroudane/econenv/releases/tag/v0.1.7
