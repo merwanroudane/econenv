@@ -70,6 +70,8 @@ reports what can move where *on this machine*.
 - 235 tests, up from 170. `matlabengine` and the export writers are optional
   extras — MATLAB, Word and Excel are never required.
 
+Published to PyPI: <https://pypi.org/project/econenv/1.0.8/>
+
 ## [1.0.7] — 2026-09-04
 
 First stable release. The same code as 0.1.7, with the version number and the
