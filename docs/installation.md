@@ -206,4 +206,4 @@ Point 3 is the important one: the workaround is technically straightforward and
 contractually prohibited, so EconEnv will not ship it.
 
 For EViews, use a local Windows machine and
-[the four-engine notebook](../examples/10_real_data_four_engines.ipynb).
+[the four-engine notebook](../examples/10_real_data_all_engines.ipynb).

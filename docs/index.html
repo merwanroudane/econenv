@@ -348,18 +348,18 @@ pip install "econenv[all]"</pre>
   <h3>What is available on this machine</h3>
   <pre>%econ status</pre>
   <span class="label lab-out">real output</span>
-  <pre class="out">             state version edition     backend  \
+  <pre class="out">             state version edition        backend  \
 engine
-Python  configured  3.11.0             cpython
-EViews  configured      13            comtypes
-R       configured   4.5.2          subprocess
-Stata      running    19.5      mp     pystata
+Python  configured  3.11.0                cpython
+EViews  configured      13               comtypes
+MATLAB  configured  R2024a          matlab.engine
+R       configured   4.5.2             subprocess
+Stata      running    19.5      mp        pystata
 
                                                  location
 engine
 Python  C:\Users\HP\AppData\Local\Programs\Python\Pyth...
 EViews                         C:\Program Files\EViews 13
-R                              C:\Program Files\R\R-4.5.2
 ...</pre>
 
   <h3>And if something will not start</h3>
@@ -469,7 +469,7 @@ econenv.snapshot()</pre>
   <p class="eyebrow">Real data, real output</p>
   <h2>A complete worked analysis</h2>
   <p class="sub">Everything below is genuine output from
-  <a href="https://github.com/merwanroudane/econenv/blob/main/examples/10_real_data_four_engines.ipynb">the example
+  <a href="https://github.com/merwanroudane/econenv/blob/main/examples/10_real_data_all_engines.ipynb">the example
   notebook</a>, executed against R 4.5.2, StataNow 19.5 MP and EViews 13. The
   data is <b>real US quarterly macroeconomic data, 1959Q1–2009Q3</b> (203
   observations), shipped with statsmodels — so the notebook needs no download
@@ -582,7 +582,7 @@ gci.coint(e)</pre>
   <span class="label lab-out">real output</span>
   <pre class="out">                   Johansen Cointegration Test
 =================================================================
-Date: 09/04/26   Time: 19:50
+Date: 09/05/26   Time: 07:07
 Sample: 1959Q1 2009Q3
 Included observations: 203
 Lags interval (in first differences): 1 to 4
@@ -604,7 +604,7 @@ eq_ev.output</pre>
   <span class="label lab-out">real output</span>
   <pre class="out">Dependent Variable: LRCONS
 Method: Least Squares
-Date: 09/04/26   Time: 19:50
+Date: 09/05/26   Time: 07:07
 Sample: 1959Q1 2009Q3
 Included observations: 203
 
@@ -886,7 +886,7 @@ conda install -c conda-forge rpy2</pre>
       <h4>Learn it</h4>
       <ul>
         <li><a href="guide/econenv-guide.pdf">Installation &amp; User Guide (PDF)</a></li>
-        <li><a href="https://github.com/merwanroudane/econenv/blob/main/examples/10_real_data_four_engines.ipynb">Worked example notebook</a></li>
+        <li><a href="https://github.com/merwanroudane/econenv/blob/main/examples/10_real_data_all_engines.ipynb">Worked example notebook</a></li>
         <li><a href="https://github.com/merwanroudane/econenv/tree/main/examples">All examples</a></li>
         <li><a href="https://github.com/merwanroudane/econenv/blob/main/docs/engines/eviews-commands.md">EViews command reference</a></li>
       </ul>

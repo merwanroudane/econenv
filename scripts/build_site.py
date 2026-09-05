@@ -1,7 +1,7 @@
 """Generate the GitHub Pages site at ``docs/index.html``.
 
 The site shows **real** output: every code result and every figure on the page
-is lifted out of ``examples/10_real_data_four_engines.ipynb`` *after it has been
+is lifted out of ``examples/10_real_data_all_engines.ipynb`` *after it has been
 executed against actual installations of R, Stata and EViews*. Nothing on the
 page is a mock-up, and nothing was typed in by hand.
 
@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 DOCS = ROOT / "docs"
 TARGET = DOCS / "index.html"
-NOTEBOOK = ROOT / "examples" / "10_real_data_four_engines.ipynb"
+NOTEBOOK = ROOT / "examples" / "10_real_data_all_engines.ipynb"
 
 REPO = "https://github.com/merwanroudane/econenv"
 PYPI = "https://pypi.org/project/econenv/"
@@ -574,7 +574,7 @@ econenv.snapshot()</pre>
   <p class="eyebrow">Real data, real output</p>
   <h2>A complete worked analysis</h2>
   <p class="sub">Everything below is genuine output from
-  <a href="{REPO}/blob/main/examples/10_real_data_four_engines.ipynb">the example
+  <a href="{REPO}/blob/main/examples/10_real_data_all_engines.ipynb">the example
   notebook</a>, executed against R 4.5.2, StataNow 19.5 MP and EViews 13. The
   data is <b>real US quarterly macroeconomic data, 1959Q1–2009Q3</b> (203
   observations), shipped with statsmodels — so the notebook needs no download
@@ -912,7 +912,7 @@ conda install -c conda-forge rpy2</pre>
       <h4>Learn it</h4>
       <ul>
         <li><a href="guide/econenv-guide.pdf">Installation &amp; User Guide (PDF)</a></li>
-        <li><a href="{REPO}/blob/main/examples/10_real_data_four_engines.ipynb">Worked example notebook</a></li>
+        <li><a href="{REPO}/blob/main/examples/10_real_data_all_engines.ipynb">Worked example notebook</a></li>
         <li><a href="{REPO}/tree/main/examples">All examples</a></li>
         <li><a href="{REPO}/blob/main/docs/engines/eviews-commands.md">EViews command reference</a></li>
       </ul>

@@ -15,7 +15,7 @@ file you do not have (brief §44).
 | [08_time_series.ipynb](08_time_series.ipynb) | R, Stata, EViews |
 | [09_panel_data.ipynb](09_panel_data.ipynb) | R, Stata |
 | [11_colab_quickstart.ipynb](11_colab_quickstart.ipynb) | Python, R — **runs on Google Colab**, no local install |
-| **[10_real_data_four_engines.ipynb](10_real_data_four_engines.ipynb)** | **all four** — a complete worked analysis on real US macro data, with every output executed |
+| **[10_real_data_all_engines.ipynb](10_real_data_all_engines.ipynb)** | **all four** — a complete worked analysis on real US macro data, with every output executed |
 
 Notebook 5 is the acceptance test from the project brief: a Python cell, an R
 cell, a Stata cell and an EViews cell, in sequence, in **one** Python kernel.
@@ -43,7 +43,7 @@ of your kernel intact — the error will say what is missing and what to do.
 
 ## The one to start with
 
-[`10_real_data_four_engines.ipynb`](10_real_data_four_engines.ipynb) is the fullest example: **real US quarterly macroeconomic data, 1959Q1–2009Q3**, shipped with statsmodels so it needs no download and no private file.
+[`10_real_data_all_engines.ipynb`](10_real_data_all_engines.ipynb) is the fullest example: **real US quarterly macroeconomic data, 1959Q1–2009Q3**, shipped with statsmodels so it needs no download and no private file.
 
 It uses each program for what it is actually best at — pandas to build the data, R to plot and diagnose, Stata's `newey` for HAC standard errors, EViews for unit roots, cointegration, stability and forecasting — then compares the same regression across all four.
 

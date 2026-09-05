@@ -20,7 +20,7 @@ from pathlib import Path
 import nbformat as nbf
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET = ROOT / "examples" / "10_real_data_four_engines.ipynb"
+TARGET = ROOT / "examples" / "10_real_data_all_engines.ipynb"
 
 md = nbf.v4.new_markdown_cell
 code = nbf.v4.new_code_cell
@@ -30,7 +30,7 @@ def cells():
     yield md(
         "# Four engines, one notebook — with real data\n"
         "\n"
-        "**Python · R · Stata · EViews**, on a single Python kernel.\n"
+        "**Python · R · Stata · EViews · MATLAB**, on a single Python kernel.\n"
         "\n"
         "This notebook works through a small applied exercise on **real US "
         "quarterly macroeconomic data, 1959Q1–2009Q3**, using each program for "
@@ -267,7 +267,25 @@ def cells():
     yield code("%%eviews\ngroup gplot lrcons lrgdp\ngplot.line")
 
     yield md(
-        "## 5. Bring results back to Python\n"
+        "## 5. MATLAB - the same data again\n"
+        "\n"
+        "MATLAB arrives as a real `table`, so `fitlm` works on it directly. The\n"
+        "pandas index becomes a `date` column of MATLAB's own datetime type.\n"
+        "\n"
+        "> **MATLAB takes about a minute to start.** The first cell pays for the\n"
+        "> whole session; every later one is fast.\n"
+    )
+    yield code("%%matlab -i macro\ndisp(size(macro))\ndisp(class(macro.date))\n")
+    yield code("%%matlab\nmdl = fitlm(macro, 'lrcons ~ lrgdp + realint');\ndisp(mdl)\n")
+    yield md("MATLAB's own plot, captured into the notebook:")
+    yield code(
+        "%%matlab\n"
+        "figure; plot(macro.lrgdp, macro.lrcons, 'o'); \n"
+        "xlabel('log real GDP'); ylabel('log real consumption');\n"
+        "title('US consumption against income, 1959-2009');\n"
+    )
+    yield md(
+        "## 6. Bring results back to Python\n"
         "\n"
         "Everything above stays available. Pull the forecast series back and work "
         "with it in pandas."
@@ -275,7 +293,7 @@ def cells():
     yield code("back = econenv.pull('eviews')\nprint(type(back).__name__, back.shape)\nback.tail()")
 
     yield md(
-        "## 6. The same model in all four engines\n"
+        "## 7. The same model in every engine\n"
         "\n"
         "This is the part that is hard to do any other way: one specification, "
         "four programs, one table — and an honest account of where they differ."
@@ -297,7 +315,32 @@ def cells():
     )
 
     yield md(
-        "## 7. Reproducibility\n"
+        "## 8. Export it for the paper\n"
+        "\n"
+        "One call writes the same table in every format a journal might ask for.\n"
+        "The numbers come from the result object, so the file and the estimation\n"
+        "cannot drift apart - which is what happens when a table is retyped into a\n"
+        "manuscript.\n"
+    )
+    yield code(
+        "paper = econenv.export(cmp, 'paper/table1',\n"
+        "                       formats=['tex', 'docx', 'xlsx'],\n"
+        "                       caption='Consumption function, five engines',\n"
+        "                       label='tab:consumption')\n"
+        "paper\n"
+    )
+    yield md(
+        "The LaTeX is `booktabs`, with significance stars and the standard error beneath each coefficient - ready to `\\input` into a manuscript:"
+    )
+    yield code("print(open('paper/table1.tex', encoding='utf-8').read())\n")
+    yield md("`style='full'` gives every statistic instead, for your own checking:")
+    yield code(
+        "econenv.export(cmp, 'paper/table1_full.csv', style='full')\n"
+        "import pandas as pd\n"
+        "pd.read_csv('paper/table1_full.csv').head()\n"
+    )
+    yield md(
+        "## 9. Reproducibility\n"
         "\n"
         "Record exactly what produced these numbers — every engine, every version."
     )

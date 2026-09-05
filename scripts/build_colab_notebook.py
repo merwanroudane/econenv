@@ -203,7 +203,7 @@ def cells():
         "\n"
         "## Next\n"
         "\n"
-        f"- [The full four-engine notebook]({REPO}/blob/main/examples/10_real_data_four_engines.ipynb) — "
+        f"- [The full four-engine notebook]({REPO}/blob/main/examples/10_real_data_all_engines.ipynb) — "
         "Python, R, Stata **and** EViews, for a local Windows machine\n"
         "- [Documentation site](https://merwanroudane.github.io/econenv/)\n"
         f"- [Installation & User Guide (PDF)]({REPO}/blob/main/docs/guide/econenv-guide.pdf)\n"
