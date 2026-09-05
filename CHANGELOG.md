@@ -29,6 +29,8 @@ work.
   and the guide's title page, each deriving the number from the package rather
   than repeating it.
 
+Published to PyPI: <https://pypi.org/project/econenv/1.0.9/>
+
 ## [1.0.8] — 2026-09-05
 
 MATLAB as a fifth engine, and a way to get results out of a notebook and into a
