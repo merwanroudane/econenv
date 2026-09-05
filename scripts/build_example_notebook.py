@@ -19,6 +19,9 @@ from pathlib import Path
 
 import nbformat as nbf
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from econenv import __version__
+
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "examples" / "10_real_data_all_engines.ipynb"
 
@@ -57,7 +60,7 @@ def cells():
         "\n"
         "**Developed by Dr Merwan Roudane**  \n"
         "GitHub: <https://github.com/merwanroudane>  \n"
-        "Package: <https://pypi.org/project/econenv/>  \n"
+        f"Package: <https://pypi.org/project/econenv/{__version__}/> (v{__version__})  \n"
         "Repository: <https://github.com/merwanroudane/econenv>\n"
     )
 

@@ -308,11 +308,17 @@ def build(outputs: dict, facts: dict) -> str:
 
   <div class="btns">
     <a class="btn btn-primary" href="#install">Install from zero</a>
-    <a class="btn btn-ghost" href="{PYPI}">View on PyPI</a>
+    <a class="btn btn-ghost" href="{PYPI}{facts["version"]}/">View on PyPI</a>
     <a class="btn btn-ghost" href="{REPO}">GitHub</a>
     <a class="btn btn-ghost" href="guide/econenv-guide.pdf">User Guide (PDF)</a>
     <a class="btn btn-ghost" href="{COLAB}">Try it on Colab</a>
   </div>
+
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 4px">
+    Latest release <b>v{facts["version"]}</b> ·
+    <a href="{PYPI}{facts["version"]}/">on PyPI</a> ·
+    <a href="{REPO}/blob/main/CHANGELOG.md">what changed</a>
+  </p>
 
   <div class="byline">
     <div class="who">Developed by <b>Dr Merwan Roudane</b> &nbsp;·&nbsp;
