@@ -13,7 +13,7 @@ Python, R, Stata, EViews and MATLAB in a single Jupyter workflow — on one Pyth
 [![Status: stable](https://img.shields.io/badge/status-stable-2E7D4F.svg)](#project-status)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/merwanroudane/econenv/blob/main/examples/11_colab_quickstart.ipynb)
 
-**[Website](https://merwanroudane.github.io/econenv/)** · **[Install from PyPI](https://pypi.org/project/econenv/)** · [User Guide (PDF)](docs/guide/econenv-guide.pdf) · [Examples](examples/) · [Changelog](CHANGELOG.md)
+**[Website](https://merwanroudane.github.io/econenv/)** · **[Install from PyPI](https://pypi.org/project/econenv/)** · [User Guide (PDF)](https://github.com/merwanroudane/econenv/blob/main/docs/guide/econenv-guide.pdf) · [Examples](https://github.com/merwanroudane/econenv/tree/main/examples/) · [Changelog](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md)
 
 </div>
 
@@ -221,7 +221,7 @@ browser talks to `localhost`. It needs the classic Jupyter stack
 (`notebook==6.4.12`), because the bridge package does not load on notebook 7.
 
 `%econ doctor` detects Colab and says which of these applies to you.
-[Full details, including both recipes](docs/installation.md#google-colab).
+[Full details, including both recipes](https://github.com/merwanroudane/econenv/blob/main/docs/installation.md#google-colab).
 
 
 ---
@@ -313,7 +313,7 @@ econenv doctor
               → Pin one: `%econ config eviews.progid EViews.Manager.14`.
 ```
 
-More in [`examples/`](examples/):
+More in [`examples/`](https://github.com/merwanroudane/econenv/tree/main/examples/):
 
 1. Quick start
 2. Python + R
@@ -340,16 +340,16 @@ breaking change without a major bump.
 
 | Version | | What changed |
 |---|---|---|
-| **1.0.8** | [PyPI](https://pypi.org/project/econenv/1.0.8/) · [notes](CHANGELOG.md#108--2026-09-05) | MATLAB as a fifth engine; publication export; broadcast |
-| 1.0.7 | [PyPI](https://pypi.org/project/econenv/1.0.7/) · [notes](CHANGELOG.md#107--2026-09-04) | First stable release; API declared stable |
-| 0.1.7 | [PyPI](https://pypi.org/project/econenv/0.1.7/) · [notes](CHANGELOG.md#017--2026-09-04) | Google Colab support; all four engines via a local runtime |
-| 0.1.6 | [PyPI](https://pypi.org/project/econenv/0.1.6/) · [notes](CHANGELOG.md#016--2026-09-04) | EViews command reference searchable from a cell; forecast plots; worked example on real data; user guide |
-| 0.1.5 | [PyPI](https://pypi.org/project/econenv/0.1.5/) · [notes](CHANGELOG.md#015--2026-09-04) | Full EViews graph/output audit; text and spool views captured; no silent failures |
-| 0.1.4 | folded into 0.1.5 · [notes](CHANGELOG.md#014--2026-09-04) | EViews graph commands (`line x`) now render |
-| 0.1.3 | [PyPI](https://pypi.org/project/econenv/0.1.3/) · [notes](CHANGELOG.md#013--2026-09-04) | EViews plotting views (`x.line`) now render; no duplicate or repeated figures |
-| 0.1.2 | [PyPI](https://pypi.org/project/econenv/0.1.2/) · [notes](CHANGELOG.md#012--2026-09-04) | Correct EViews ProgID discovery; stop guessing the EViews version before connecting |
-| 0.1.1 | [PyPI](https://pypi.org/project/econenv/0.1.1/) · [notes](CHANGELOG.md#011--2026-09-04) | EViews cell output and graph capture; honest engine reporting |
-| 0.1.0 | [PyPI](https://pypi.org/project/econenv/0.1.0/) · [notes](CHANGELOG.md#010--2026-09-04) | First release |
+| **1.0.8** | [PyPI](https://pypi.org/project/econenv/1.0.8/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#108--2026-09-05) | MATLAB as a fifth engine; publication export; broadcast |
+| 1.0.7 | [PyPI](https://pypi.org/project/econenv/1.0.7/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#107--2026-09-04) | First stable release; API declared stable |
+| 0.1.7 | [PyPI](https://pypi.org/project/econenv/0.1.7/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#017--2026-09-04) | Google Colab support; all four engines via a local runtime |
+| 0.1.6 | [PyPI](https://pypi.org/project/econenv/0.1.6/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#016--2026-09-04) | EViews command reference searchable from a cell; forecast plots; worked example on real data; user guide |
+| 0.1.5 | [PyPI](https://pypi.org/project/econenv/0.1.5/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#015--2026-09-04) | Full EViews graph/output audit; text and spool views captured; no silent failures |
+| 0.1.4 | folded into 0.1.5 · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#014--2026-09-04) | EViews graph commands (`line x`) now render |
+| 0.1.3 | [PyPI](https://pypi.org/project/econenv/0.1.3/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#013--2026-09-04) | EViews plotting views (`x.line`) now render; no duplicate or repeated figures |
+| 0.1.2 | [PyPI](https://pypi.org/project/econenv/0.1.2/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#012--2026-09-04) | Correct EViews ProgID discovery; stop guessing the EViews version before connecting |
+| 0.1.1 | [PyPI](https://pypi.org/project/econenv/0.1.1/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#011--2026-09-04) | EViews cell output and graph capture; honest engine reporting |
+| 0.1.0 | [PyPI](https://pypi.org/project/econenv/0.1.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#010--2026-09-04) | First release |
 
 Install the latest with `pip install --upgrade econenv`.
 
@@ -365,7 +365,7 @@ What is verified, and on what:
 | Linux / macOS | **not** verified — the design supports them; nobody has run them yet |
 
 Where something is untested, this README and the docs say so. See
-[`docs/audit/PHASE0_TECHNOLOGY_AUDIT.md`](docs/audit/PHASE0_TECHNOLOGY_AUDIT.md)
+[`docs/audit/PHASE0_TECHNOLOGY_AUDIT.md`](https://github.com/merwanroudane/econenv/blob/main/docs/audit/PHASE0_TECHNOLOGY_AUDIT.md)
 for the measured evidence behind every technical decision.
 
 ## Roadmap
@@ -419,7 +419,7 @@ them endorses or is affiliated with this project.
 ## Troubleshooting
 
 Start with `econenv doctor` — it names the problem and the fix. Common ones are
-in [`docs/troubleshooting.md`](docs/troubleshooting.md), including:
+in [`docs/troubleshooting.md`](https://github.com/merwanroudane/econenv/blob/main/docs/troubleshooting.md), including:
 
 * Stata says the edition is wrong
 * EViews connects to the wrong version
@@ -430,18 +430,18 @@ in [`docs/troubleshooting.md`](docs/troubleshooting.md), including:
 ## Contributing
 
 Issues and pull requests are welcome. See
-[`docs/development.md`](docs/development.md) for the layout, the test markers
+[`docs/development.md`](https://github.com/merwanroudane/econenv/blob/main/docs/development.md) for the layout, the test markers
 (`-m "not stata and not eviews"` runs everything that needs no licence) and how
 to write a new engine adapter.
 
 ## Citation
 
 If EconEnv is part of your research workflow, please cite it — see
-[`CITATION.cff`](CITATION.cff).
+[`CITATION.cff`](https://github.com/merwanroudane/econenv/blob/main/CITATION.cff).
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The MIT grant covers EconEnv's own source only and
+MIT — see [LICENSE](https://github.com/merwanroudane/econenv/blob/main/LICENSE). The MIT grant covers EconEnv's own source only and
 confers no rights in Stata, EViews or R.
 
 ## Author

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -604,3 +605,41 @@ def test_transfer_matrix_reports_this_machine_not_the_manual():
     for engine, row in matrix.iterrows():
         if row["receives"]:
             assert row["sends"], f"{engine} can receive but not send"
+
+
+class TestReadmeLinks:
+    """The README is also the PyPI page, where relative links do not work.
+
+    GitHub resolves `docs/guide/x.pdf` against the repository; PyPI resolves it
+    against `pypi.org/project/econenv/<version>/` and returns 404. The links
+    look perfect on GitHub while being broken for everyone arriving from PyPI,
+    which is why this needs a test rather than an eye.
+    """
+
+    @staticmethod
+    def _readme() -> str:
+        return (pathlib.Path(__file__).resolve().parents[1] / "README.md").read_text(
+            encoding="utf-8"
+        )
+
+    def test_no_relative_links(self):
+        import re
+
+        relative = re.findall(r"\[([^\]]*)\]\((?!https?:|#|mailto:)([^)]+)\)", self._readme())
+        assert not relative, (
+            "these break on the PyPI page; use the full "
+            f"https://github.com/... URL: {[t for _, t in relative]}"
+        )
+
+    def test_every_repository_link_points_at_something_real(self):
+        import re
+
+        root = pathlib.Path(__file__).resolve().parents[1]
+        targets = set(
+            re.findall(
+                r"\]\(https://github\.com/merwanroudane/econenv/(?:blob|tree)/main/([^)#]+)",
+                self._readme(),
+            )
+        )
+        missing = [t for t in targets if not (root / t).exists()]
+        assert not missing, f"README links to files that do not exist: {missing}"
