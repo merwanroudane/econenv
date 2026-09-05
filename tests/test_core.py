@@ -623,12 +623,17 @@ class TestReadmeLinks:
         )
 
     def test_no_relative_links(self):
+        """Matches on the target alone.
+
+        A `[text](target)` pattern misses `[![badge](img)](target)`, because the
+        nested image puts a `]` inside the link text - which is exactly how the
+        LICENSE badge slipped through the first version of this test.
+        """
         import re
 
-        relative = re.findall(r"\[([^\]]*)\]\((?!https?:|#|mailto:)([^)]+)\)", self._readme())
+        relative = re.findall(r"\]\((?!https?:|#|mailto:)([^)]+)\)", self._readme())
         assert not relative, (
-            "these break on the PyPI page; use the full "
-            f"https://github.com/... URL: {[t for _, t in relative]}"
+            f"these break on the PyPI page; use the full https://github.com/... URL: {relative}"
         )
 
     def test_every_repository_link_points_at_something_real(self):
