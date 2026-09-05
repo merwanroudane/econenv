@@ -8,10 +8,12 @@
 | [installation.md](installation.md) | Extras, engine requirements, platform notes |
 | [architecture.md](architecture.md) | Layers, the engine contract, why no custom kernel |
 | [magics.md](magics.md) | Every magic, every flag, and who owns which name |
+| [export.md](export.md) | Tables and figures out to LaTeX, Word, Excel — publication ready |
 | [engines/python.md](engines/python.md) | The host engine |
 | [engines/r.md](engines/r.md) | Two backends, why rpy2 is not required |
 | [engines/stata.md](engines/stata.md) | PyStata delegation, editions, frames |
 | [engines/eviews.md](engines/eviews.md) | COM automation and its traps |
+| [engines/matlab.md](engines/matlab.md) | The Engine API, release matching, and figures |
 | [engines/eviews-commands.md](engines/eviews-commands.md) | The menu path you know, and the command it becomes |
 | [guide/econenv-guide.pdf](guide/econenv-guide.pdf) | **Installation and User Guide (PDF)** — everything from zero |
 | [data-exchange.md](data-exchange.md) | Push, pull, move; transports per engine |

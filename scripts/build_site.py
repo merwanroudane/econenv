@@ -924,6 +924,7 @@ conda install -c conda-forge rpy2</pre>
         <li><a href="{REPO}/blob/main/docs/engines/r.md">R</a></li>
         <li><a href="{REPO}/blob/main/docs/engines/stata.md">Stata</a></li>
         <li><a href="{REPO}/blob/main/docs/engines/eviews.md">EViews</a></li>
+        <li><a href="{REPO}/blob/main/docs/engines/matlab.md">MATLAB</a></li>
       </ul>
     </div>
   </div>
