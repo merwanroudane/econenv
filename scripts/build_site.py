@@ -75,12 +75,25 @@ def notebook_outputs() -> dict:
     for cell in nb.cells:
         if cell.cell_type != "code":
             continue
+        primary: list = []
+        stderr: list = []
         for out in cell.get("outputs", []):
+            if out.get("output_type") == "error":
+                continue
             text = out.get("text") or out.get("data", {}).get("text/plain", "")
             if isinstance(text, list):
                 text = "".join(text)
-            if text and text.strip():
-                found.setdefault(cell.source, []).append(text)
+            if not (text and text.strip()):
+                continue
+            # A warning on stderr is not the cell's result. Taking whichever
+            # output happened to come first put a pandas conversion warning on
+            # the page where the five-engine comparison table belonged.
+            if out.get("output_type") == "stream" and out.get("name") == "stderr":
+                stderr.append(text)
+            else:
+                primary.append(text)
+        if primary or stderr:
+            found[cell.source] = primary + stderr
     return found
 
 
@@ -240,6 +253,7 @@ figcaption{font-size:13.6px;color:var(--muted);margin-top:10px;text-align:center
 .n-r{background:#E9F0FB;border-color:#C4D8F3;color:var(--r)}
 .n-stata{background:#F8ECEC;border-color:#EBCFCF;color:var(--stata)}
 .n-ev{background:#E9F6EE;border-color:#C6E5D4;color:var(--ev)}
+.n-ml{background:#FBEFE7;border-color:#F0DCCB;color:var(--ml)}
 .arrow{color:var(--muted);font-size:19px}
 
 .kpi{text-align:center;padding:20px}
@@ -297,7 +311,7 @@ def build(outputs: dict, facts: dict) -> str:
 <div class="hero"><div class="wrap">
   <p class="tag">One Notebook. Multiple Econometric Engines.</p>
   <h1>Python, R, Stata and EViews<br>in a single notebook</h1>
-  <p class="lede">One dataset, one kernel, four programs. No CSV round-trip, no
+  <p class="lede">One dataset, one kernel, five programs. No CSV round-trip, no
   switching windows, and results you can compare side by side — with the
   differences explained instead of hidden.</p>
 
@@ -306,6 +320,7 @@ def build(outputs: dict, facts: dict) -> str:
     {engine_pill("R", "r", "#1F65B7")}
     {engine_pill("Stata 17+", "stata", "#7A2E2E")}
     {engine_pill("EViews 12–14", "ev", "#1B7A43")}
+    {engine_pill("MATLAB R2024a+", "ml", "#B0521A")}
   </div>
 
   <div class="btns">
@@ -331,7 +346,7 @@ def build(outputs: dict, facts: dict) -> str:
 <!-- ============================ THE PROBLEM ============================ -->
 <section><div class="wrap">
   <p class="eyebrow">Why this exists</p>
-  <h2>The four-program problem</h2>
+  <h2>The five-program problem</h2>
   <p class="sub">An applied econometrics paper rarely lives in one program. The
   unit-root test is in EViews because that is where the output is readable. The
   panel estimator is in Stata. The plots are in R. The data cleaning is in
@@ -344,10 +359,12 @@ def build(outputs: dict, facts: dict) -> str:
     <span class="node" style="background:#F6F5F1;border-color:#E4E2DC;color:#5B6672">export</span><span class="arrow">→</span>
     <span class="node n-r">R</span><span class="arrow">→</span>
     <span class="node" style="background:#F6F5F1;border-color:#E4E2DC;color:#5B6672">write.csv</span><span class="arrow">→</span>
-    <span class="node n-ev">EViews</span>
+    <span class="node n-ev">EViews</span><span class="arrow">→</span>
+    <span class="node" style="background:#F6F5F1;border-color:#E4E2DC;color:#5B6672">writetable</span><span class="arrow">→</span>
+    <span class="node n-ml">MATLAB</span>
   </div>
 
-  <p class="sub">Four windows, four copies of the same data slowly drifting
+  <p class="sub">Five windows, five copies of the same data slowly drifting
   apart. A missing value that meant <code>.a</code> in Stata arrives as an empty
   cell in R. A quarterly index becomes a string. And when a referee asks why
   your robust standard error differs from theirs, there is no way to answer
@@ -359,11 +376,12 @@ def build(outputs: dict, facts: dict) -> str:
     <span class="node n-r">R</span>
     <span class="node n-stata">Stata</span>
     <span class="node n-ev">EViews</span>
+    <span class="node n-ml">MATLAB</span>
     <span class="arrow">→</span><span class="node n-py">back to Python</span>
   </div>
 
   <div class="grid g4" style="margin-top:24px">
-    <div class="card kpi"><div class="n">4</div><div class="l">engines, one kernel</div></div>
+    <div class="card kpi"><div class="n">5</div><div class="l">engines, one kernel</div></div>
     <div class="card kpi"><div class="n">0</div><div class="l">CSV files written</div></div>
     <div class="card kpi"><div class="n">{facts["tests"]}</div><div class="l">tests</div></div>
     <div class="card kpi"><div class="n">{facts["commands"]}</div><div class="l">EViews commands catalogued</div></div>
@@ -486,13 +504,7 @@ pip install "econenv[all]"</pre>
   <span class="label lab-py">notebook</span>
   <pre>%load_ext econenv</pre>
   <span class="label lab-out">real output</span>
-  <pre class="out">EconEnv {facts["version"]} loaded — one notebook, multiple econometric engines.
-  %econ                  econenv
-  %Rec / %%Rec           econenv
-  %R / %%R               econenv (rpy2 not installed)
-  %eviews / %%eviews     econenv
-  %stata / %%stata       pystata (official)
-  %econ status · %econ doctor · %econ help</pre>
+  <pre class="out">{o("%load_ext econenv")}</pre>
 
   <div class="note"><b>Note the last line.</b>
   <code>%%stata</code> belongs to StataCorp, not to EconEnv — Stata 17+ ships
@@ -725,8 +737,8 @@ eq_ev.output</pre>
 <!-- ============================ COMPARE ============================ -->
 <section id="compare"><div class="wrap">
   <p class="eyebrow">The part that is hard to do any other way</p>
-  <h2>The same model in all four engines</h2>
-  <p class="sub">One specification, four programs, one table — and an honest
+  <h2>The same model in all five engines</h2>
+  <p class="sub">One specification, five programs, one table — and an honest
   account of where they differ.</p>
 
   <span class="label lab-py">Python</span>
@@ -735,7 +747,7 @@ eq_ev.output</pre>
   <pre class="out">{o("compare_ols(macro", 20)}</pre>
 
   <div class="note"><b>The coefficients agree to machine precision.</b>
-  Maximum disagreement across the four engines is of the order of 10⁻¹⁵ —
+  Maximum disagreement across the five engines is of the order of 10⁻¹⁵ —
   floating-point noise and nothing more.</div>
 
   <div class="warn"><b>The information criteria deliberately do not agree.</b>
@@ -813,7 +825,7 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
 <section id="colab"><div class="wrap">
   <p class="eyebrow">No installation at all</p>
   <h2>Running on Google Colab</h2>
-  <p class="sub">One line, no local setup — but only for two of the four
+  <p class="sub">One line, no local setup — but only for two of the five
   engines, and the reason is worth stating plainly rather than leaving you to
   discover it.</p>
 
@@ -826,6 +838,7 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
       <tr><td><b>R</b></td><td>works</td><td>R is already on the Colab image</td></tr>
       <tr><td><b>Stata</b></td><td><b>possible</b></td><td>Stata for Linux exists and pystata supports it — install it from Google Drive if you hold a Linux licence</td></tr>
       <tr><td><b>EViews</b></td><td>no</td><td>no Linux build; Wine cannot licence it; and EViews forbids remote access</td></tr>
+      <tr><td><b>MATLAB</b></td><td><b>possible</b></td><td>MATLAB for Linux exists and the Engine API supports it — the same licence question as Stata, and the pin must match both the release and Colab's Python</td></tr>
     </tbody>
   </table></div>
 
@@ -845,7 +858,7 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
   instance. That workaround is easy to build and contractually prohibited, so
   EconEnv will not ship it.</div>
 
-  <h3>All four engines, still in Colab</h3>
+  <h3>All five engines, still in Colab</h3>
   <p class="sub">There is a way round every limitation above, and it is Google's
   own feature: <b>connect Colab to a local runtime</b>. Colab already runs in a
   browser on your PC — point it at a Jupyter server on that same PC and the
@@ -861,6 +874,7 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
     <span class="node n-r">R</span>
     <span class="node n-stata">Stata</span>
     <span class="node n-ev">EViews</span>
+    <span class="node n-ml">MATLAB</span>
   </div>
 
   <p class="sub">Nothing is exposed to the internet: your browser talks to

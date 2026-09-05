@@ -7,7 +7,7 @@ pip install econenv
 ```
 
 Core dependencies are `pandas`, `numpy`, `ipython` and `statsmodels` — the last
-because Python is one of the four comparable engines and `compare_ols` needs its
+because Python is one of the five comparable engines and `compare_ols` needs its
 OLS adapter. Nothing commercial is pulled in, and nothing is bundled.
 
 ## Extras
@@ -206,4 +206,4 @@ Point 3 is the important one: the workaround is technically straightforward and
 contractually prohibited, so EconEnv will not ship it.
 
 For EViews, use a local Windows machine and
-[the four-engine notebook](../examples/10_real_data_all_engines.ipynb).
+[the five-engine notebook](../examples/10_real_data_all_engines.ipynb).

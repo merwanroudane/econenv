@@ -97,7 +97,6 @@ def _python_ok(series: str) -> bool:
     return low <= sys.version_info[:2] < high
 
 
-
 def _release_of(series: str) -> str:
     """``24.1`` -> ``R2024a``. The inverse of :func:`_series_for`."""
     major, _, minor = series.partition(".")

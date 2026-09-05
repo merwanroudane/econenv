@@ -34,8 +34,8 @@ engines/registry.py                        ← the extension point
 ### 1. No custom kernel in v0.1
 
 A polyglot Jupyter kernel means implementing the Jupyter messaging protocol,
-owning completion, introspection, interrupt and display for four languages, and
-maintaining it against four vendors' release schedules. An IPython extension
+owning completion, introspection, interrupt and display for five languages, and
+maintaining it against five vendors' release schedules. An IPython extension
 gets the same user-visible result — one notebook, many engines — for a fraction
 of that. The trade is evaluated again in the roadmap, not assumed away.
 

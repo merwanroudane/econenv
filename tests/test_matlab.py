@@ -172,7 +172,7 @@ class TestApiMissingMessage:
         monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 13))
         message = self._engine("R2026a")._api_missing_message("no module")
 
-        assert 'matlabengine==26.1.*' in message
+        assert "matlabengine==26.1.*" in message
         assert "does not support" not in message
 
     def test_a_release_newer_than_this_table_still_gets_a_pin(self, monkeypatch):
@@ -180,7 +180,7 @@ class TestApiMissingMessage:
         monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 13))
         message = self._engine("R2027a")._api_missing_message("no module")
 
-        assert 'matlabengine==27.1.*' in message
+        assert "matlabengine==27.1.*" in message
 
     def test_a_release_usable_on_this_python_is_separated_from_one_that_is_not(self, monkeypatch):
         monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 12))

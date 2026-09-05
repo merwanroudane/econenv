@@ -11,8 +11,8 @@ documented automation interface. Licensing them is your responsibility.
 
 **Why not a custom polyglot kernel?**
 It would mean implementing the Jupyter messaging protocol and owning
-completion, introspection, interrupt and display for four languages, against
-four vendors' release schedules. An IPython extension gives the same
+completion, introspection, interrupt and display for five languages, against
+five vendors' release schedules. An IPython extension gives the same
 user-visible result for a fraction of the cost. It is re-evaluated in the
 roadmap, not assumed away.
 
@@ -44,7 +44,7 @@ the numbers *and* names the reason. See [comparison.md](comparison.md).
 No. Automation is COM, which is Windows-only. Everything else works.
 
 **Do the engines keep state between cells?**
-Yes. All four are persistent sessions. `%econ restart <engine>` clears one.
+Yes. All five are persistent sessions. `%econ restart <engine>` clears one.
 
 **Is my data written to disk?**
 Only where a transport requires it, into a private temp directory that is

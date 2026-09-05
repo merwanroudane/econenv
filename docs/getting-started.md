@@ -32,11 +32,12 @@ EconEnv works with whatever subset you have.
 ```
 
 ```
-EconEnv 0.1.0 loaded — one notebook, multiple econometric engines.
+EconEnv loaded — one notebook, multiple econometric engines.
   %econ                  econenv
   %Rec / %%Rec           econenv
   %R / %%R               rpy2 (official)
   %eviews / %%eviews     econenv
+  %matlab / %%matlab     econenv
   %stata / %%stata       pystata (official)
   %econ status · %econ doctor · %econ help
 ```
@@ -48,7 +49,7 @@ rather than shadowing them, and says so.
 No engine has started yet. Loading the extension is fast and consumes no
 licence seat.
 
-## 4. Your first four-engine notebook
+## 4. Your first five-engine notebook
 
 ```python
 import pandas as pd, numpy as np

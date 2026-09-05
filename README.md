@@ -175,7 +175,6 @@ Optional extras — install only what you use:
 pip install "econenv[stata]"    # helper for locating PyStata
 pip install "econenv[eviews]"   # comtypes, Windows only
 pip install "econenv[arrow]"    # fast Arrow transfer to R
-pip install "econenv[matlab]"   # MATLAB Engine API
 pip install "econenv[export]"   # Word and Excel export
 pip install "econenv[all]"
 ```
@@ -197,7 +196,7 @@ Then, in a notebook:
 | Stata | optional | **17 or newer** — PyStata ships with Stata 17+ |
 | EViews | optional | **Windows only**; automation is COM-based |
 | `comtypes` | for EViews | `pip install "econenv[eviews]"` |
-| MATLAB | optional | R2019b+; needs the matching `matlabengine` (24.1.x is R2024a) |
+| MATLAB | optional | needs `matlabengine` pinned to **both** the release and your Python — R2024a is `24.1.*` (Python ≤3.11), R2026a is `26.1.*` (first to accept 3.13). `econenv doctor` prints the exact pin. |
 | `rpy2` | never required | no Windows wheels; EconEnv's subprocess backend replaces it |
 
 ### Google Colab
@@ -340,7 +339,7 @@ breaking change without a major bump.
 
 | Version | | What changed |
 |---|---|---|
-| **1.1.0** | [PyPI](https://pypi.org/project/econenv/1.1.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#110--2026-09-05) | MATLAB R2026a and Python 3.13 |
+| **1.1.1** | [PyPI](https://pypi.org/project/econenv/1.1.1/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#111--2026-09-05) | MATLAB R2026a and Python 3.13; five-engine docs |
 | 1.0.9 | [PyPI](https://pypi.org/project/econenv/1.0.9/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#109--2026-09-05) | Working links on the PyPI page |
 | 1.0.8 | [PyPI](https://pypi.org/project/econenv/1.0.8/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#108--2026-09-05) | MATLAB as a fifth engine; publication export; broadcast |
 | 1.0.7 | [PyPI](https://pypi.org/project/econenv/1.0.7/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#107--2026-09-04) | First stable release; API declared stable |

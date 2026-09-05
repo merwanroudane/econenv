@@ -391,6 +391,33 @@ def build() -> nbf.NotebookNode:
     return nb
 
 
+def default_kernel() -> str:
+    """A kernel running *this* interpreter, which is where econenv is installed.
+
+    Defaulting to ``python3`` executed the notebook under whichever interpreter
+    that name happened to point at — here, an Anaconda base with no econenv —
+    and the run silently replaced every real output with an import traceback.
+    """
+    try:
+        from jupyter_client.kernelspec import KernelSpecManager
+
+        specs = KernelSpecManager().get_all_specs()
+    except Exception:
+        return "python3"
+
+    me = Path(sys.executable).resolve()
+    for name, info in sorted(specs.items()):
+        argv = info.get("spec", {}).get("argv") or []
+        if argv and Path(argv[0]).resolve() == me:
+            return name
+    print(
+        f"warning: no kernelspec runs {me}; falling back to python3. "
+        f"Register one with `python -m ipykernel install --user --name econenv`.",
+        file=sys.stderr,
+    )
+    return "python3"
+
+
 def main() -> int:
     nb = build()
     TARGET.parent.mkdir(parents=True, exist_ok=True)
@@ -402,10 +429,11 @@ def main() -> int:
         from nbclient import NotebookClient
 
         print("executing against the real engines ...")
-        kernel = "python3"
+        kernel = default_kernel()
         for arg in sys.argv:
             if arg.startswith("--kernel="):
                 kernel = arg.split("=", 1)[1]
+        print(f"kernel: {kernel}")
         client = NotebookClient(
             nb, timeout=900, kernel_name=kernel, resources={"metadata": {"path": str(ROOT)}}
         )

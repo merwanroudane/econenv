@@ -63,10 +63,11 @@ export = [
     "openpyxl>=3.1",      # Excel workbooks
     "tabulate>=0.9",      # markdown tables
 ]
-matlab = [
-    # Must match the MATLAB release: 24.1.x is R2024a, 25.1.x is R2025a.
-    "matlabengine>=9.13",
-]
+# NOTE: there is deliberately no `matlab` extra. matlabengine must be pinned to
+# BOTH the MATLAB release and the running Python (R2024a is 24.1.x and refuses
+# Python 3.12+; R2026a is 26.1.x and is the first to accept 3.13). An unpinned
+# extra would resolve to the newest wheel and be wrong for almost everyone, so
+# EconEnv prints the correct pin from `econenv doctor` instead.
 eviews = ["comtypes>=1.2; platform_system == 'Windows'"]
 arrow = ["pyarrow>=12"]
 all = [

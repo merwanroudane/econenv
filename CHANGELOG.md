@@ -4,7 +4,7 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] — 2026-09-05
+## [1.1.1] — 2026-09-05
 
 MATLAB release support, worked out rather than tabulated.
 
@@ -25,6 +25,34 @@ MATLAB release support, worked out rather than tabulated.
   the MATLAB release whose engine *does* support that Python, and the Python
   version your own MATLAB can drive, so there are two ways forward instead of
   none.
+
+### Fixed — documentation that had fallen behind the code
+
+- **The site's comparison section showed a Stata warning instead of the
+  comparison table.** The page pulls its output from the executed notebook and
+  took whichever output came first, so a `stderr` warning displaced the
+  five-engine result on the one section the page exists to show. Real results
+  now win over warnings; errors are never used.
+- **The `%load_ext` banner on the site was hand-written and stale** — it
+  predated `%%matlab`. It is read from the notebook now, like every other
+  output on the page, so it cannot drift again. The copies in the guide and in
+  `getting-started.md` were corrected too; the latter still claimed 0.1.0.
+- **MATLAB was missing from the site entirely** despite shipping in 1.0.8. It
+  now has an installation card with the compatibility matrix, a `%%matlab`
+  reference card, a troubleshooting entry, and a place in the diagrams.
+- **"Four engines" in the live documentation**, in twelve places, from before
+  MATLAB was added.
+- **Colab support for MATLAB was described two ways** — "possible" in the
+  README and "no" on the site. It is the same situation as Stata: a Linux
+  build exists, and the licence is the question.
+
+### Removed
+
+- **The `econenv[matlab]` extra.** It resolved to `matlabengine>=9.13`, which
+  pip satisfies with the newest wheel — wrong for anyone not on the newest
+  MATLAB, and unusable on Python 3.13 before R2026a. An extra cannot express a
+  constraint that depends on both the MATLAB release and the interpreter, so
+  `econenv doctor` prints the correct pin instead.
 
 ## [1.0.9] — 2026-09-05
 

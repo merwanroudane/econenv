@@ -72,7 +72,7 @@ and compare, expect the standard errors to differ — the comparison names this.
 
 ### Missing values
 
-All four use listwise deletion for OLS by default, so the estimation samples
+All five use listwise deletion for OLS by default, so the estimation samples
 match. They diverge for other estimators; when EconEnv gains those, the same
 "report the difference" rule applies.
 

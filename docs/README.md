@@ -4,7 +4,7 @@
 
 | Page | What it covers |
 |---|---|
-| [getting-started.md](getting-started.md) | Install, load, first four-engine notebook |
+| [getting-started.md](getting-started.md) | Install, load, first five-engine notebook |
 | [installation.md](installation.md) | Extras, engine requirements, platform notes |
 | [architecture.md](architecture.md) | Layers, the engine contract, why no custom kernel |
 | [magics.md](magics.md) | Every magic, every flag, and who owns which name |

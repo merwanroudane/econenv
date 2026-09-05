@@ -6,7 +6,7 @@ interpreter. It exists so Python appears everywhere the other three do:
 * in `%econ status` and `%econ versions`
 * in reproducibility snapshots, with every installed distribution
 * in the cross-engine comparison table, where "what does statsmodels say" is one
-  of the four answers being compared
+  of the five answers being compared
 
 ## Session
 
