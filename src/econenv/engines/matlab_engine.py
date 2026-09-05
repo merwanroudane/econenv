@@ -27,6 +27,7 @@ import io
 import os
 import platform
 import re
+import sys
 import tempfile
 import uuid
 from pathlib import Path
@@ -49,8 +50,29 @@ from .registry import register
 #: Release folders, e.g. ``R2024a``. Sorted newest-first by year then letter.
 _RELEASE_RE = re.compile(r"^R(\d{4})([ab])$", re.IGNORECASE)
 
-#: Engine-API series that matches each release, for the pip hint.
+#: Engine-API series that matches each release, and the Python versions that
+#: series supports. MathWorks pins these narrowly and a mismatch is an import
+#: error rather than a wrong answer, so the diagnostic has to name both.
 _ENGINE_SERIES = {"2024a": "24.1", "2024b": "24.2", "2025a": "25.1", "2025b": "25.2"}
+_SERIES_PYTHON = {
+    "24.1": ((3, 9), (3, 12)),  # R2024a: 3.9-3.11
+    "24.2": ((3, 9), (3, 13)),  # R2024b: 3.9-3.12
+    "25.1": ((3, 9), (3, 13)),  # R2025a: 3.9-3.12
+    "25.2": ((3, 9), (3, 13)),  # R2025b: 3.9-3.12
+}
+
+
+def _python_ok(series: str) -> bool:
+    """Whether the running interpreter is inside that series' supported range."""
+    bounds = _SERIES_PYTHON.get(series)
+    if not bounds:
+        return True
+    low, high = bounds
+    return low <= sys.version_info[:2] < high
+
+
+def _series_for(release: str) -> str:
+    return _ENGINE_SERIES.get(release.lower().lstrip("r"), "")
 
 
 def _release_key(name: str) -> tuple:
@@ -179,19 +201,59 @@ class MatlabEngine(BaseEngine):
             self._release = chosen.name
 
         if not importable:
-            release = self._installs[0].name if self._installs else "your release"
-            series = _ENGINE_SERIES.get(release.lower().lstrip("r"), "")
-            pin = (
-                f'pip install "matlabengine=={series}.*"' if series else "pip install matlabengine"
-            )
-            self._detect_error = (
-                f"MATLAB {release} is installed but the Engine API for Python is not: "
-                f"{error}. The engine version must match the release: {pin}"
-            )
+            self._detect_error = self._api_missing_message(error)
             return False
 
         self._backend = "matlab.engine"
         return True
+
+    def _api_missing_message(self, error: Optional[str]) -> str:
+        """Say which pin to use, for *every* release present — and when none can work.
+
+        Naming only the newest installation sent a user with R2024a and R2025a
+        to install the R2025a engine. And the Python version matters as much as
+        the release: MathWorks pins each series narrowly, so an environment on a
+        too-new Python cannot run MATLAB at all and should be told so rather
+        than handed a pip command that will fail.
+        """
+        python = f"{sys.version_info.major}.{sys.version_info.minor}"
+        if not self._installs:
+            return (
+                f"The MATLAB Engine API for Python is not importable ({error}) and no "
+                "MATLAB installation was found."
+            )
+
+        usable, blocked = [], []
+        for install in self._installs:
+            series = _series_for(install.name)
+            if not series:
+                continue
+            if _python_ok(series):
+                usable.append((install.name, series))
+            else:
+                low, high = _SERIES_PYTHON[series]
+                blocked.append(
+                    f"{install.name} needs Python {low[0]}.{low[1]}-{high[0]}.{high[1] - 1}"
+                )
+
+        found = ", ".join(p.name for p in self._installs)
+        if usable:
+            options = "; ".join(
+                f'{release}: pip install "matlabengine=={series}.*"' for release, series in usable
+            )
+            message = (
+                f"MATLAB is installed ({found}) but the Engine API for Python is not: "
+                f"{error}. Install the one matching the release you use — {options}"
+            )
+            if blocked:
+                message += f". Not usable on Python {python}: {'; '.join(blocked)}"
+            return message
+
+        return (
+            f"MATLAB is installed ({found}) but no Engine API supports Python {python}: "
+            f"{'; '.join(blocked)}. Use an environment on a supported Python — for "
+            f"example `conda create -n econ python=3.11` — and install econenv there."
+        )
 
     def _static_version(self) -> Optional[str]:
         return getattr(self, "_release", None) or (

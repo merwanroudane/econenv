@@ -17,9 +17,28 @@ The engine package is versioned to the MATLAB release and must match it:
 | R2025a | `pip install "matlabengine==25.1.*"` |
 | R2025b | `pip install "matlabengine==25.2.*"` |
 
-It must also match your **Python**. R2024a's engine supports Python 3.9–3.11 and
-refuses anything newer — a mismatch is an import error, not a wrong answer.
-`econenv doctor` names the pin you need.
+It must also match your **Python**, and the ranges are narrow:
+
+| MATLAB | Package | Python |
+|---|---|---|
+| R2024a | 24.1.x | 3.9 – **3.11** |
+| R2024b | 24.2.x | 3.9 – 3.12 |
+| R2025a | 25.1.x | 3.9 – 3.12 |
+| R2025b | 25.2.x | 3.9 – 3.12 |
+
+**No engine release supports Python 3.13 yet.** An environment on 3.13 cannot
+run MATLAB through EconEnv at all, whichever MATLAB you have. Make one on a
+supported Python instead:
+
+```bash
+conda create -n econ python=3.11
+conda activate econ
+pip install econenv "matlabengine==24.1.*"
+```
+
+`econenv doctor` reports this: it names a pin for every MATLAB release you have
+installed, and when your Python suits none of them it says so rather than
+handing you a command that cannot work.
 
 ## Which release actually starts
 

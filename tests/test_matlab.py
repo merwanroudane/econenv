@@ -122,3 +122,66 @@ class TestPushGuards:
     def test_a_frame_is_still_a_frame(self):
         # guards must not reject the valid case
         assert isinstance(pd.DataFrame({"a": [1]}), pd.DataFrame)
+
+
+class TestApiMissingMessage:
+    """Reported from a real session: a user with R2024a and R2025a on Python 3.13
+    was told to `pip install "matlabengine==25.1.*"` — the wrong release, and a
+    command that could not have worked on that Python anyway.
+    """
+
+    @staticmethod
+    def _engine(*releases):
+        from pathlib import Path
+
+        engine = object.__new__(matlab_engine.MatlabEngine)
+        engine._installs = [Path(f"C:/Program Files/MATLAB/{r}") for r in releases]
+        return engine
+
+    @staticmethod
+    def _version(major, minor):
+        from collections import namedtuple
+
+        V = namedtuple("V", "major minor micro releaselevel serial")
+        return V(major, minor, 0, "final", 0)
+
+    def test_every_installed_release_is_offered_not_just_the_newest(self, monkeypatch):
+        monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 11))
+        message = self._engine("R2025a", "R2024a")._api_missing_message("no module")
+
+        assert "24.1" in message, "the release the user actually uses must be offered"
+        assert "25.1" in message
+        assert "R2024a" in message and "R2025a" in message
+
+    def test_an_unsupported_python_is_stated_rather_than_a_doomed_pip_command(self, monkeypatch):
+        monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 13))
+        message = self._engine("R2025a", "R2024a")._api_missing_message("no module")
+
+        assert "no Engine API supports Python 3.13" in message
+        assert "pip install" not in message, "no command that cannot work"
+        assert "python=3.11" in message, "say what would work instead"
+
+    def test_a_release_usable_on_this_python_is_separated_from_one_that_is_not(self, monkeypatch):
+        monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(3, 12))
+        message = self._engine("R2025a", "R2024a")._api_missing_message("no module")
+
+        # 3.12 suits R2025a but not R2024a
+        assert "25.1" in message
+        assert "Not usable on Python 3.12" in message and "R2024a" in message
+
+    def test_no_matlab_at_all_says_so(self, monkeypatch):
+        message = self._engine()._api_missing_message("no module")
+        assert "no MATLAB installation was found" in message
+
+    @pytest.mark.parametrize(
+        "series, major, minor, ok",
+        [
+            ("24.1", 3, 11, True),
+            ("24.1", 3, 12, False),
+            ("24.2", 3, 12, True),
+            ("25.1", 3, 13, False),
+        ],
+    )
+    def test_python_support_ranges(self, monkeypatch, series, major, minor, ok):
+        monkeypatch.setattr(matlab_engine.sys, "version_info", self._version(major, minor))
+        assert matlab_engine._python_ok(series) is ok
