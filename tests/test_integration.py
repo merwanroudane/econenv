@@ -215,7 +215,9 @@ class TestComparison:
     def test_all_four_engines_agree_to_machine_precision(self, sample_frame):
         """Brief §48. The point of the whole project."""
         comparison = econenv.compare_ols(sample_frame, "y ~ x1 + x2")
-        assert set(comparison.results) == {"python", "r", "stata", "eviews", "matlab"}, comparison.failures
+        assert set(comparison.results) == {"python", "r", "stata", "eviews", "matlab"}, (
+            comparison.failures
+        )
 
         table = comparison.coefficients()
         reference = table["python"]

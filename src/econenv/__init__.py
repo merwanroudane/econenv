@@ -41,6 +41,7 @@ from .exceptions import (
     SessionError,
     UnsupportedDataTypeError,
 )
+from .export import export, export_figures, export_table
 from .results import ExecutionResult, Figure, ModelResult
 from .schema import ColumnSchema, ConversionReport, DatasetMetadata, LogicalType
 
@@ -75,6 +76,9 @@ __all__ = [
     "doctor",
     "engine",
     "engines",
+    "export",
+    "export_figures",
+    "export_table",
     "get_logger",
     "load_ipython_extension",
     "move",

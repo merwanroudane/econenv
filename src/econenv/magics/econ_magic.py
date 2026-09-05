@@ -76,6 +76,16 @@ def _build_parser() -> MagicParser:
     move.add_argument("target")
     move.add_argument("name")
 
+    export = sub.add_parser("export", add_help=False, help="Write results to publication formats.")
+    export.add_argument("name", help="Python variable holding the result to export.")
+    export.add_argument("path", help="Destination file or stem, e.g. paper/table1")
+    export.add_argument(
+        "--formats", default=None, help="Comma-separated: tex,docx,xlsx,csv,html,md,rtf"
+    )
+    export.add_argument("--style", default="journal", choices=["journal", "full"])
+    export.add_argument("--caption", default=None)
+    export.add_argument("--label", default=None)
+
     eviews = sub.add_parser(
         "eviews", add_help=False, help="Look up EViews commands by task or keyword."
     )
@@ -138,6 +148,32 @@ class EconMagics(Magics):
             print("Magic ownership")
             for entry in lines:
                 print(f"  {entry}")
+        return None
+
+    def _cmd_export(self, args, local_ns) -> Any:
+        """Write a result to disk without leaving the notebook.
+
+        The point of doing this from a cell rather than by hand is that the
+        numbers in the file come from the object that produced them, so a table
+        cannot drift from the estimation that made it.
+        """
+        from ..export import export as _export
+
+        key = strip_quotes(args.name)
+        obj = local_ns.get(key, shell_of(self).user_ns.get(key))
+        if obj is None:
+            raise NameError(f"{key!r} is not defined in Python.")
+
+        formats = [f.strip() for f in args.formats.split(",")] if args.formats else None
+        result = _export(
+            obj,
+            strip_quotes(args.path),
+            formats=formats,
+            style=args.style,
+            caption=args.caption,
+            label=args.label,
+        )
+        print(result)
         return None
 
     def _cmd_eviews(self, args, local_ns) -> Any:
