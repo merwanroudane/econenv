@@ -82,19 +82,163 @@ matlab.engine.shareEngine
 %econ config matlab.shared MATLAB_shared
 ```
 
-## Data types
+## Getting data in and out
 
-| pandas | MATLAB | Note |
-|---|---|---|
-| float, int | `double` | integers become double, as MATLAB tables prefer |
-| bool | `logical` | a missing value cannot be represented — NaN becomes false, and you are warned |
-| datetime | `datetime` | the pandas index becomes a column, since MATLAB tables have no date index |
-| category | `categorical` | |
-| str | `string` | missing strings become empty, and you are warned |
+`-i` sends a Python object into MATLAB; `-o` brings a MATLAB variable back.
+Repeat either flag for several names.
 
-Anything lossy warns and names the column. The index is moved to a column
-because a MATLAB table's row names are strings only, so a `DatetimeIndex` would
-otherwise be flattened.
+```python
+%%matlab -i x -i df -o beta -o T
+fit  = fitlm(df, 'y ~ x1 + x2');
+beta = fit.Coefficients.Estimate;
+T    = fit.Coefficients;
+```
+
+### Python → MATLAB
+
+| Python | MATLAB |
+|---|---|
+| `int`, `float`, NumPy scalar | `double` scalar |
+| `bool` | `logical` |
+| `complex` | complex `double` |
+| `str` | `char` |
+| list, tuple, 1-D array | `double` **column** vector |
+| 2-D array | `double`, shape preserved |
+| list of `str` | `string` array |
+| `pandas.Series` | one-column `table` |
+| `pandas.DataFrame` | `table` |
+
+A 1-D sequence lands as a **column**, because that is the orientation a
+regressor, a series and a table column all already use. To get a row instead:
+
+```python
+%econ config matlab.vectors row
+```
+
+`None` is refused rather than quietly becoming `NaN` — MATLAB has no
+equivalent, and guessing which one you meant is worse than asking.
+
+### MATLAB → Python
+
+| MATLAB | Python |
+|---|---|
+| numeric scalar | `float` (`int` for `int8`…`uint64`) |
+| complex scalar | `complex` |
+| logical scalar | `bool` |
+| `char` / scalar `string` | `str` |
+| row **or** column vector | 1-D `numpy.ndarray` |
+| 2-D matrix | 2-D `numpy.ndarray` |
+| `string` array, cellstr | `list` of `str` |
+| `table` / `timetable` | `pandas.DataFrame` |
+
+A vector comes back **flat** whichever way MATLAB stored it. MATLAB has no 1-D
+array — `[1 2 3]` is 1×3 and `[1;2;3]` is 3×1 — so preserving the singleton
+axis would hand Python a `(1, 3)` array for something every researcher reads as
+three numbers. Reshape in MATLAB when the orientation is itself the result.
+
+A struct, a mixed cell array or a model object raises `DataTransferError`
+naming the MATLAB class, rather than guessing at a conversion:
+
+```
+'s' is a MATLAB struct, which EconEnv cannot convert to Python.
+Hint: Convert it in MATLAB first: struct2table for a struct, a table for
+mixed columns, or pull the fields you need one at a time.
+```
+
+### `pull` and `pull_value`
+
+`econenv.pull` is frame-oriented — that is the contract `move` and `broadcast`
+depend on, and it is why a table comes back as a DataFrame. `pull_value` gives
+the natural type instead, and is what `-o` uses:
+
+```python
+econenv.pull("matlab", "T")          # DataFrame — a table or a matrix
+econenv.pull_value("matlab", "y")    # 10.0 — a number is a number
+```
+
+Asking `pull` for a scalar says so and names the other one, instead of failing
+inside pandas.
+
+## Google Colab, through a local runtime
+
+Colab normally runs on a Linux VM at Google, where your MATLAB is not installed
+and your licence does not reach. The **local runtime** keeps the Colab
+interface in the browser and runs the kernel on your own machine, so MATLAB,
+EViews and a local Stata all work exactly as in a local notebook.
+
+```
+Colab UI (browser) → local Jupyter server → EconEnv → MATLAB
+```
+
+Everything below is available from a cell with `%econ matlab colab`.
+
+**1. Activate the environment that has EconEnv** — Windows CMD or PowerShell:
+
+```bat
+<your-env>\Scripts\activate
+python --version
+```
+
+**2. Start Jupyter so Colab is allowed to talk to it** — same terminal:
+
+```bash
+jupyter notebook --ServerApp.allow_origin="https://colab.research.google.com" --ServerApp.allow_credentials=True
+```
+
+Jupyter picks a free port itself; there is nothing special about 8888. Add
+`--ServerApp.port=8890` if you need a fixed one, and if it is busy Jupyter says
+so and you can pick another.
+
+**3. Copy the address it prints**, token and all:
+
+```
+http://localhost:<PORT>/?token=<TOKEN>
+```
+
+**4. In Colab**: Connect → *Connect to local runtime* → paste → Connect.
+
+**5. Check the kernel really is yours** — Python cell:
+
+```python
+import sys; print(sys.executable)
+```
+
+It must show your own environment, not `/usr/bin/python3`.
+
+**6. Then nothing is different** — Python cell:
+
+```python
+%load_ext econenv
+%econ status
+
+%%matlab
+version
+```
+
+> **Security.** The local runtime executes notebook code on your computer, with
+> your files and your installed software. Connect only notebooks you trust, and
+> never share the token — it is the credential to your kernel.
+
+Variables set in one Colab cell are found by `-i` without any help. Earlier
+versions looked in two namespaces and missed the one Colab uses, so `%%matlab
+-i x` raised `NameError` until you wrote `get_ipython().user_ns["x"] = x` by
+hand. That workaround is no longer needed.
+
+## Finding MATLAB commands
+
+```python
+%econ matlab                     # the categories
+%econ matlab timeseries          # unit roots, ARIMA, VAR
+%econ matlab find cointegration  # search everything
+%econ matlab colab               # the local-runtime setup above
+%econ matlab export              # saving figures and tables
+%econ matlab doctor              # diagnose the setup
+```
+
+102 commands, every one resolved against a live MATLAB, each naming the toolbox
+it needs — because a function you have not licensed fails with `Unrecognized
+function or variable`, which reads like a typo and is not one. The full list is
+[matlab-commands.md](matlab-commands.md).
 
 ## Figures
 
@@ -160,6 +304,18 @@ addpath('C:/path/to/code')
 
 **A cell seems to hang.** The first one is starting MATLAB. Subsequent cells are
 fast; share an already-open session to skip the wait entirely.
+
+**`'x' is not defined in Python`** for a variable you can see. Fixed in 1.2.0 —
+the lookup consulted two namespaces and Colab's local runtime uses a third.
+Upgrade rather than working around it with `get_ipython().user_ns[...]`.
+
+**`ValueError: Must pass 2-d input. shape=()`** from `-o`. Also fixed in 1.2.0:
+every pull went through `pandas.DataFrame`, so a scalar failed inside pandas.
+Scalars now come back as numbers.
+
+**`Unrecognized function or variable` for a function that exists.** It is in a
+toolbox this licence does not cover. `%econ matlab find <name>` says which one,
+and `ver` lists what you have.
 
 ---
 

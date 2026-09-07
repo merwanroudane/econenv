@@ -195,3 +195,253 @@ def _as_str_list(value: Any) -> list:
     if isinstance(value, str):
         return [value]
     return [str(v) for v in value]
+
+
+# --------------------------------------------------------------------------- #
+# typed transfer, for values that are not tables
+# --------------------------------------------------------------------------- #
+# `pull_frame` answers "give me this as a DataFrame", which is the right
+# contract for `econenv.pull` and for moving data between engines. It is the
+# wrong contract for `%%matlab -o y` where `y = 10`: a scalar is not a frame,
+# and forcing it through pandas produced `ValueError: Must pass 2-d input.
+# shape=()` — an error raised inside pandas that says nothing about MATLAB.
+#
+# So the typed path below is separate and explicit. What each MATLAB class
+# becomes in Python is documented in docs/engines/matlab.md and tested; nothing
+# here guesses.
+
+#: MATLAB classes that carry numbers.
+_NUMERIC = {
+    "double",
+    "single",
+    "int8",
+    "int16",
+    "int32",
+    "int64",
+    "uint8",
+    "uint16",
+    "uint32",
+    "uint64",
+}
+
+#: MATLAB integer classes, which come back as Python ``int`` rather than float.
+_INTEGER = {"int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"}
+
+
+def _matlab_class(eng, name: str) -> str:
+    """The MATLAB class of *name*, or raise if it is not in the workspace."""
+    try:
+        exists = bool(eng.eval("exist('" + name + "', 'var')", nargout=1))
+    except Exception as exc:  # a malformed name, mostly
+        raise DataTransferError(
+            f"MATLAB could not inspect {name!r}: {exc}", engine="matlab", name=name, raw=exc
+        ) from exc
+    if not exists:
+        raise DataTransferError(
+            f"{name!r} is not in the MATLAB workspace.",
+            engine="matlab",
+            name=name,
+            hint="Check the spelling, and that the cell creating it ran without error.",
+        )
+    return str(eng.eval(f"class({name})", nargout=1))
+
+
+def pull_value(engine, name: str, **kwargs: Any) -> Any:
+    """Read any MATLAB variable back into its natural Python type.
+
+    ===========================  =========================================
+    MATLAB                       Python
+    ===========================  =========================================
+    numeric scalar               ``float`` (``int`` for integer classes)
+    complex scalar               ``complex``
+    logical scalar               ``bool``
+    ``char`` / ``string`` scalar ``str``
+    row or column vector         1-D ``numpy.ndarray``
+    2-D matrix                   2-D ``numpy.ndarray``
+    ``string`` array / cellstr   ``list`` of ``str``
+    ``table`` / ``timetable``    ``pandas.DataFrame``
+    ===========================  =========================================
+
+    A vector comes back 1-D whichever way it was oriented in MATLAB, because
+    ``[1 2 3]`` and ``[1;2;3]`` are the same three numbers to a researcher and
+    the orientation is a MATLAB storage detail. Reshape in MATLAB when the
+    orientation is itself the result.
+    """
+    eng = engine._eng
+    kind = _matlab_class(eng, name)
+
+    if kind in ("table", "timetable"):
+        return pull_frame(engine, name, **kwargs)
+
+    if kind == "char":
+        return str(eng.workspace[name])
+
+    if kind == "string":
+        if bool(eng.eval(f"isscalar({name})", nargout=1)):
+            return str(eng.eval(f"char({name})", nargout=1))
+        return _as_str_list(eng.eval(f"cellstr({name}(:))", nargout=1))
+
+    if kind == "cell":
+        if bool(eng.eval(f"iscellstr({name})", nargout=1)):
+            return _as_str_list(eng.eval(f"{name}(:)", nargout=1))
+        raise DataTransferError(
+            f"{name!r} is a MATLAB cell array of mixed types, which has no single "
+            "Python equivalent.",
+            engine="matlab",
+            name=name,
+            hint="Convert it in MATLAB first — cell2table, string(), or index the elements.",
+        )
+
+    if kind == "logical":
+        raw = np.array(eng.workspace[name], dtype=bool)
+        return bool(raw.ravel()[0]) if raw.size == 1 else _shaped(raw)
+
+    if kind in _NUMERIC:
+        return _numeric_value(eng, name, kind)
+
+    raise DataTransferError(
+        f"{name!r} is a MATLAB {kind}, which EconEnv cannot convert to Python.",
+        engine="matlab",
+        name=name,
+        hint=(
+            "Convert it in MATLAB first: struct2table for a struct, a table for mixed "
+            "columns, or pull the fields you need one at a time."
+        ),
+    )
+
+
+def _numeric_value(eng, name: str, kind: str) -> Any:
+    """A numeric MATLAB variable as a scalar, 1-D array or 2-D array."""
+    complex_valued = bool(eng.eval(f"isreal({name}) == 0", nargout=1))
+    array = np.array(eng.workspace[name], dtype=complex if complex_valued else float)
+
+    if array.size == 1:
+        value = array.ravel()[0]
+        if complex_valued:
+            return complex(value)
+        return int(value) if kind in _INTEGER else float(value)
+
+    if kind in _INTEGER and not complex_valued:
+        array = array.astype(np.int64)
+    return _shaped(array)
+
+
+def _shaped(array: np.ndarray) -> np.ndarray:
+    """A MATLAB array with its Python shape: vectors flat, matrices as they are.
+
+    MATLAB has no 1-D array — ``[1 2 3]`` is 1x3 and ``[1;2;3]`` is 3x1 — so
+    keeping the singleton axis would hand Python a ``(1, 3)`` array for
+    something every researcher reads as three numbers.
+    """
+    if array.ndim == 2 and 1 in array.shape:
+        return array.ravel()
+    return array
+
+
+def push_value(engine, name: str, obj: Any, orientation: str = "column") -> None:
+    """Send any supported Python value into the MATLAB workspace under *name*.
+
+    ==============================  ===========================================
+    Python                          MATLAB
+    ==============================  ===========================================
+    ``bool`` / ``numpy.bool_``      ``logical``
+    ``int`` / ``float`` / NumPy     ``double``
+    ``complex``                     complex ``double``
+    ``str``                         ``char``
+    list, tuple, 1-D array          ``double`` column (see *orientation*)
+    2-D array                       ``double``, shape preserved
+    list of ``str``                 ``string`` array
+    ==============================  ===========================================
+
+    The previous implementation called ``float(obj)`` on everything that was not
+    a DataFrame, so a list, a tuple or any NumPy array with ``ndim > 0`` raised
+    a ``TypeError`` from the float constructor instead of being converted.
+    """
+    import matlab
+
+    eng = engine._eng
+
+    if obj is None:
+        raise DataTransferError(
+            "MATLAB has no equivalent of None.",
+            engine="matlab",
+            name=name,
+            hint="Use float('nan') for a missing number, or an empty list for [].",
+        )
+
+    if isinstance(obj, str):
+        escaped = obj.replace("'", "''")
+        eng.eval(f"{name} = '{escaped}';", nargout=0)
+        return
+
+    # bool before int: bool is a subclass of int, and MATLAB distinguishes them.
+    if isinstance(obj, (bool, np.bool_)):
+        eng.workspace[name] = matlab.logical([[bool(obj)]])
+        eng.eval(f"{name} = {name}(1);", nargout=0)
+        return
+
+    if isinstance(obj, (int, float, np.integer, np.floating)):
+        eng.workspace[name] = float(obj)
+        return
+
+    if isinstance(obj, (complex, np.complexfloating)):
+        eng.workspace[name] = complex(obj)
+        return
+
+    if isinstance(obj, pd.Series):
+        obj = obj.to_numpy()
+    elif isinstance(obj, (list, tuple)):
+        if len(obj) and all(isinstance(v, str) for v in obj):
+            eng.workspace[name] = [str(v) for v in obj]
+            eng.eval(f"{name} = string({name}(:));", nargout=0)
+            return
+        obj = np.asarray(obj)
+
+    if isinstance(obj, np.ndarray):
+        _push_array(eng, matlab, name, obj, orientation)
+        return
+
+    raise DataTransferError(
+        f"EconEnv cannot send a {type(obj).__name__} to MATLAB.",
+        engine="matlab",
+        name=name,
+        hint=(
+            "Supported: numbers, bool, str, list/tuple, NumPy array, pandas Series and DataFrame."
+        ),
+    )
+
+
+def _push_array(eng, matlab, name: str, array: np.ndarray, orientation: str) -> None:
+    """A NumPy array as a MATLAB matrix, with the shape rules stated."""
+    if array.ndim > 2:
+        raise DataTransferError(
+            f"{name!r} has {array.ndim} dimensions; MATLAB matrices here are 2-D.",
+            engine="matlab",
+            name=name,
+            hint="Reshape it in Python first, or send each 2-D slice separately.",
+        )
+
+    if array.ndim == 0:
+        eng.workspace[name] = float(array)
+        return
+
+    if array.dtype == bool:
+        rows = [[bool(v)] for v in array.ravel()] if array.ndim == 1 else array.tolist()
+        eng.workspace[name] = matlab.logical(rows)
+    elif array.dtype.kind in "US":
+        eng.workspace[name] = [str(v) for v in array.ravel().tolist()]
+        eng.eval(f"{name} = string({name}(:));", nargout=0)
+        return
+    elif array.dtype.kind == "c":
+        values = array.astype(complex)
+        rows = [[complex(v)] for v in values] if values.ndim == 1 else values.tolist()
+        eng.workspace[name] = matlab.double(rows, is_complex=True)
+    else:
+        values = array.astype(float)
+        rows = [[float(v)] for v in values] if values.ndim == 1 else values.tolist()
+        eng.workspace[name] = matlab.double(rows)
+
+    # A 1-D sequence lands as a column by default: that is the orientation a
+    # MATLAB table column, a regressor and a time series all already use.
+    if array.ndim == 1 and orientation == "row":
+        eng.eval(f"{name} = {name}.';", nargout=0)

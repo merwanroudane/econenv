@@ -41,7 +41,7 @@ from .exceptions import (
     SessionError,
     UnsupportedDataTypeError,
 )
-from .export import export, export_figures, export_table
+from .export import Report, export, export_figures, export_table, report
 from .results import ExecutionResult, Figure, ModelResult
 from .schema import ColumnSchema, ConversionReport, DatasetMetadata, LogicalType
 
@@ -68,6 +68,7 @@ __all__ = [
     "ModelResult",
     "ModelSpec",
     "ModelSpecificationError",
+    "Report",
     "SessionError",
     "UnsupportedDataTypeError",
     "__version__",
@@ -84,7 +85,9 @@ __all__ = [
     "load_ipython_extension",
     "move",
     "pull",
+    "pull_value",
     "push",
+    "report",
     "snapshot",
     "status",
     "transfer_matrix",
@@ -142,6 +145,17 @@ def pull(engine_name: str, name: Optional[str] = None, **kwargs: Any):
     from . import transfer
 
     return transfer.pull(engine_name, name, **kwargs)
+
+
+def pull_value(engine_name: str, name: str, **kwargs: Any):
+    """Fetch an object out of an engine as its natural Python type.
+
+    Where ``pull`` gives a DataFrame, this gives a number for a scalar, an
+    ndarray for a matrix and a DataFrame for a table.
+    """
+    from . import transfer
+
+    return transfer.pull_value(engine_name, name, **kwargs)
 
 
 def broadcast(name: str, obj: Any, engines: Any = None, **kwargs: Any):

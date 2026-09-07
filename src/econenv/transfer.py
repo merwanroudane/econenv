@@ -39,6 +39,16 @@ def pull(engine: str, name: Optional[str] = None, **kwargs: Any) -> Any:
     return engine_registry.get(engine).pull(name, **kwargs)
 
 
+def pull_value(engine: str, name: str, **kwargs: Any) -> Any:
+    """Bring *name* out of *engine* as its natural Python type.
+
+    ``pull`` always answers with a DataFrame, which is what ``move`` and
+    ``broadcast`` need and the wrong shape for a scalar. This gives the type the
+    value actually has, and is what ``%%matlab -o`` uses.
+    """
+    return engine_registry.get(engine).pull_value(name, **kwargs)
+
+
 def move(
     source: str,
     target: str,

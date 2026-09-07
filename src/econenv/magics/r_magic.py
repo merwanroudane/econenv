@@ -8,7 +8,7 @@ from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, nee
 
 from .._logging import get_logger
 from ..engines import registry as engine_registry
-from ._common import MagicParser, display_result, shell_of, split_line
+from ._common import MagicParser, display_result, resolve_python_name, shell_of, split_line
 
 _log = get_logger("magics.r")
 
@@ -86,9 +86,7 @@ class RMagics(Magics):
         engine.ensure_started()
 
         for name in args.input:
-            if name not in local_ns and name not in shell_of(self).user_ns:
-                raise NameError(f"{name!r} is not defined in Python.")
-            engine.push(name, local_ns.get(name, shell_of(self).user_ns.get(name)))
+            engine.push(name, resolve_python_name(name, local_ns, shell_of(self)))
 
         kwargs = {"graphics": "off"} if args.no_graphics else {}
         result = engine.execute(code, **kwargs)

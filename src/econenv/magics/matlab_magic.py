@@ -13,7 +13,15 @@ from typing import Any, Optional
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, needs_local_scope
 
 from ..engines import registry as engine_registry
-from ._common import MagicParser, display_result, push_outputs, shell_of, split_line, strip_quotes
+from ._common import (
+    MagicParser,
+    display_result,
+    push_outputs,
+    resolve_python_name,
+    shell_of,
+    split_line,
+    strip_quotes,
+)
 
 
 def _parser() -> MagicParser:
@@ -26,7 +34,7 @@ def _parser() -> MagicParser:
         action="append",
         default=[],
         metavar="NAME",
-        help="Python DataFrame to push into the MATLAB workspace as a table.",
+        help="Python object to push into MATLAB (DataFrame, array, list, number, text).",
     )
     parser.add_argument(
         "-o",
@@ -34,7 +42,7 @@ def _parser() -> MagicParser:
         action="append",
         default=[],
         metavar="NAME",
-        help="MATLAB variable to bring back into Python after the cell runs.",
+        help="MATLAB variable to bring back into Python, as its natural type.",
     )
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress output.")
     parser.add_argument(
@@ -75,17 +83,81 @@ class MatlabMagics(Magics):
     def matlab(
         self, line: str = "", cell: Optional[str] = None, local_ns: Optional[dict] = None
     ) -> Any:
-        """Run MATLAB code.
+        """Run MATLAB in the session EconEnv keeps open.
 
-        Line form::
+        Line form, for a single statement::
 
             %matlab disp(version)
 
-        Cell form::
+        Cell form, for a block::
 
-            %%matlab -i df -o beta
-            fit = fitlm(df, 'y ~ x1 + x2');
-            beta = fit.Coefficients.Estimate;
+            %%matlab
+            x = 1:10;
+            disp(mean(x))
+
+        **Sending Python values in** with ``-i``. Repeat the flag for several::
+
+            %%matlab -i x -i df
+            disp(x)
+            head(df)
+
+        =============================  ==========================
+        Python                         arrives in MATLAB as
+        =============================  ==========================
+        ``int``, ``float``, NumPy      ``double`` scalar
+        ``bool``                       ``logical``
+        ``complex``                    complex ``double``
+        ``str``                        ``char``
+        list, tuple, 1-D array         ``double`` column vector
+        2-D array                      ``double``, shape preserved
+        ``pandas.Series``              one-column ``table``
+        ``pandas.DataFrame``           ``table``
+        =============================  ==========================
+
+        A 1-D sequence lands as a *column*, which is what a regressor, a series
+        and a table column all want. ``%econ config matlab.vectors row`` changes
+        it if you would rather have rows.
+
+        **Bringing results back** with ``-o``. The Python type follows the
+        MATLAB class, so a scalar is a number and not a one-cell DataFrame::
+
+            %%matlab -o y -o A -o T
+            y = 10;                       % -> 10.0
+            A = [1 2; 3 4];               % -> 2-D numpy array
+            T = table([1;2], [3;4]);      % -> pandas DataFrame
+
+        =============================  ==========================
+        MATLAB                         comes back as
+        =============================  ==========================
+        numeric scalar                 ``float`` (``int`` if integer class)
+        complex scalar                 ``complex``
+        logical scalar                 ``bool``
+        ``char`` / ``string`` scalar   ``str``
+        row or column vector           1-D ``numpy.ndarray``
+        2-D matrix                     2-D ``numpy.ndarray``
+        ``string`` array / cellstr     ``list`` of ``str``
+        ``table`` / ``timetable``      ``pandas.DataFrame``
+        =============================  ==========================
+
+        Anything else — a struct, a mixed cell array, a model object — raises a
+        ``DataTransferError`` naming the MATLAB class, rather than guessing.
+        Convert it in MATLAB first (``struct2table``, ``table``) and pull that.
+
+        **Figures** drawn by the cell are captured and displayed, each once.
+        ``--no-graphs`` turns that off for one cell;
+        ``%econ config matlab.graphics pdf`` makes them vector for publication.
+
+        **Other flags**
+
+        ``-q``          run without displaying the output
+        ``--result``    return the :class:`ExecutionResult` object instead of
+                        displaying it, for when you want ``.text`` or
+                        ``.figures`` in Python
+
+        The first MATLAB cell of a session takes about a minute while MATLAB
+        starts; every cell after it is fast. ``%econ doctor matlab`` explains
+        anything that will not start, and ``%econ matlab`` is a searchable
+        catalogue of MATLAB commands for research work.
         """
         local_ns = local_ns or {}
         parser = _parser()
@@ -106,16 +178,13 @@ class MatlabMagics(Magics):
 
         for name in args.input:
             key = strip_quotes(name)
-            obj = local_ns.get(key, shell_of(self).user_ns.get(key))
-            if obj is None:
-                raise NameError(f"{key!r} is not defined in Python.")
-            engine.push(key, obj)
+            engine.push(key, resolve_python_name(key, local_ns, shell_of(self)))
 
         result = engine.execute(code, capture_graphs=not args.no_graphs)
 
         if args.output:
             names = [strip_quotes(n) for n in args.output]
-            values = [engine.pull(n) for n in names]
+            values = [engine.pull_value(n) for n in names]
             push_outputs(shell_of(self), names, values)
 
         if args.result:

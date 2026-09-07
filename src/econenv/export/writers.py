@@ -13,6 +13,9 @@ only wants LaTeX should never be asked to install python-docx.
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Sequence
 
@@ -278,6 +281,96 @@ def _safe_sheet_name(name: str) -> str:
     return cleaned[:31] or "sheet"
 
 
+#: TeX engines that can turn a standalone table into a PDF, in preference
+#: order. ``tectonic`` is included because it needs no TeX installation of its
+#: own beyond the binary.
+_TEX_ENGINES = ("pdflatex", "xelatex", "lualatex", "tectonic")
+
+
+def tex_engine() -> Optional[str]:
+    """The first available TeX engine, or None."""
+    for engine in _TEX_ENGINES:
+        if shutil.which(engine):
+            return engine
+    return None
+
+
+def write_pdf(
+    table: pd.DataFrame,
+    path: Path,
+    *,
+    caption: Optional[str] = None,
+    label: Optional[str] = None,
+    note: Optional[str] = None,
+    landscape: bool = False,
+) -> Path:
+    """A one-page PDF of the table, typeset by the local TeX installation.
+
+    This is the same LaTeX :func:`write_latex` produces, wrapped in a
+    ``standalone`` document and compiled — so the PDF and the ``.tex`` you would
+    ``\\input`` into a paper cannot disagree.
+
+    A PDF needs a TeX engine, which is not a Python dependency and cannot be
+    installed by pip. When none is present this raises with the reason and the
+    alternatives rather than failing inside a subprocess.
+    """
+    engine = tex_engine()
+    if engine is None:
+        raise EconEnvError(
+            "PDF export needs a TeX engine (pdflatex, xelatex, lualatex or "
+            "tectonic) on PATH, and there is none. It cannot be installed with "
+            "pip.\n"
+            "  Windows : install MiKTeX (https://miktex.org) or TeX Live\n"
+            "  macOS   : brew install --cask mactex-no-gui\n"
+            "  Linux   : apt install texlive-latex-recommended\n"
+            "Or export .tex and typeset it with your paper, or .docx for Word."
+        )
+
+    body = write_latex(
+        table,
+        path.with_suffix(".econenv-tmp.tex"),
+        caption=caption,
+        label=label,
+        note=note,
+        fragment=True,
+    )
+    fragment = body.read_text(encoding="utf-8")
+    body.unlink(missing_ok=True)
+
+    orientation = "landscape," if landscape else ""
+    document = (
+        "\\documentclass[border=10pt," + orientation + "varwidth=\\maxdimen]{standalone}\n"
+        "\\usepackage{booktabs}\n"
+        "\\usepackage[T1]{fontenc}\n"
+        "\\usepackage{amsmath}\n"
+        "\\begin{document}\n" + fragment + "\n\\end{document}\n"
+    )
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as workdir:
+        source = Path(workdir) / "table.tex"
+        source.write_text(document, encoding="utf-8")
+        command = (
+            [engine, str(source)]
+            if engine == "tectonic"
+            else [engine, "-interaction=nonstopmode", "-halt-on-error", source.name]
+        )
+        completed = subprocess.run(
+            command, cwd=workdir, capture_output=True, text=True, timeout=180
+        )
+        produced = Path(workdir) / "table.pdf"
+        if not produced.exists():
+            log = (completed.stdout or "") + (completed.stderr or "")
+            errors = [ln for ln in log.splitlines() if ln.startswith("!")][:3]
+            detail = "\n  ".join(errors) if errors else log.strip()[-400:]
+            raise EconEnvError(
+                f"{engine} could not typeset the table:\n  {detail}\n"
+                "Export .tex instead and compile it with your paper's preamble."
+            )
+        shutil.copyfile(produced, path)
+    return path
+
+
 #: Extension -> writer, for the dispatcher in :mod:`econenv.export`.
 TABLE_WRITERS: Dict[str, Callable[..., Path]] = {
     "tex": write_latex,
@@ -288,4 +381,5 @@ TABLE_WRITERS: Dict[str, Callable[..., Path]] = {
     "html": write_html,
     "md": write_markdown,
     "rtf": write_rtf,
+    "pdf": write_pdf,
 }

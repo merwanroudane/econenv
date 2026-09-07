@@ -14,7 +14,14 @@ from typing import Any, Optional
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class, needs_local_scope
 
 from ..engines import registry as engine_registry
-from ._common import MagicParser, display_result, shell_of, split_line, strip_quotes
+from ._common import (
+    MagicParser,
+    display_result,
+    resolve_python_name,
+    shell_of,
+    split_line,
+    strip_quotes,
+)
 
 
 def _parser() -> MagicParser:
@@ -96,9 +103,7 @@ class EViewsMagics(Magics):
 
         for name in args.input:
             key = strip_quotes(name)
-            obj = local_ns.get(key, shell_of(self).user_ns.get(key))
-            if obj is None:
-                raise NameError(f"{key!r} is not defined in Python.")
+            obj = resolve_python_name(key, local_ns, shell_of(self))
             engine.push(key, obj, new_workfile=not args.append)
 
         if args.page:

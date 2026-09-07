@@ -84,3 +84,53 @@ def push_outputs(shell: Any, names: Sequence[str], values: Sequence[Any]) -> Non
     """Bind pulled objects into the user's namespace."""
     for name, value in zip(names, values):
         shell.push({name: value})
+
+
+#: Namespaces a magic should consult, in order. ``user_global_ns`` differs from
+#: ``user_ns`` only when the shell runs with a separate globals mapping, which
+#: some frontends do; consulting it costs nothing and is the difference between
+#: working and not on those.
+def _namespaces(local_ns: Optional[dict], shell: Any) -> List[dict]:
+    spaces: List[dict] = []
+    if isinstance(local_ns, dict):
+        spaces.append(local_ns)
+    for attribute in ("user_ns", "user_global_ns"):
+        candidate = getattr(shell, attribute, None)
+        if isinstance(candidate, dict) and not any(candidate is s for s in spaces):
+            spaces.append(candidate)
+    return spaces
+
+
+def resolve_python_name(name: str, local_ns: Optional[dict], shell: Any) -> Any:
+    """The Python object called *name*, looked up the way a frontend stores it.
+
+    Two things were wrong with the previous one-liner
+    ``local_ns.get(name, shell.user_ns.get(name))``:
+
+    1. It tested the *value* for ``None``, so a variable genuinely assigned
+       ``None`` was reported as undefined — a misleading NameError for what is
+       really an unsupported type.
+    2. It consulted only two mappings. Under Google Colab's local runtime a
+       variable set in one cell was not found in ``shell.user_ns`` at all, and
+       ``%%matlab -i x`` failed with "'x' is not defined in Python" until the
+       user wrote ``get_ipython().user_ns["x"] = x`` by hand.
+
+    Membership is tested rather than truthiness, and every namespace the shell
+    exposes is consulted, so the answer does not depend on which frontend is
+    driving the kernel.
+    """
+    for namespace in _namespaces(local_ns, shell):
+        if name in namespace:
+            return namespace[name]
+
+    known = sorted(
+        {
+            key
+            for namespace in _namespaces(local_ns, shell)
+            for key in namespace
+            if not key.startswith("_")
+        }
+    )
+    close = [key for key in known if key.lower() == name.lower()][:1]
+    suffix = f" Did you mean {close[0]!r}?" if close else ""
+    raise NameError(f"{name!r} is not defined in Python.{suffix}")

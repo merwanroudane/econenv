@@ -19,7 +19,12 @@ a cell, without importing anything:
 ```
 
 `cmp` can be a `ModelResult`, a `ComparisonResult` across five engines, a
-`DataFrame`, a `Figure`, or a list mixing them.
+`DataFrame`, a **NumPy array** — which is what `%%matlab -o A` gives you for a
+matrix — a `Figure`, or a list mixing them.
+
+A file extension EconEnv cannot write is refused by name. It used to fall
+back to the journal bundle, so asking for `table.pdf` wrote `table.tex`,
+`table.docx` and `table.xlsx` and said nothing.
 
 ## In the notebook
 
@@ -115,6 +120,7 @@ econenv.export(cmp, "check.xlsx", style="full")
 | HTML | `.html` | — | self-contained, styled like a journal table |
 | Markdown | `.md` | `econenv[export]` | |
 | RTF | `.rtf` | — | for submission systems that still want it |
+| PDF | `.pdf` | a TeX engine | typeset from the same LaTeX, so they cannot disagree |
 
 ```bash
 pip install "econenv[export]"
@@ -185,6 +191,39 @@ Figures (3):
   paper/figure03_r_plot.svg
 ```
 
+## A short research report
+
+A table and a figure without the versions that produced them are the thing a
+referee cannot check, so the report layer keeps all three together:
+
+```python
+report = econenv.report("Consumption function", author="Dr Merwan Roudane")
+report.add_text("Quarterly US data, 1959Q1-2009Q3.")
+report.add_table(cmp, caption="Table 1. Baseline estimates")
+report.add_figures(result.figures, caption="Figure 1. Residual diagnostics")
+report.add_snapshot()
+
+report.write("paper/report.docx")
+```
+
+`html`, `md`, `tex`, `docx` and `pdf`. Figures are written beside the report and
+referenced from it, so the folder moves as one thing.
+
+`add_snapshot()` records EconEnv, Python and every engine's version. It never
+raises for an engine that is not installed — that is a fact about the machine,
+not a reason to lose the report.
+
+This is deliberately **not** a manuscript system. It answers one question — *put
+the table, the chart and the versions into one file I can send someone* — and
+stops. Anything more belongs in a real authoring tool.
+
+### PDF needs a TeX engine
+
+`pdf`, for both tables and reports, typesets the LaTeX with `pdflatex`,
+`xelatex`, `lualatex` or `tectonic`. That is not a Python package and pip cannot
+install it, so when none is on `PATH` the error says which to install for your
+platform and offers `.tex` and `.docx` instead of failing inside a subprocess.
+
 ## What it will not do
 
 - **Invent a statistic.** A number the engine did not report is left blank, not
@@ -193,6 +232,13 @@ Figures (3):
 - **Fake vector output.** A raster figure is never re-wrapped as a "vector" PDF.
 - **Round twice.** The journal layout formats once, from the full-precision
   value; the Excel export keeps the unrounded number.
+
+---
+
+> **A note on importing.** `econenv.export` is both a function and a
+> subpackage, and the function wins as an attribute. `from econenv.export import
+> journal_table` and `from econenv.export.writers import write_pdf` work; only
+> the `import econenv.export.writers as w` form does not.
 
 ---
 

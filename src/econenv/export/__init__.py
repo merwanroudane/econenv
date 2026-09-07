@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Union
 
+import numpy as np
 import pandas as pd
 
 from ..exceptions import EconEnvError
@@ -34,17 +35,21 @@ __all__ = [
     "FIGURE_FORMATS",
     "TABLE_FORMATS",
     "ExportResult",
+    "Report",
     "build_table",
     "export",
     "export_figures",
     "export_table",
     "full_table",
     "journal_table",
+    "report",
     "star_note",
 ]
 
+from .report import Report, report
+
 #: Table formats ``export`` understands.
-TABLE_FORMATS = ("tex", "docx", "xlsx", "csv", "html", "md", "rtf")
+TABLE_FORMATS = ("tex", "docx", "xlsx", "csv", "html", "md", "rtf", "pdf")
 #: Figure formats, written in whatever the engine actually produced.
 FIGURE_FORMATS = ("png", "svg", "pdf", "eps")
 
@@ -124,7 +129,16 @@ def export(
     # `is not None`, never truthiness: a DataFrame raises on bool().
     if tables is not None:
         frame = _to_frame(tables, style=style, stars=stars, digits=digits, **kwargs)
-        footer = note if note is not None else (star_note(stars) if style == "journal" else None)
+        # The stars note belongs under a coefficient table, not under a matrix
+        # or a DataFrame the user assembled: it would claim a significance
+        # convention for numbers that have no p-values behind them.
+        estimated = _has_estimates(tables)
+        if note is not None:
+            footer = note
+        elif style == "journal" and estimated:
+            footer = star_note(stars)
+        else:
+            footer = None
         result.tables += _write_table(
             frame, target, chosen, caption=caption, label=label, note=footer
         )
@@ -185,11 +199,31 @@ def _split(obj: Any) -> tuple:
     return (tables if tables else None), figures
 
 
+def _has_estimates(obj: Any) -> bool:
+    """Whether *obj* came from an estimation, so stars mean something."""
+    items = obj if isinstance(obj, (list, tuple)) else [obj]
+    return any(
+        not isinstance(item, (pd.DataFrame, pd.Series, np.ndarray))
+        and (hasattr(item, "coefficients") or hasattr(item, "results"))
+        for item in items
+    )
+
+
 def _to_frame(obj: Any, *, style: str, stars: Sequence, digits: int, **kwargs: Any) -> pd.DataFrame:
     if isinstance(obj, pd.DataFrame):
         return obj
     if isinstance(obj, pd.Series):
         return obj.to_frame()
+    if isinstance(obj, np.ndarray):
+        # `%%matlab -o A` returns a matrix as an ndarray, and "export that
+        # matrix to LaTeX" is a thing researchers ask for constantly.
+        if obj.ndim == 1:
+            return pd.DataFrame({"value": obj})
+        if obj.ndim == 2:
+            return pd.DataFrame(obj)
+        raise EconEnvError(
+            f"A {obj.ndim}-dimensional array has no table form; slice it to 2-D first."
+        )
     if style == "journal":
         return journal_table(obj, stars=stars, digits=digits, **kwargs)
     return full_table(obj, digits=max(digits, 6))
@@ -207,6 +241,15 @@ def _resolve_formats(target: Path, formats: Optional[Sequence[str]]) -> List[str
     suffix = target.suffix.lower().lstrip(".")
     if suffix in TABLE_WRITERS:
         return [suffix]
+    if suffix:
+        # Falling through to the journal bundle here wrote table.tex, table.docx
+        # and table.xlsx for someone who asked for table.pdf, and said nothing.
+        raise EconEnvError(
+            f"{target.name!r} has an extension EconEnv cannot write: {suffix!r}. "
+            f"Available: {', '.join(sorted(set(TABLE_FORMATS)))}. "
+            "Give a name without a suffix for the journal bundle "
+            f"({', '.join(JOURNAL_FORMATS)})."
+        )
     return list(JOURNAL_FORMATS)
 
 

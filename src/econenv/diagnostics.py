@@ -596,6 +596,145 @@ def _module_version(name: str) -> Optional[str]:
         return "installed" if spec else None
 
 
+def check_matlab(deep: bool = False) -> List[Check]:
+    """MATLAB, from the installation on disk to the Engine API that drives it.
+
+    The two failures worth telling apart are "MATLAB is not here" and "MATLAB is
+    here but the Engine API cannot be imported", because only the second is
+    fixable with pip — and then only with the right pin, which depends on both
+    the MATLAB release and the running Python.
+    """
+    from .engines.matlab_engine import (
+        _python_range,
+        _releases_supporting_python,
+        _series_for,
+        engine_api_release,
+        find_matlab,
+    )
+
+    checks: List[Check] = []
+    installs = find_matlab()
+    python = f"{sys.version_info.major}.{sys.version_info.minor}"
+
+    if installs:
+        checks.append(
+            Check(
+                "MATLAB installation",
+                Status.PASS,
+                ", ".join(f"{p.name} at {p}" for p in installs),
+                group="matlab",
+            )
+        )
+    else:
+        checks.append(
+            Check(
+                "MATLAB installation",
+                Status.SKIP,
+                "not found",
+                "Install MATLAB, or ignore this if you do not use it — the other "
+                "engines are unaffected.",
+                group="matlab",
+            )
+        )
+
+    package = _module_version("matlabengine")
+    api_release = engine_api_release()
+    if package:
+        checks.append(
+            Check(
+                "matlabengine package",
+                Status.PASS,
+                f"{package}" + (f" (starts {api_release})" if api_release else ""),
+                group="matlab",
+            )
+        )
+    else:
+        # The pin depends on both the release and the interpreter, so name it
+        # per installation rather than telling everyone to install the newest.
+        usable = [
+            (p.name, _series_for(p.name))
+            for p in installs
+            if _series_for(p.name)
+            and _python_range(_series_for(p.name))[0]
+            <= sys.version_info[:2]
+            < _python_range(_series_for(p.name))[1]
+        ]
+        if usable:
+            fix = "; ".join(f'{rel}: pip install "matlabengine=={ser}.*"' for rel, ser in usable)
+            status = Status.WARN if installs else Status.SKIP
+        elif installs:
+            supported = _releases_supporting_python()
+            first = f" {supported[0][0]} or newer supports Python {python}." if supported else ""
+            fix = (
+                f"No installed release's Engine API supports Python {python}."
+                + first
+                + " Or run EconEnv on a Python your MATLAB can drive: "
+                "conda create -n econ python=3.11"
+            )
+            status = Status.WARN
+        else:
+            fix = "Install MATLAB first; the engine package is pinned to its release."
+            status = Status.SKIP
+        checks.append(Check("matlabengine package", status, "not installed", fix, group="matlab"))
+
+    engine = registry_get_quiet("matlab")
+    if engine is None:
+        return checks
+
+    if engine.available:
+        checks.append(
+            Check(
+                "MATLAB engine",
+                Status.PASS,
+                f"{engine.version() or 'ready'} via matlab.engine",
+                group="matlab",
+            )
+        )
+        if deep:
+            try:
+                engine.ensure_started()
+                value = engine.pull_scalar("1 + 1")
+                ok = float(value) == 2.0
+                checks.append(
+                    Check(
+                        "MATLAB round trip",
+                        Status.PASS if ok else Status.ERROR,
+                        "1 + 1 evaluated in MATLAB" if ok else f"returned {value!r}",
+                        group="matlab",
+                    )
+                )
+            except Exception as exc:
+                checks.append(
+                    Check(
+                        "MATLAB round trip",
+                        Status.ERROR,
+                        str(exc)[:200],
+                        "Start MATLAB by hand once; a licence prompt blocks the Engine API.",
+                        group="matlab",
+                    )
+                )
+    else:
+        checks.append(
+            Check(
+                "MATLAB engine",
+                Status.SKIP if not installs else Status.WARN,
+                getattr(engine, "_detect_error", None) or "not available",
+                group="matlab",
+            )
+        )
+    return checks
+
+
+def registry_get_quiet(name: str):
+    """The engine object, or None if the registry cannot produce one."""
+    try:
+        from .engines import registry
+
+        return registry.get(name)
+    except Exception:
+        return None
+
+
 def run(engine: Optional[str] = None, *, deep: bool = False) -> Report:
     """Run the diagnostics.
 
@@ -612,6 +751,7 @@ def run(engine: Optional[str] = None, *, deep: bool = False) -> Report:
         "r": lambda: check_r(deep),
         "stata": lambda: check_stata(deep),
         "eviews": lambda: check_eviews(deep),
+        "matlab": lambda: check_matlab(deep),
     }
     if engine:
         key = engine.lower()

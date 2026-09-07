@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import econenv
 from econenv.exceptions import EconEnvError
 from econenv.export import export, export_table, full_table, journal_table, star_note
 from econenv.export.figures import figure_extension, is_vector, save_figure, vector_advice
@@ -234,3 +235,97 @@ class TestJupyterDisplay:
         result = export(_model(), tmp_path / "t", formats=["tex", "csv", "html"])
         assert len(result.tables) == 3
         assert all(p.stat().st_size > 0 for p in result.tables)
+
+
+class TestMatrixAndPdfExport:
+    """Gaps found while checking the export layer against the MATLAB brief."""
+
+    def test_a_numpy_matrix_can_be_exported(self, tmp_path):
+        """`%%matlab -o A` returns an ndarray, and it has to be exportable."""
+        matrix = np.array([[10.0, 20.0], [30.0, 40.0]])
+        result = econenv.export(matrix, tmp_path / "m.tex")
+        text = result.paths[0].read_text(encoding="utf-8")
+        assert "10.0" in text and "40.0" in text
+        assert r"\toprule" in text
+
+    def test_a_matrix_gets_no_significance_note(self, tmp_path):
+        """Stars under a plain matrix would claim p-values that do not exist."""
+        econenv.export(np.array([[1.0, 2.0]]), tmp_path / "m.tex")
+        assert "Standard errors in parentheses" not in (tmp_path / "m.tex").read_text(
+            encoding="utf-8"
+        )
+
+    def test_a_three_dimensional_array_is_refused(self, tmp_path):
+        with pytest.raises(EconEnvError) as caught:
+            econenv.export(np.zeros((2, 2, 2)), tmp_path / "m.tex")
+        assert "3-dimensional" in str(caught.value)
+
+    def test_an_unknown_extension_is_refused_not_silently_swapped(self, tmp_path):
+        """Asking for .odt used to write .tex, .docx and .xlsx and say nothing."""
+        with pytest.raises(EconEnvError) as caught:
+            econenv.export(pd.DataFrame({"a": [1.0]}), tmp_path / "t.odt")
+        message = str(caught.value)
+        assert "odt" in message
+        assert "csv" in message and "pdf" in message, "list what is available"
+
+    def test_pdf_is_a_known_format(self):
+        from econenv.export import TABLE_FORMATS
+
+        assert "pdf" in TABLE_FORMATS
+
+    def test_pdf_without_a_tex_engine_explains_itself(self, tmp_path, monkeypatch):
+        from econenv.export import writers
+
+        monkeypatch.setattr(writers.shutil, "which", lambda name: None)
+        with pytest.raises(EconEnvError) as caught:
+            writers.write_pdf(pd.DataFrame({"a": [1.0]}), tmp_path / "t.pdf")
+        message = str(caught.value)
+        assert "TeX engine" in message
+        assert "pip" in message, "say that pip cannot fix it"
+        assert ".tex" in message and "docx" in message, "offer the alternatives"
+
+
+class TestReport:
+    """A table, a figure and the versions that produced them, in one file."""
+
+    @pytest.fixture
+    def filled(self):
+        frame = pd.DataFrame({"coefficient": [1.5, 2.5]}, index=["_cons", "x"])
+        report = econenv.report("Test report", author="Dr Merwan Roudane")
+        report.add_text("A paragraph.")
+        report.add_table(frame, caption="Table 1. Estimates")
+        report.add_snapshot({"econenv": "test", "python": "3.11"})
+        return report
+
+    @pytest.mark.parametrize("extension", ["html", "md", "tex"])
+    def test_it_writes_each_text_format(self, filled, tmp_path, extension):
+        path = filled.write(tmp_path / f"r.{extension}")
+        text = path.read_text(encoding="utf-8")
+        assert path.exists() and path.stat().st_size > 0
+        assert "Test report" in text
+        assert "Table 1. Estimates" in text
+        assert "A paragraph." in text
+
+    def test_the_reproducibility_block_is_included(self, filled, tmp_path):
+        text = filled.write(tmp_path / "r.md").read_text(encoding="utf-8")
+        assert "Reproducibility" in text
+        assert "econenv: test" in text
+
+    def test_a_snapshot_taken_live_never_breaks_the_report(self, tmp_path):
+        """An engine that is missing is a fact, not a reason to lose the report."""
+        report = econenv.report("Live").add_snapshot()
+        assert report.write(tmp_path / "r.html").exists()
+
+    def test_an_unknown_format_is_refused_by_name(self, tmp_path):
+        with pytest.raises(EconEnvError) as caught:
+            econenv.report("x").write(tmp_path / "r.odt")
+        assert "odt" in str(caught.value)
+
+    def test_the_author_appears_when_given(self, filled, tmp_path):
+        assert "Merwan Roudane" in filled.write(tmp_path / "r.html").read_text(encoding="utf-8")
+
+    def test_it_renders_in_a_notebook(self, filled):
+        assert "<table" in filled._repr_html_()
+
+    def test_str_says_what_is_in_it(self, filled):
+        assert "1 text" in str(filled) and "1 table" in str(filled)

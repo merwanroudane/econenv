@@ -14,13 +14,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
+#: Engines a test can be marked as needing. MATLAB was missing here while
+#: `test_all_five_engines_agree` already asserted it took part, so that test
+#: failed rather than skipped on a machine without MATLAB.
+ENGINES = ("r", "stata", "eviews", "matlab")
+
 
 def pytest_collection_modifyitems(config, items):
     """Skip engine tests when the engine is not usable on this machine."""
     from econenv.engines import registry
 
     available = set()
-    for name in ("r", "stata", "eviews"):
+    for name in ENGINES:
         try:
             if registry.get(name).available:
                 available.add(name)
@@ -28,7 +33,7 @@ def pytest_collection_modifyitems(config, items):
             pass
 
     for item in items:
-        for engine in ("r", "stata", "eviews"):
+        for engine in ENGINES:
             if engine in item.keywords and engine not in available:
                 item.add_marker(
                     pytest.mark.skip(reason=f"{engine} is not installed on this machine")

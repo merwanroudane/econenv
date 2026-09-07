@@ -36,6 +36,11 @@ If another extension already owns `%R`, EconEnv leaves it alone and reports
 %econ pull <engine> [name] [--as target]
 %econ move <source> <target> <name>
 %econ ols <formula> --data <df> [--engines a,b] [--vcov hc1] [--no-constant]
+%econ eviews [task|find <term>]       EViews command lookup
+%econ matlab [category|find <term>]   MATLAB command lookup
+%econ matlab colab                    Colab local-runtime setup
+%econ matlab export                   saving MATLAB output for publication
+%econ export [help|formats]           what can be exported, and to what
 ```
 
 Examples:
@@ -173,11 +178,28 @@ beta = fit.Coefficients.Estimate;
 
 | Flag | Meaning |
 |---|---|
-| `-i NAME` | push a DataFrame in as a MATLAB `table` |
-| `-o NAME` | bring a MATLAB variable back to Python |
+| `-i NAME` | push a Python object in (DataFrame, array, list, number, text) |
+| `-o NAME` | bring a MATLAB variable back, as its natural Python type |
 | `-q` | suppress output |
 | `--no-graphs` | do not capture figures this cell draws |
 | `--result` | return the `ExecutionResult` instead of displaying it |
+
+`-i` and `-o` are typed both ways: a MATLAB scalar comes back as a number, a
+matrix as a NumPy array, a table as a DataFrame; a Python list or array goes in
+as a `double` column. The full tables are in
+[engines/matlab.md](engines/matlab.md).
+
+To find a MATLAB command without leaving the notebook:
+
+```python
+%econ matlab                     # 11 categories, 102 commands
+%econ matlab timeseries          # unit roots, ARIMA, VAR
+%econ matlab find cointegration  # search everything
+```
+
+Every entry names the toolbox it needs, because a function you have not licensed
+fails with `Unrecognized function or variable` — which reads like a typo and is
+not one.
 
 **MATLAB is slow to start** — roughly a minute cold. The first cell that uses it
 pays for the whole session; every later one is fast. That is also why

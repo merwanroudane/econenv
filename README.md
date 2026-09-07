@@ -339,7 +339,8 @@ breaking change without a major bump.
 
 | Version | | What changed |
 |---|---|---|
-| **1.1.1** | [PyPI](https://pypi.org/project/econenv/1.1.1/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#111--2026-09-05) | MATLAB R2026a and Python 3.13; five-engine docs |
+| **1.2.0** | [PyPI](https://pypi.org/project/econenv/1.2.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#120--2026-09-07) | MATLAB transfer hardening; research reports |
+| 1.1.1 | [PyPI](https://pypi.org/project/econenv/1.1.1/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#111--2026-09-05) | MATLAB R2026a and Python 3.13; five-engine docs |
 | 1.0.9 | [PyPI](https://pypi.org/project/econenv/1.0.9/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#109--2026-09-05) | Working links on the PyPI page |
 | 1.0.8 | [PyPI](https://pypi.org/project/econenv/1.0.8/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#108--2026-09-05) | MATLAB as a fifth engine; publication export; broadcast |
 | 1.0.7 | [PyPI](https://pypi.org/project/econenv/1.0.7/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#107--2026-09-04) | First stable release; API declared stable |

@@ -515,14 +515,49 @@ class MatlabEngine(BaseEngine):
                 engine=self.name,
                 hint="Push one first, or name a table in the MATLAB workspace.",
             )
+        from ..bridges.matlab_bridge import _matlab_class
+
+        kind = _matlab_class(self._eng, target)
+        if kind not in ("table", "timetable") and not self._is_frameable(target):
+            raise DataTransferError(
+                f"{target!r} is a MATLAB {kind}, not a table or matrix, so it has no "
+                "DataFrame form.",
+                engine=self.name,
+                name=target,
+                hint=(
+                    "Use econenv.pull_value('matlab', name) — or %%matlab -o name — "
+                    "which returns the natural Python type for any MATLAB variable."
+                ),
+            )
         return pull_frame(self, target, **kwargs)
 
+    def _is_frameable(self, name: str) -> bool:
+        """Whether *name* has at least two dimensions of real data behind it."""
+        try:
+            return bool(self._eng.eval(f"isnumeric({name}) && ~isscalar({name})", nargout=1))
+        except Exception:
+            return False
+
     def _push_scalar(self, name: str, value: Any, **kwargs: Any) -> None:
-        if isinstance(value, str):
-            escaped = value.replace("'", "''")
-            self._eng.eval(f"{name} = '{escaped}';", nargout=0)
-        else:
-            self._eng.workspace[name] = float(value)
+        """Anything that is not a frame — scalars, vectors, matrices, text.
+
+        Named ``_push_scalar`` because that is the slot :class:`BaseEngine`
+        dispatches to; it has always received lists and arrays as well, and used
+        to call ``float()`` on them.
+        """
+        from ..bridges.matlab_bridge import push_value
+
+        push_value(self, name, value, orientation=self._vector_orientation())
+
+    def _vector_orientation(self) -> str:
+        """Which way a 1-D Python sequence lands in MATLAB."""
+        choice = str(_config.get_option("matlab", "vectors", "column") or "column").lower()
+        return "row" if choice == "row" else "column"
+
+    def _pull_value(self, name: str, **kwargs: Any) -> Any:
+        from ..bridges.matlab_bridge import pull_value
+
+        return pull_value(self, name, **kwargs)
 
     def _pull_scalar(self, expression: str) -> Any:
         try:

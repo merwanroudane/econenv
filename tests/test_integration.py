@@ -212,7 +212,8 @@ class TestComparison:
     @pytest.mark.r
     @pytest.mark.stata
     @pytest.mark.eviews
-    def test_all_four_engines_agree_to_machine_precision(self, sample_frame):
+    @pytest.mark.matlab
+    def test_all_five_engines_agree_to_machine_precision(self, sample_frame):
         """Brief §48. The point of the whole project."""
         comparison = econenv.compare_ols(sample_frame, "y ~ x1 + x2")
         assert set(comparison.results) == {"python", "r", "stata", "eviews", "matlab"}, (
@@ -246,3 +247,82 @@ class TestComparison:
 
         with pytest.raises(ModelSpecificationError):
             ModelSpec(depvar="y", exog=["y"])
+
+
+@pytest.mark.matlab
+@pytest.mark.slow
+class TestMatlabRoundTrip:
+    """Every documented type, against a real MATLAB.
+
+    The unit tests fake the engine, which proves the conversion rules but not
+    that MATLAB agrees with them. These run the values through an actual
+    session, which is where `y = 10` returning a ValueError from pandas was
+    found in the first place.
+    """
+
+    @pytest.fixture(scope="class")
+    def engine(self):
+        from econenv.engines import registry
+
+        eng = registry.get("matlab")
+        eng.ensure_started()
+        return eng
+
+    @pytest.mark.parametrize(
+        "code, check",
+        [
+            ("y = 10;", lambda v: v == 10.0 and isinstance(v, float)),
+            ("y = true;", lambda v: v is True),
+            ("y = int32(7);", lambda v: v == 7 and isinstance(v, int)),
+            ("y = 'hello';", lambda v: v == "hello"),
+            ('y = "hello";', lambda v: v == "hello"),
+            ("y = 3 + 4i;", lambda v: v == 3 + 4j),
+            ("y = [1 2 3];", lambda v: v.shape == (3,)),
+            ("y = [1;2;3];", lambda v: v.shape == (3,)),
+            ("y = [10 20; 30 40];", lambda v: v.shape == (2, 2)),
+        ],
+    )
+    def test_pull_value_gives_the_documented_type(self, engine, code, check):
+        engine.execute(code, capture_graphs=False)
+        assert check(engine.pull_value("y"))
+
+    def test_a_table_still_comes_back_as_a_dataframe(self, engine):
+        engine.execute("y = table([1;2], [3;4], 'VariableNames', {'a','b'});", capture_graphs=False)
+        frame = engine.pull_value("y")
+        assert isinstance(frame, pd.DataFrame)
+        assert list(frame.columns) == ["a", "b"]
+
+    @pytest.mark.parametrize(
+        "value, expected_class",
+        [
+            (5.0, "double"),
+            (True, "logical"),
+            ("text", "char"),
+            ([1.0, 2.0, 3.0], "double"),
+            ((1.0, 2.0), "double"),
+            (np.arange(1, 6, dtype=float), "double"),
+            (np.arange(6, dtype=float).reshape(2, 3), "double"),
+        ],
+    )
+    def test_push_value_lands_as_the_documented_class(self, engine, value, expected_class):
+        engine.push("x_rt", value)
+        assert engine.pull_scalar("class(x_rt)") == expected_class
+
+    def test_a_numpy_vector_survives_the_round_trip_unchanged(self, engine):
+        original = np.array([1.5, -2.0, 3.25])
+        engine.push("v_rt", original)
+        np.testing.assert_allclose(engine.pull_value("v_rt"), original)
+
+    def test_a_matrix_survives_the_round_trip_with_its_shape(self, engine):
+        original = np.arange(6, dtype=float).reshape(2, 3)
+        engine.push("m_rt", original)
+        np.testing.assert_allclose(engine.pull_value("m_rt"), original)
+
+    def test_pull_still_refuses_a_scalar_but_says_where_to_go(self, engine):
+        """`pull` keeps its frame contract; the error names the typed path."""
+        from econenv.exceptions import DataTransferError
+
+        engine.execute("s_rt = 42;", capture_graphs=False)
+        with pytest.raises(DataTransferError) as caught:
+            engine.pull("s_rt")
+        assert "pull_value" in str(caught.value)

@@ -4,6 +4,86 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-09-07
+
+A hardening pass over the MATLAB integration, from a bug report against 1.1.1.
+Python, R, Stata and EViews are untouched.
+
+### Fixed
+
+- **`%%matlab -o y` failed for anything that was not a table.** Every pull went
+  through `pandas.DataFrame`, so `y = 10` raised
+  `ValueError: Must pass 2-d input. shape=()` from inside pandas — an error that
+  says nothing about MATLAB. Scalars, logicals, text, complex numbers, integer
+  classes, vectors and string arrays now come back as their natural Python
+  types, and a struct or mixed cell array raises a `DataTransferError` naming
+  the MATLAB class and the conversion that would work.
+- **`%%matlab -i x` failed for a list or any NumPy array.** `_push_scalar`
+  called `float()` on everything that was not a DataFrame, so
+  `float([1.0, 2.0])` and `float(np.arange(5))` failed in the float
+  constructor. Lists, tuples, 1-D and 2-D arrays, Series, bools, complex numbers
+  and strings each now convert to the right MATLAB class — and `bool` becomes
+  `logical` rather than `double`.
+- **Variables were not found under Google Colab's local runtime.** The lookup
+  consulted `local_ns` and `shell.user_ns`, missed the namespace Colab uses, and
+  raised `NameError: 'x' is not defined in Python` until the user wrote
+  `get_ipython().user_ns["x"] = x` by hand. All four magics now share one
+  resolver that consults every namespace the shell exposes and tests
+  *membership* — so a variable genuinely assigned `None` is no longer reported
+  as undefined.
+- **`%econ doctor matlab` answered "unknown engine".** MATLAB was never added to
+  the diagnostics dispatcher. It now reports the installation, the engine
+  package and its release, and with `--deep` runs a round trip.
+- **`pytest` had no `matlab` marker**, so the five-engine comparison test failed
+  rather than skipping on a machine without MATLAB.
+- **Export refused a NumPy matrix**, which is exactly what `%%matlab -o A`
+  returns.
+- **An unwritable extension fell back silently.** Asking for `table.pdf` wrote
+  `table.tex`, `table.docx` and `table.xlsx` without a word. It is now refused
+  by name, and `.pdf` is a real format.
+- **A plain DataFrame or matrix got a significance-stars footnote**, claiming a
+  convention for numbers with no p-values behind them.
+
+### Added
+
+- **`pull_value`** — `econenv.pull_value("matlab", "y")` returns the natural
+  type. `pull` keeps its frame contract, which `move` and `broadcast` depend on,
+  and now explains itself instead of failing inside pandas when asked for a
+  scalar.
+- **A searchable MATLAB command catalogue**: `%econ matlab`,
+  `%econ matlab timeseries`, `%econ matlab find cointegration`. 102 commands in
+  11 categories, **every one resolved against a live MATLAB R2024a** —
+  `exist` for functions, `which -all` for the eleven that are class methods.
+  Each names the toolbox it needs, because an unlicensed function fails with
+  `Unrecognized function or variable`, which reads like a typo. Two toolbox
+  claims were wrong and `which` caught them: `quantile` and `prctile` are base
+  MATLAB now, not Statistics.
+- **`%econ matlab colab`** — the local-runtime setup, which is the only
+  arrangement where MATLAB, EViews and a local Stata work from Colab at all.
+- **`%econ export`, `%econ export formats`, `%econ matlab export`** — what can
+  be exported, to what, and which optional dependency each needs.
+- **PDF table export**, typeset from the same LaTeX the `.tex` writer produces.
+- **A research report layer**: `econenv.report(...)` with `add_text`,
+  `add_table`, `add_figures` and `add_snapshot`, written as HTML, Markdown,
+  LaTeX, DOCX or PDF. The snapshot is the point — a table and a figure without
+  the versions that produced them are what a referee cannot check.
+- **`docs/engines/matlab-commands.md`**, generated from the catalogue, with a
+  test that fails if the page and the module disagree.
+- 85 tests, taking the suite to 343.
+
+### Changed
+
+- A MATLAB vector comes back as a **1-D** NumPy array whichever way MATLAB
+  oriented it, rather than a `(1, n)` DataFrame. MATLAB has no 1-D array, and
+  the orientation is a storage detail, not a result.
+- A 1-D Python sequence goes in as a **column**, which is what a regressor, a
+  series and a table column all use. `%econ config matlab.vectors row` changes
+  it.
+
+### Removed
+
+- Nothing.
+
 ## [1.1.1] — 2026-09-05
 
 MATLAB release support, worked out rather than tabulated.

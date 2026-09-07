@@ -311,6 +311,19 @@ class BaseEngine(abc.ABC):
         self._require(Capability.PULL_FRAME)
         return self._pull_frame(name, **kwargs)
 
+    def pull_value(self, name: str, **kwargs: Any) -> Any:
+        """Bring *name* back as its natural Python type, not necessarily a frame.
+
+        ``pull`` is frame-oriented, which is what ``move`` and ``broadcast``
+        need. It is the wrong contract for a scalar: an engine variable holding
+        ``10`` is a number, and wrapping it in a DataFrame to satisfy a single
+        return type serves nobody. Engines that can tell their types apart
+        override ``_pull_value``; the rest fall back to the frame, so this is
+        always safe to call.
+        """
+        self.ensure_started()
+        return self._pull_value(name, **kwargs)
+
     def pull_scalar(self, expression: str) -> Any:
         self.ensure_started()
         self._require(Capability.PULL_SCALAR)
@@ -411,6 +424,11 @@ class BaseEngine(abc.ABC):
 
     def _push_scalar(self, name: str, value: Any, **kwargs: Any) -> None:
         raise CapabilityError(f"{self.display_name} cannot receive scalars.")
+
+    def _pull_value(self, name: str, **kwargs: Any) -> Any:
+        """Default: whatever ``pull`` gives, so every engine answers something."""
+        self._require(Capability.PULL_FRAME)
+        return self._pull_frame(name, **kwargs)
 
     def _pull_scalar(self, expression: str) -> Any:
         raise CapabilityError(f"{self.display_name} cannot return scalars.")

@@ -26,7 +26,7 @@ from IPython.core.magic import Magics, line_magic, magics_class, needs_local_sco
 from .. import services
 from .._version import __version__
 from ..exceptions import EconEnvError
-from ._common import MagicParser, shell_of, split_line, strip_quotes
+from ._common import MagicParser, resolve_python_name, shell_of, split_line, strip_quotes
 
 
 def _build_parser() -> MagicParser:
@@ -77,8 +77,12 @@ def _build_parser() -> MagicParser:
     move.add_argument("name")
 
     export = sub.add_parser("export", add_help=False, help="Write results to publication formats.")
-    export.add_argument("name", help="Python variable holding the result to export.")
-    export.add_argument("path", help="Destination file or stem, e.g. paper/table1")
+    export.add_argument(
+        "name", nargs="?", default=None, help="Python variable holding the result to export."
+    )
+    export.add_argument(
+        "path", nargs="?", default=None, help="Destination file or stem, e.g. paper/table1"
+    )
     export.add_argument(
         "--formats", default=None, help="Comma-separated: tex,docx,xlsx,csv,html,md,rtf"
     )
@@ -90,6 +94,11 @@ def _build_parser() -> MagicParser:
         "eviews", add_help=False, help="Look up EViews commands by task or keyword."
     )
     eviews.add_argument("term", nargs="*", default=None)
+
+    matlab = sub.add_parser(
+        "matlab", add_help=False, help="Look up MATLAB commands, or MATLAB help topics."
+    )
+    matlab.add_argument("term", nargs="*", default=None)
 
     ols = sub.add_parser("ols", add_help=False, help="Run one OLS across engines.")
     ols.add_argument("formula", nargs="+")
@@ -159,10 +168,12 @@ class EconMagics(Magics):
         """
         from ..export import export as _export
 
+        if not args.name or (args.name in ("help", "formats") and not args.path):
+            print(_EXPORT_HELP)
+            return None
+
         key = strip_quotes(args.name)
-        obj = local_ns.get(key, shell_of(self).user_ns.get(key))
-        if obj is None:
-            raise NameError(f"{key!r} is not defined in Python.")
+        obj = resolve_python_name(key, local_ns, shell_of(self))
 
         formats = [f.strip() for f in args.formats.split(",")] if args.formats else None
         result = _export(
@@ -174,6 +185,77 @@ class EconMagics(Magics):
             label=args.label,
         )
         print(result)
+        return None
+
+    def _cmd_matlab(self, args, local_ns) -> Any:
+        """MATLAB commands for research work, searchable from the cell.
+
+        MATLAB is not short of documentation; it is short of a way to ask "is
+        there a function for this, and is it in a toolbox I actually have"
+        without leaving the notebook. Every entry names its toolbox, and the
+        tick marks the ones resolved against a live MATLAB.
+        """
+        from ..engines import matlab_commands as catalogue
+
+        term = " ".join(getattr(args, "term", None) or []).strip()
+        head = term.split()[0].lower() if term else ""
+
+        if head in ("status", "doctor"):
+            from .. import services
+
+            return services.doctor("matlab") if head == "doctor" else services.status()
+
+        if head == "colab":
+            print(_COLAB_HELP)
+            return None
+
+        if head == "export":
+            print(_MATLAB_EXPORT_HELP)
+            return None
+
+        if head in ("help", "magic"):
+            print(_MATLAB_MAGIC_HELP)
+            return None
+
+        if not term:
+            verified = sum(1 for c in catalogue.COMMANDS if c.verified)
+            print(
+                f"{len(catalogue.COMMANDS)} MATLAB commands for research "
+                f"({verified} resolved against a live MATLAB).\n"
+            )
+            for name, description in catalogue.categories().items():
+                count = len(catalogue.by_category(name))
+                print(f"  {name:<13} {description} ({count})")
+            print("\n  colab         Running MATLAB through Colab's local runtime")
+            print("  export        Saving MATLAB figures and tables for publication")
+            print("  status        Which MATLAB EconEnv will start")
+            print("  doctor        Diagnose MATLAB setup")
+            print("\nExamples:")
+            print("  %econ matlab timeseries          unit roots, ARIMA, VAR")
+            print("  %econ matlab find cointegration  search everything")
+            print("  %econ matlab find wavelet")
+            print("\nToolboxes these commands need:")
+            for toolbox, count in catalogue.toolboxes().items():
+                print(f"  {count:>3}  {toolbox}")
+            return None
+
+        if head in ("find", "search"):
+            term = " ".join(term.split()[1:])
+
+        matches = catalogue.find(term)
+        if not matches:
+            print(f"Nothing matches {term!r}. Try `%econ matlab` for the categories,")
+            print("or ask MATLAB itself:  %%matlab\\n  lookfor " + term.split()[0])
+            return None
+
+        heading = (
+            catalogue.categories().get(term.lower())
+            or f"{len(matches)} command(s) matching {term!r}"
+        )
+        print(f"{heading}\n")
+        for command in matches:
+            print(command)
+            print()
         return None
 
     def _cmd_eviews(self, args, local_ns) -> Any:
@@ -285,9 +367,7 @@ class EconMagics(Magics):
     def _cmd_push(self, args, local_ns) -> Any:
         from .. import transfer
 
-        obj = local_ns.get(args.name, shell_of(self).user_ns.get(args.name))
-        if obj is None:
-            raise NameError(f"{args.name!r} is not defined in Python.")
+        obj = resolve_python_name(args.name, local_ns, shell_of(self))
         transfer.push(args.engine, args.target or args.name, obj)
         print(f"{args.name} -> {args.engine}:{args.target or args.name}")
         return None
@@ -313,9 +393,7 @@ class EconMagics(Magics):
     def _cmd_ols(self, args, local_ns) -> Any:
         from ..models import compare_ols
 
-        data = local_ns.get(args.data, shell_of(self).user_ns.get(args.data))
-        if data is None:
-            raise NameError(f"{args.data!r} is not defined in Python.")
+        data = resolve_python_name(args.data, local_ns, shell_of(self))
         engines: Optional[List[str]] = (
             [e.strip() for e in args.engines.split(",")] if args.engines else None
         )
@@ -339,3 +417,210 @@ Examples
   %econ ols y ~ x1 + x2 --data df --engines python,r,stata
   %econ snapshot ./environment.json
 """
+
+#: Colab's local runtime puts the notebook interface in the browser and the
+#: kernel on your own machine, which is the only arrangement in which MATLAB,
+#: EViews and a local Stata can be driven from Colab at all.
+_COLAB_HELP = """Running MATLAB from Google Colab, through a local runtime
+===========================================================
+
+Colab normally runs on a Linux VM at Google, where your MATLAB is not
+installed and your licence does not apply. The local runtime keeps the Colab
+interface in your browser but runs the kernel on YOUR computer, so MATLAB,
+EViews and Stata all work exactly as they do in a local notebook.
+
+    Colab UI (browser)  ->  local Jupyter server  ->  EconEnv  ->  MATLAB
+
+1. Activate the environment that has EconEnv        [Windows CMD/PowerShell]
+
+     <your-env>\\Scripts\\activate
+     python --version
+
+2. Start Jupyter so Colab is allowed to talk to it  [Windows CMD/PowerShell]
+
+     jupyter notebook \\
+       --ServerApp.allow_origin="https://colab.research.google.com" \\
+       --ServerApp.allow_credentials=True
+
+   Jupyter picks a free port itself. If you need a fixed one, add
+   --ServerApp.port=8888; if that port is busy Jupyter will say so and you can
+   choose another.
+
+3. Copy the address it prints, token and all:
+
+     http://localhost:<PORT>/?token=<TOKEN>
+
+4. In Colab:  Connect -> Connect to local runtime -> paste -> Connect
+
+5. Check the kernel really is yours                 [Python cell]
+
+     import sys; print(sys.executable)
+
+   It must show your own environment, not /usr/bin/python3.
+
+6. Then everything is normal                        [Python cell]
+
+     %load_ext econenv
+     %econ status
+
+     %%matlab
+     version
+
+SECURITY
+  The local runtime executes notebook code on your computer, with your files
+  and your installed software. Connect only notebooks you trust, and never
+  share the token — it is the credential to your kernel."""
+
+
+#: Publication-quality output from MATLAB, which is `exportgraphics` underneath
+#: rather than anything EconEnv invents.
+_MATLAB_EXPORT_HELP = """Saving MATLAB results for publication
+=====================================
+
+FIGURES
+
+  Capture format is a setting, and it must be chosen BEFORE the cell runs:
+  a bitmap cannot be turned into a vector afterwards.
+
+     %econ config matlab.graphics pdf     # png | svg | pdf | off
+     %econ config matlab.dpi 300          # for png
+
+  pdf and svg are vector — sharp at any size, which is what most economics
+  journals ask for. Underneath this is MATLAB's own exportgraphics, so the
+  figure is rendered by MATLAB rather than screenshotted.
+
+  Figures captured by a cell are also written to disk from Python:
+
+     res = %matlab --result plot(x, y)
+     econenv.export_figures(res, "paper/figures")
+
+  Or from MATLAB directly, when you want full control:
+
+     %%matlab
+     exportgraphics(gcf, 'fig1.pdf', 'ContentType', 'vector');
+     exportgraphics(gcf, 'fig1.png', 'Resolution', 600);
+
+TABLES
+
+  Bring the table into Python, then export it like any other result:
+
+     %%matlab -o T
+     T = mdl.Coefficients;
+
+     econenv.export(T, "paper/table1", formats=["tex", "docx", "xlsx"])
+
+  or from a cell:
+
+     %econ export T paper/table1 --formats tex,docx --caption "Table 1"
+
+  Formats: tex, docx, xlsx, csv, html, md, rtf.  docx and xlsx need
+  `pip install "econenv[export]"`; the rest need nothing.
+
+WHAT NOT TO EXPECT
+
+  EconEnv will not re-wrap a raster figure as a "vector" PDF, and will not
+  compute a statistic MATLAB did not report. A blank cell in a table is a
+  number the engine did not give."""
+
+
+#: The magic's own help, printed rather than requiring `%%matlab?`.
+_MATLAB_MAGIC_HELP = """%matlab and %%matlab
+=====================
+
+  %matlab disp(version)          one statement
+
+  %%matlab                       a block
+  x = 1:10;
+  disp(mean(x))
+
+SENDING PYTHON VALUES IN
+
+  %%matlab -i x -i df            repeat -i for several
+
+  int/float/NumPy scalar -> double      list/tuple/1-D array -> double column
+  bool                   -> logical     2-D array            -> double, shape kept
+  complex                -> complex     Series               -> one-column table
+  str                    -> char        DataFrame            -> table
+
+  %econ config matlab.vectors row       send 1-D as a row instead
+
+BRINGING RESULTS BACK
+
+  %%matlab -o y -o A -o T
+
+  numeric scalar -> float (int for integer classes)   vector    -> 1-D ndarray
+  logical scalar -> bool                              matrix    -> 2-D ndarray
+  char/string    -> str                               table     -> DataFrame
+  complex scalar -> complex                           cellstr   -> list of str
+
+  A struct or a mixed cell array raises DataTransferError naming the class;
+  convert it in MATLAB first (struct2table, table) and pull that.
+
+FLAGS
+
+  -q            do not display the output
+  --no-graphs   do not capture figures from this cell
+  --result      return the ExecutionResult (.text, .figures) instead of
+                displaying it
+
+The first MATLAB cell of a session takes about a minute while MATLAB starts.
+`%econ doctor matlab` explains anything that will not start."""
+
+
+#: `%econ export` with nothing to export: the formats, what can be exported and
+#: which optional dependency each needs. Written out rather than derived so it
+#: can say *why* a format is there.
+_EXPORT_HELP = r"""Exporting results for publication
+=================================
+
+  %econ export <name> <path> [--formats ...] [--style journal|full]
+                             [--caption "..."] [--label tab:x]
+
+  <name> is a Python variable: a ComparisonResult, a ModelResult, a
+  DataFrame, a Figure, or a list mixing them.
+
+TABLE FORMATS
+
+  tex     LaTeX with booktabs rules, ready to \input        no extra install
+  csv     plain values                                      no extra install
+  html    self-contained, styled like a journal table       no extra install
+  rtf     for submission systems that still want it         no extra install
+  docx    a real editable Word table, not a picture         econenv[export]
+  xlsx    one sheet per table, full precision               econenv[export]
+  md      markdown                                          econenv[export]
+
+     pip install "econenv[export]"
+
+  Give a path with a suffix and that format is used; give a stem and you get
+  the journal bundle — tex, docx and xlsx:
+
+     %econ export cmp paper/table1            three files
+     %econ export cmp paper/table1.tex        just LaTeX
+
+FIGURE FORMATS
+
+  png, svg, pdf, eps. The extension follows the CONTENT, not the filename:
+  naming a PNG .pdf makes a file nothing can open, so EconEnv corrects it and
+  says so. Ask the engine for vector output before running the cell —
+
+     %econ config matlab.graphics pdf
+     %econ config r.graphics pdf
+     %econ config eviews.graphics svg
+
+  because a bitmap cannot be converted into a vector afterwards.
+
+TWO LAYOUTS
+
+  --style journal   what a paper prints: coefficient with stars, standard
+                    error beneath in parentheses, N and fit statistics at the
+                    foot. The default.
+  --style full      one row per term per engine with coefficient, standard
+                    error, statistic, p-value and confidence interval as
+                    separate columns. For checking, not for a paper.
+
+WHAT IT WILL NOT DO
+
+  Invent a statistic the engine did not report, fake vector output from a
+  raster figure, or round twice. Blank cells are missing numbers, not zeros.
+
+  %econ matlab export   the same thing from the MATLAB side"""
