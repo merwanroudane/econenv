@@ -31,6 +31,7 @@ def register_all(ipython: Any) -> Dict[str, str]:
     """Register every EconEnv magic into *ipython*, resolving collisions."""
     from .econ_magic import EconMagics
     from .eviews_magic import EViewsMagics
+    from .gauss_magic import GaussMagics
     from .matlab_magic import MatlabMagics
     from .r_magic import RMagics, claim_short_r_names, load_rpy2_magics
     from .stata_magic import load_stata_magics
@@ -55,6 +56,9 @@ def register_all(ipython: Any) -> Dict[str, str]:
 
     ipython.register_magics(MatlabMagics)
     REGISTRATION["%matlab / %%matlab"] = "econenv"
+
+    ipython.register_magics(GaussMagics)
+    REGISTRATION["%gauss / %%gauss"] = "econenv"
 
     status = load_stata_magics(ipython)
     REGISTRATION["%stata / %%stata"] = status

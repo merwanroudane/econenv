@@ -1,0 +1,52 @@
+/*
+** econenv_bridge.gss — the GAUSS side of EconEnv's data transfer.
+**
+** GAUSS's own csvWriteM writes about fifteen significant digits, which is not
+** enough: a round trip through it changes a double by roughly 3e-15, and
+** EconEnv's whole claim is that the engines agree to machine precision. So the
+** numbers are written here at seventeen significant digits, which round-trips
+** an IEEE double exactly — verified against GAUSS 26.1.1, where the difference
+** after a round trip is 0.
+**
+** Missing values are written as "." and read back by csvReadM as GAUSS
+** missings, so a gap stays a gap instead of becoming a number that would
+** quietly enter a regression.
+**
+** This file is inlined into the generated program rather than #included, so it
+** cannot be affected by the user's src_path.
+*/
+
+proc (0) = econenv_write(x, fname);
+    local fh, i, j, buf, piece, nr, nc, retc;
+    nr = rows(x);
+    nc = cols(x);
+    fh = fopen(fname, "w");
+    i = 1;
+    do while i <= nr;
+        buf = "";
+        j = 1;
+        do while j <= nc;
+            if ismiss(x[i,j]);
+                piece = ".";
+            else;
+                piece = ftos(x[i,j], "%*.*e", 1, 17);
+            endif;
+            if j == 1;
+                buf = piece;
+            else;
+                buf = buf $+ "," $+ piece;
+            endif;
+            j = j + 1;
+        endo;
+        call fputs(fh, buf $+ "\n");
+        i = i + 1;
+    endo;
+    retc = close(fh);
+endp;
+
+proc (0) = econenv_write_string(s, fname);
+    local fh, retc;
+    fh = fopen(fname, "w");
+    call fputs(fh, s);
+    retc = close(fh);
+endp;

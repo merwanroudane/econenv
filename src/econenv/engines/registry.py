@@ -59,9 +59,10 @@ def unregister(name: str) -> None:
 
 
 def _load_builtin() -> None:
-    """Import the four engines that ship with EconEnv."""
+    """Import the engines that ship with EconEnv."""
     from . import (  # noqa: F401
         eviews_engine,
+        gauss_engine,
         matlab_engine,
         python_engine,
         r_engine,

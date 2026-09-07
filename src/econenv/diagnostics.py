@@ -735,6 +735,113 @@ def registry_get_quiet(name: str):
         return None
 
 
+def check_gauss(deep: bool = False) -> List[Check]:
+    """GAUSS: which installations are present, and which one will actually run.
+
+    More than one GAUSS can be installed and they do not all work — on the
+    machine this was developed against, gauss24 and gauss25 are present and only
+    gauss26 runs. So this lists every installation found and states which one
+    EconEnv will use, rather than reporting a count and leaving the user to
+    guess which their cell reached.
+    """
+    from .engines._gauss_cli import find_executable, probe_version
+    from .engines.gauss_engine import find_gauss
+
+    checks: List[Check] = []
+    installs = find_gauss()
+
+    if not installs:
+        return [
+            Check(
+                "GAUSS installation",
+                Status.SKIP,
+                "not found",
+                "Install GAUSS, or point EconEnv at it: "
+                "%econ config gauss.home C:/gauss26 — the other engines are unaffected.",
+                group="gauss",
+            )
+        ]
+
+    chosen = installs[0]
+    others = [str(p) for p in installs[1:]]
+    detail = f"using {chosen}"
+    if others:
+        detail += f" (also installed: {', '.join(others)})"
+    checks.append(Check("GAUSS installation", Status.PASS, detail, group="gauss"))
+
+    executable = find_executable(chosen)
+    if executable is None:  # pragma: no cover - find_gauss filters these
+        checks.append(
+            Check(
+                "GAUSS executable",
+                Status.ERROR,
+                f"no tgauss in {chosen}",
+                "Reinstall GAUSS, or set gauss.home to an installation that has one.",
+                group="gauss",
+            )
+        )
+        return checks
+
+    version = probe_version(executable)
+    checks.append(
+        Check(
+            "GAUSS executable",
+            Status.PASS if version else Status.WARN,
+            f"{executable.name} — {version or 'version not reported'}",
+            "" if version else "The executable did not print a version banner.",
+            group="gauss",
+        )
+    )
+
+    backend = str(_config.get_option("gauss", "backend", "auto") or "auto").lower()
+    if backend == "native":
+        checks.append(
+            Check(
+                "GAUSS backend",
+                Status.WARN,
+                "native requested, running cli",
+                "No native GAUSS Engine binding is built yet. Set gauss.backend "
+                "to auto or cli to silence this.",
+                group="gauss",
+            )
+        )
+    else:
+        checks.append(
+            Check(
+                "GAUSS backend",
+                Status.PASS,
+                "cli — one process per cell; top-level values carry between cells",
+                group="gauss",
+            )
+        )
+
+    if deep:
+        try:
+            engine = registry_get_quiet("gauss")
+            engine.ensure_started()
+            value = engine.pull_scalar("1 + 1")
+            ok = abs(float(value) - 2.0) < 1e-12
+            checks.append(
+                Check(
+                    "GAUSS round trip",
+                    Status.PASS if ok else Status.ERROR,
+                    "1 + 1 evaluated in GAUSS" if ok else f"returned {value!r}",
+                    group="gauss",
+                )
+            )
+        except Exception as exc:
+            checks.append(
+                Check(
+                    "GAUSS round trip",
+                    Status.ERROR,
+                    str(exc)[:200],
+                    "Run tgauss by hand once; a licence prompt blocks batch mode.",
+                    group="gauss",
+                )
+            )
+    return checks
+
+
 def run(engine: Optional[str] = None, *, deep: bool = False) -> Report:
     """Run the diagnostics.
 
@@ -752,6 +859,7 @@ def run(engine: Optional[str] = None, *, deep: bool = False) -> Report:
         "stata": lambda: check_stata(deep),
         "eviews": lambda: check_eviews(deep),
         "matlab": lambda: check_matlab(deep),
+        "gauss": lambda: check_gauss(deep),
     }
     if engine:
         key = engine.lower()
