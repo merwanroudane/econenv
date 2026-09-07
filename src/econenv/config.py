@@ -65,6 +65,15 @@ DEFAULTS: Dict[str, Dict[str, Any]] = {
         "dpi": 150,
         "keep_temp": False,
     },
+    "gauss": {
+        "home": None,  # GAUSS root; None -> discover (C:/gauss26, GAUSSHOME, ...)
+        "backend": "auto",  # auto | cli | native (native needs the GAUSS Engine)
+        "graphics": "svg",  # svg | png | pdf | off
+        "width": 1200,  # pixels for png; svg and pdf use inches
+        "height": 900,
+        "timeout": 600.0,  # seconds, per cell
+        "vectors": "column",  # how a 1-D Python sequence lands in GAUSS
+    },
     "eviews": {
         "progid": "EViews.Manager",  # pin e.g. "EViews.Manager.14" if needed
         "instance": "new",  # new | either | existing

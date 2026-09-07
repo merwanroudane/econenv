@@ -148,7 +148,7 @@ Three rules hold the design together:
 | **Cross-engine comparison** | Same specification, five engines, one table, with tolerance-aware agreement testing |
 | **Diagnostics** | `econenv doctor` checks every layer and tells you how to fix what is broken |
 | **Reproducibility** | Environment snapshots and provenance records (code hash, data hash, versions, timing) |
-| **Rich output** | HTML tables, and plots from R, EViews and MATLAB rendered inline |
+| **Rich output** | HTML tables, and plots from R, EViews, MATLAB and GAUSS rendered inline |
 | **Publication export** | Tables to LaTeX, Word, Excel, HTML, Markdown and RTF; journal layout with significance stars, or every statistic |
 | **Honest about limits** | Capability matrix reports what each engine can do *on this machine*, not in theory |
 

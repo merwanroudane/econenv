@@ -52,6 +52,9 @@ def _parser() -> MagicParser:
     )
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress output.")
     parser.add_argument(
+        "--no-graphs", action="store_true", help="Do not capture plots this cell draws."
+    )
+    parser.add_argument(
         "--result", action="store_true", help="Return the ExecutionResult instead of displaying it."
     )
     return parser
@@ -67,7 +70,7 @@ def _split_flags(tokens):
             flags += tokens[index : index + 2]
             index += 2
             continue
-        if token in ("-q", "--quiet", "--result"):
+        if token in ("-q", "--quiet", "--no-graphs", "--result"):
             flags.append(token)
             index += 1
             continue
@@ -163,7 +166,7 @@ class GaussMagics(Magics):
             key = strip_quotes(name)
             engine.push(key, resolve_python_name(key, local_ns, shell_of(self)))
 
-        result = engine.execute(code)
+        result = engine.execute(code, capture_graphs=not args.no_graphs)
 
         if args.output:
             names = [strip_quotes(n) for n in args.output]

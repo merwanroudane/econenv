@@ -38,6 +38,7 @@ If another extension already owns `%R`, EconEnv leaves it alone and reports
 %econ ols <formula> --data <df> [--engines a,b] [--vcov hc1] [--no-constant]
 %econ eviews [task|find <term>]       EViews command lookup
 %econ matlab [category|find <term>]   MATLAB command lookup
+%econ gauss  [category|find <term>]   GAUSS command lookup
 %econ matlab colab                    Colab local-runtime setup
 %econ matlab export                   saving MATLAB output for publication
 %econ export [help|formats]           what can be exported, and to what
@@ -215,6 +216,41 @@ matlab.engine.shareEngine
 ```python
 %econ config matlab.shared MATLAB_shared
 ```
+
+## `%%gauss` — GAUSS
+
+```python
+%%gauss -i df -o b
+y = df[.,3];
+X = ones(rows(df),1) ~ df[.,1] ~ df[.,2];
+b = y / X;                 /* least squares */
+print b;
+```
+
+| Flag | Meaning |
+|---|---|
+| `-i NAME` | push a Python object in (DataFrame, array, list, number, text) |
+| `-o NAME` | bring a GAUSS symbol back, as its natural type |
+| `-q` | suppress output |
+| `--no-graphs` | do not capture plots this cell draws |
+| `--result` | return the `ExecutionResult` instead of displaying it |
+
+**Three things catch everyone out**: every statement ends with `;`, a bare
+expression prints nothing, and `~` joins columns while `|` stacks rows.
+
+**And one that looks like a bug**: GAUSS compiles the whole cell before running
+any of it, so a mistyped name on the last line means the first line never ran
+either. EconEnv says so rather than leaving you with a silent cell.
+
+Only top-level values carry into the next cell — procedures and `#include`
+state do not, because each cell is a fresh process.
+
+```python
+%econ gauss                     # 95 commands, 12 categories
+%econ gauss find cointegration
+```
+
+---
 
 ## `%econ export` — results to publication formats
 

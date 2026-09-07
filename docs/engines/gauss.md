@@ -145,6 +145,46 @@ That limit is stated rather than worked around. Rebuilding a session by
 replaying earlier cells would silently re-run their side effects, which is worse
 than carrying less.
 
+## Figures
+
+Plots are captured and displayed automatically:
+
+```python
+%%gauss
+x = seqa(0, 0.1, 100);
+y = sin(x);
+struct plotControl p;
+p = plotGetDefaults("xy");
+plotSetTitle(&p, "Sine wave");
+plotXY(p, x, y);
+```
+
+The default is **SVG** — vector, and what most journals ask for.
+
+```python
+%econ config gauss.graphics svg    # svg | png | pdf | off
+%econ config gauss.width 1600      # pixels, for png only
+%econ config gauss.height 1200
+```
+
+A cell that draws nothing produces no figure. EconEnv only asks GAUSS to save a
+plot when the cell actually contains a plotting call — otherwise `plotSave`
+would write out whatever was drawn last, and the same figure would reappear
+under every later cell.
+
+`--no-graphs` turns capture off for one cell.
+
+> **`plotSave` measures raster and vector differently.** The two numbers are
+> *pixels* for PNG and *inches* for SVG and PDF, so the same `12 | 9` that gives
+> a sensible SVG gives a 12×9 **pixel** PNG. EconEnv passes the right units for
+> the format you chose.
+
+> **A `struct` cannot be carried between cells.** GAUSS refuses to `save` one —
+> it is a compile error. Since a plotting cell declares `struct plotControl p;`
+> and then assigns to `p`, EconEnv recognises struct declarations and leaves
+> them out of the carried workspace. You will not notice this unless you expect
+> a plot control to survive into the next cell, which it does not.
+
 ## OLS, and the comparison
 
 GAUSS's own `ols` procedure, so the comparison carries GAUSS's numbers:

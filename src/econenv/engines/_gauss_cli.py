@@ -262,6 +262,7 @@ class GaussCliBackend:
 def _assigned_names(code: str) -> List[str]:
     """Top-level names assigned in *code*, in order, without duplicates."""
     names: List[str] = []
+    structs = _struct_names(code)
     depth = 0
     for raw in code.splitlines():
         line = raw.strip()
@@ -281,9 +282,32 @@ def _assigned_names(code: str) -> List[str]:
         match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=[^=]", line)
         if match:
             name = match.group(1)
-            if name.lower() not in _RESERVED and name not in names:
-                names.append(name)
+            if name.lower() in _RESERVED or name in names or name in structs:
+                continue
+            names.append(name)
     return names
+
+
+#: ``struct plotControl p;`` and ``struct myType a, b;``
+_STRUCT_DECL = re.compile(r"^\s*struct\s+\w+\s+([^;]+);", re.IGNORECASE | re.MULTILINE)
+
+
+def _struct_names(code: str) -> set:
+    """Names declared as structs in *code*.
+
+    GAUSS cannot ``save`` a struct — it is a compile error, ``G0514: Not
+    supported for structures``. A plotting cell declares ``struct plotControl
+    p;`` and then assigns to ``p``, which looks exactly like an ordinary
+    top-level assignment, so without this every plotting cell failed to run at
+    all.
+    """
+    found: set = set()
+    for declaration in _STRUCT_DECL.findall(code):
+        for name in declaration.split(","):
+            cleaned = name.strip().split()[0] if name.strip() else ""
+            if cleaned:
+                found.add(cleaned)
+    return found
 
 
 #: GAUSS keywords that can begin a line and be followed by ``=``.

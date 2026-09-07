@@ -127,7 +127,9 @@ def push_frame(engine, name: str, df: pd.DataFrame, **kwargs: Any) -> Conversion
         elif pd.api.types.is_numeric_dtype(series):
             numeric[column] = series.astype(float)
         elif pd.api.types.is_datetime64_any_dtype(series):
-            numeric[column] = series.view("int64") / 1e9
+            # `.view("int64")` is deprecated in pandas 2.2 and warns in the
+            # notebook; `.astype` gives the same nanoseconds without the noise.
+            numeric[column] = series.astype("int64") / 1e9
             report.add(
                 Severity.WARNING,
                 f"{column!r}: datetime became seconds since 1970; GAUSS has no date type",

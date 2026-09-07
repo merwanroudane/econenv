@@ -801,8 +801,9 @@ def check_gauss(deep: bool = False) -> List[Check]:
                 "GAUSS backend",
                 Status.WARN,
                 "native requested, running cli",
-                "No native GAUSS Engine binding is built yet. Set gauss.backend "
-                "to auto or cli to silence this.",
+                "The GAUSS Engine (mteng) is licensed separately from desktop "
+                "GAUSS and is not part of this installation, so there is nothing "
+                "to bind to. Set gauss.backend to auto or cli to silence this.",
                 group="gauss",
             )
         )

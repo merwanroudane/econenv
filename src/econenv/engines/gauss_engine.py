@@ -24,6 +24,7 @@ import glob
 import os
 import platform
 import re
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -36,6 +37,29 @@ from ..results import ExecutionResult
 from ._gauss_cli import GaussCliBackend, describe, find_executable, probe_version
 from .base import BaseEngine, Capability
 from .registry import register
+
+#: GAUSS's plotting calls. A cell that contains none of these drew nothing, and
+#: asking GAUSS to save a plot anyway would write out whatever was last drawn —
+#: so the same figure would reappear under every later cell, which is the trap
+#: the EViews and MATLAB adapters both had to be taught to avoid.
+_PLOT_CALL = re.compile(
+    r"\bplot(?:XY|Scatter|Hist|HistP|HistF|Bar|Area|Box|Surface|Contour|TS|"
+    r"LogLog|SemiLogX|SemiLogY|Polar|Line|OpenWindow|Add\w*)\s*\(",
+    re.IGNORECASE,
+)
+
+#: Formats GAUSS's plotSave writes, and the mime type each becomes.
+_GRAPHICS_MIME = {
+    "svg": "image/svg+xml",
+    "png": "image/png",
+    "pdf": "application/pdf",
+}
+
+#: plotSave takes PIXELS for a raster format and INCHES for a vector one — the
+#: same two numbers mean different things. Passing 12|9 for a PNG produces a
+#: 12x9 pixel thumbnail, which is a genuinely confusing way to fail.
+_VECTOR_INCHES = (12, 9)
+_RASTER_PIXELS = (1200, 900)
 
 #: ``gauss26``, ``GAUSS 24``, ``gauss24.0`` — the version in a directory name.
 _VERSION_IN_NAME = re.compile(r"(\d+)(?:[._](\d+))?\s*$")
@@ -108,6 +132,7 @@ class GaussEngine(BaseEngine):
         Capability.PULL_SCALAR,
         Capability.PULL_MATRIX,
         Capability.RESTART,
+        Capability.GRAPHICS,
         Capability.OLS,
     )
 
@@ -177,7 +202,9 @@ class GaussEngine(BaseEngine):
             detail.update(describe(self._executable_path))
         if getattr(self, "_backend_kind", "cli") == "native-unavailable":
             detail["backend"] = (
-                "cli (gauss.backend=native was requested, but no native binding is built yet)"
+                "cli — gauss.backend=native was requested, but the GAUSS Engine "
+                "(mteng) is a separately licensed Aptech product and is not part "
+                "of a desktop GAUSS installation"
             )
         detail["session"] = (
             "One process per cell. Values are carried between cells with GAUSS's "
@@ -203,10 +230,49 @@ class GaussEngine(BaseEngine):
     # ------------------------------------------------------------------ #
     def _execute(self, code: str, **kwargs: Any) -> ExecutionResult:
         timeout = float(_config.get_option("gauss", "timeout", 600) or 600)
-        text, error = self._backend.execute(code, timeout=timeout)
+        capture = kwargs.get("capture_graphs", True)
+
+        target, program = self._with_graphics(code) if capture else (None, code)
+        text, error = self._backend.execute(program, timeout=timeout)
         if error:
             raise EngineExecutionError(error, engine=self.name, code=code)
-        return ExecutionResult(engine=self.name, code=code, stdout=text)
+
+        figures = self._read_figure(target) if target else []
+        return ExecutionResult(engine=self.name, code=code, stdout=text, figures=figures)
+
+    # ------------------------------------------------------------------ #
+    # graphics
+    # ------------------------------------------------------------------ #
+    def _graphics_format(self) -> str:
+        """``svg`` by default: vector, and what a journal asks for."""
+        choice = str(_config.get_option("gauss", "graphics", "svg") or "svg").lower()
+        return choice if choice in _GRAPHICS_MIME or choice == "off" else "svg"
+
+    def _with_graphics(self, code: str) -> tuple:
+        """Append a ``plotSave`` when — and only when — the cell draws something."""
+        fmt = self._graphics_format()
+        if fmt == "off" or not _PLOT_CALL.search(code):
+            return None, code
+
+        target = self._backend.session / f"econenv_plot_{uuid.uuid4().hex[:8]}.{fmt}"
+        if fmt == "png":
+            width = int(_config.get_option("gauss", "width", _RASTER_PIXELS[0]))
+            height = int(_config.get_option("gauss", "height", _RASTER_PIXELS[1]))
+        else:
+            width, height = _VECTOR_INCHES
+        saved = str(target).replace("\\", "/")
+        return target, f'{code.rstrip()}\nplotSave("{saved}", {width} | {height});'
+
+    def _read_figure(self, target: Path) -> List[Any]:
+        """The saved plot as a Figure, or nothing if GAUSS did not write one."""
+        from ..results import Figure
+
+        if not target.exists() or target.stat().st_size == 0:
+            return []
+        data = target.read_bytes()
+        target.unlink(missing_ok=True)
+        mimetype = _GRAPHICS_MIME.get(target.suffix.lstrip("."), "image/svg+xml")
+        return [Figure(data=data, mimetype=mimetype, engine=self.name, name=target.stem)]
 
     # ------------------------------------------------------------------ #
     # data

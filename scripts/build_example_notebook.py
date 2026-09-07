@@ -122,7 +122,7 @@ def cells():
         "\n"
         "raw = sm.datasets.macrodata.load_pandas().data\n"
         "\n"
-        "idx = pd.PeriodIndex(\n"
+        "idx = pd.PeriodIndex.from_fields(\n"
         "    year=raw.year.astype(int), quarter=raw.quarter.astype(int), freq='Q'\n"
         ").to_timestamp()\n"
         "\n"
@@ -288,7 +288,63 @@ def cells():
         "title('US consumption against income, 1959-2009');\n"
     )
     yield md(
-        "## 6. Bring results back to Python\n"
+        "## 6. GAUSS - a matrix language, and the same regression\n"
+        "\n"
+        "GAUSS has no DataFrame: everything is a numeric matrix. So the frame\n"
+        "arrives as one, and EconEnv remembers the column names on the Python\n"
+        "side so it comes back with them.\n"
+        "\n"
+        "Three things catch people out. Every statement ends with `;`. A bare\n"
+        "expression prints nothing - you need `print`. And `~` joins columns\n"
+        "while `|` stacks rows, which is how a design matrix gets built.\n"
+    )
+    yield code(
+        "%%gauss -i macro\n"
+        'print "rows and columns: " rows(macro) cols(macro);\n'
+        'print "means of each column:";\n'
+        "print meanc(macro)';\n"
+    )
+    yield md(
+        "Least squares written out. `/` is GAUSS's least-squares solve, not\n"
+        "division - it is the equivalent of `numpy.linalg.lstsq`, and more\n"
+        "accurate than forming `inv(X'X)X'y` by hand."
+    )
+    yield code(
+        "%%gauss -o b\n"
+        "y = macro[.,2];                     /* lrcons  */\n"
+        "X = ones(rows(macro),1) ~ macro[.,3] ~ macro[.,5];\n"
+        "b = y / X;\n"
+        'print "constant, lrgdp, realint:";\n'
+        "print b';\n"
+    )
+    yield code("print(type(b).__name__, b.shape)\nb.ravel()")
+    yield md(
+        "And GAUSS's own `ols`, which adds standard errors and $R^2$. Setting\n"
+        "`__output = 0` suppresses the report GAUSS would otherwise print itself."
+    )
+    yield code(
+        "%%gauss\n"
+        "__output = 0;\n"
+        "_olsres = 1;\n"
+        '{ vnam, mm, bb, stb, vc, se, sig, cx, rsq, resid, dw } = ols("", y, X);\n'
+        'print "coefficients:  " bb\';\n'
+        'print "std errors:    " se\';\n'
+        'print "r-squared:     " rsq;\n'
+        'print "durbin-watson: " dw;\n'
+    )
+    yield md("A GAUSS plot, captured into the notebook as vector SVG:")
+    yield code(
+        "%%gauss\n"
+        "struct plotControl myPlot;\n"
+        'myPlot = plotGetDefaults("scatter");\n'
+        'plotSetTitle(&myPlot, "US consumption against income, 1959-2009");\n'
+        'plotSetXLabel(&myPlot, "log real GDP");\n'
+        'plotSetYLabel(&myPlot, "log real consumption");\n'
+        "plotScatter(myPlot, macro[.,3], macro[.,2]);\n"
+    )
+
+    yield md(
+        "## 7. Bring results back to Python\n"
         "\n"
         "Everything above stays available. Pull the forecast series back and work "
         "with it in pandas."
@@ -296,7 +352,7 @@ def cells():
     yield code("back = econenv.pull('eviews')\nprint(type(back).__name__, back.shape)\nback.tail()")
 
     yield md(
-        "## 7. The same model in every engine\n"
+        "## 8. The same model in every engine\n"
         "\n"
         "This is the part that is hard to do any other way: one specification, "
         "four programs, one table — and an honest account of where they differ."
@@ -318,7 +374,7 @@ def cells():
     )
 
     yield md(
-        "## 8. Export it for the paper\n"
+        "## 9. Export it for the paper\n"
         "\n"
         "One call writes the same table in every format a journal might ask for.\n"
         "The numbers come from the result object, so the file and the estimation\n"
@@ -343,7 +399,7 @@ def cells():
         "pd.read_csv('paper/table1_full.csv').head()\n"
     )
     yield md(
-        "## 9. Reproducibility\n"
+        "## 10. Reproducibility\n"
         "\n"
         "Record exactly what produced these numbers — every engine, every version."
     )

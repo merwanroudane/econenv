@@ -830,6 +830,33 @@ in the same cell that uses it.
 That limit is stated rather than worked around: replaying earlier cells to fake
 a session would silently re-run their side effects.
 
+\section{Figures}
+
+Plots are captured and shown in the notebook. The default is SVG --- vector,
+and what most journals ask for.
+
+\begin{lstlisting}
+%econ config gauss.graphics svg    # svg | png | pdf | off
+%econ config gauss.width 1600      # pixels, for png only
+\end{lstlisting}
+
+A cell that draws nothing produces no figure: EconEnv only asks GAUSS to save
+a plot when the cell contains a plotting call, because \texttt{plotSave} would
+otherwise write out whatever was drawn last and the same figure would reappear
+under every later cell.
+
+\begin{warn}
+\texttt{plotSave} measures raster and vector differently: the two numbers are
+pixels for PNG and inches for SVG and PDF. The \texttt{12 | 9} that gives a
+sensible SVG gives a 12-by-9 \emph{pixel} PNG. EconEnv passes the right units
+for the format you chose.
+
+A \texttt{struct} also cannot be carried between cells --- GAUSS refuses to
+\texttt{save} one. Since a plotting cell declares \texttt{struct plotControl p;},
+EconEnv recognises struct declarations and leaves them out of the carried
+workspace.
+\end{warn}
+
 \section{In the comparison}
 
 \begin{lstlisting}

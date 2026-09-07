@@ -304,3 +304,70 @@ class TestBridgeResource:
         """csvWriteM writes ~15, which moves a double by ~3e-15 per round trip
         and would put GAUSS out of step with the other engines."""
         assert "%*.*e" in gauss_bridge._helper()
+
+
+class TestGraphics:
+    """Plot capture, and the two traps found by running it."""
+
+    def test_a_struct_is_never_carried_between_cells(self):
+        """GAUSS cannot `save` a struct — G0514, a compile error.
+
+        A plotting cell declares `struct plotControl p;` then assigns to `p`,
+        which looks exactly like an ordinary top-level assignment. Saving it
+        made every plotting cell fail to run at all.
+        """
+        code = 'struct plotControl p;\np = plotGetDefaults("xy");\nplotXY(p, x, y);\nz = 1;'
+        assert _gauss_cli._assigned_names(code) == ["z"]
+
+    def test_several_structs_on_one_line_are_all_excluded(self):
+        assert _gauss_cli._struct_names("struct myType a, b, c;") == {"a", "b", "c"}
+
+    @pytest.mark.parametrize(
+        "code, draws",
+        [
+            ("plotXY(p, x, y);", True),
+            ("plotScatter(p, x, y);", True),
+            ("plotHist(p, x, 20);", True),
+            ("z = 1 + 1;", False),
+            ('print "no plot";', False),
+        ],
+    )
+    def test_only_a_plotting_cell_is_instrumented(self, code, draws):
+        """Saving unconditionally would re-emit the last plot under every cell."""
+        from econenv.engines.gauss_engine import _PLOT_CALL
+
+        assert bool(_PLOT_CALL.search(code)) is draws
+
+    def test_raster_and_vector_use_different_units(self):
+        """plotSave takes pixels for png and inches for svg/pdf.
+
+        Passing the vector numbers to a png produced a 12x9 pixel thumbnail,
+        which is a confusing way to fail.
+        """
+        from econenv.engines.gauss_engine import _RASTER_PIXELS, _VECTOR_INCHES
+
+        assert _VECTOR_INCHES[0] < 100, "inches"
+        assert _RASTER_PIXELS[0] > 100, "pixels"
+
+    def test_every_graphics_format_has_a_mime_type(self):
+        from econenv.engines.gauss_engine import _GRAPHICS_MIME
+
+        assert _GRAPHICS_MIME["svg"] == "image/svg+xml"
+        assert _GRAPHICS_MIME["png"] == "image/png"
+        assert _GRAPHICS_MIME["pdf"] == "application/pdf"
+
+
+class TestConfiguration:
+    def test_gauss_is_a_known_config_section(self):
+        """`%econ config gauss.home` is documented, so it has to be settable."""
+        from econenv import config
+
+        assert "gauss" in config.DEFAULTS
+
+    @pytest.mark.parametrize(
+        "key", ["home", "backend", "graphics", "width", "height", "timeout", "vectors"]
+    )
+    def test_the_documented_options_exist(self, key):
+        from econenv import config
+
+        assert key in config.DEFAULTS["gauss"]

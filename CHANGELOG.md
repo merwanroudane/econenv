@@ -35,6 +35,15 @@ unchanged except where a shared bug affected them.
   GAUSS and EViews all work with your existing licences.
 - `docs/engines/gauss.md` and a generated `gauss-commands.md`, with a test that
   fails if the page and the catalogue disagree.
+- **GAUSS plots**, captured and displayed inline. SVG by default — vector, and
+  what most journals ask for — with `png` and `pdf` available through
+  `%econ config gauss.graphics`. A cell that draws nothing produces no figure,
+  because asking `plotSave` unconditionally would re-emit the last plot under
+  every later cell.
+- **A GAUSS section in the example notebook**, executed against the real
+  engines: the matrix layout, least squares written out with `/`, GAUSS's own
+  `ols`, and a captured scatter plot. All six engines now appear in the
+  notebook's comparison on real US macro data.
 
 ### Fixed
 
@@ -53,9 +62,25 @@ unchanged except where a shared bug affected them.
   half the engines. It now tracks loading explicitly.
 - **`pytest` had no `gauss` marker**, so a test needing GAUSS would have failed
   rather than skipped on a machine without it.
+- **`gauss` was not a known config section**, so every `%econ config gauss.*`
+  documented on the engine page would have raised. Seven options are now
+  declared.
+- **A `struct` cannot be saved in GAUSS**, and a plotting cell declares one
+  (`struct plotControl p;`) then assigns to it — which looked like an ordinary
+  top-level assignment, so EconEnv tried to carry it and *every plotting cell
+  failed to compile*. Struct declarations are now recognised and excluded.
+- **`Series.view` is deprecated in pandas 2.2** and warned in the notebook when
+  a datetime column crossed to GAUSS.
+- The example notebook's own data cell used the deprecated
+  `pd.PeriodIndex(year=..., quarter=...)`.
 
 ### Changed
 
+- **The native backend is blocked, not merely unwritten.** The GAUSS Engine
+  (`mteng`) is licensed separately from desktop GAUSS and is not part of an
+  installation — `gauss.dll` exports no `GAUSS_*` symbols — so there is nothing
+  to bind to on a normal machine. `gauss.backend=native` now says exactly that
+  instead of "not built yet", and the CLI backend is what runs.
 - A GAUSS cell runs in a fresh process, so **only top-level values carry**
   between cells, via GAUSS's own `save`/`load`. Procedures and `#include` state
   do not, and that is documented rather than worked around: replaying earlier

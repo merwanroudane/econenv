@@ -258,7 +258,7 @@ footer .muted{color:var(--muted);font-size:14.5px}
   <div class="grid g4" style="margin-top:24px">
     <div class="card kpi"><div class="n">6</div><div class="l">engines, one kernel</div></div>
     <div class="card kpi"><div class="n">0</div><div class="l">CSV files written</div></div>
-    <div class="card kpi"><div class="n">394</div><div class="l">tests</div></div>
+    <div class="card kpi"><div class="n">411</div><div class="l">tests</div></div>
     <div class="card kpi"><div class="n">136</div><div class="l">EViews commands catalogued</div></div>
   </div>
 </div></section>
@@ -379,12 +379,13 @@ pip install "econenv[all]"</pre>
   <span class="label lab-py">notebook</span>
   <pre>%load_ext econenv</pre>
   <span class="label lab-out">real output</span>
-  <pre class="out">EconEnv 1.1.1 loaded — one notebook, multiple econometric engines.
+  <pre class="out">EconEnv 1.3.0 loaded — one notebook, multiple econometric engines.
   %econ                  econenv
   %Rec / %%Rec           econenv
   %R / %%R               econenv (rpy2 not installed)
   %eviews / %%eviews     econenv
   %matlab / %%matlab     econenv
+  %gauss / %%gauss       econenv
   %stata / %%stata       pystata (official)
   %econ status · %econ doctor · %econ help</pre>
 
@@ -400,6 +401,7 @@ pip install "econenv[all]"</pre>
 engine
 Python  configured  3.11.0                cpython
 EViews  configured      13               comtypes
+GAUSS   configured  26.1.1
 MATLAB  configured  R2024a          matlab.engine
 R       configured   4.5.2             subprocess
 Stata      running    19.5      mp        pystata
@@ -407,7 +409,6 @@ Stata      running    19.5      mp        pystata
                                                  location
 engine
 Python  C:\Users\HP\AppData\Local\Programs\Python\Pyth...
-EViews                         C:\Program Files\EViews 13
 ...</pre>
 
   <h3>And if something will not start</h3>
@@ -633,7 +634,11 @@ F-statistic: 1.248e+05 on 2 and 200 DF,  p-value: &lt; 2.2e-16</pre>
 tsset t
 newey lrcons lrgdp realint, lag(4)</pre>
   <span class="label lab-out">real output</span>
-  <pre class="out">. tsset t
+  <pre class="out">. tsset, clear
+
+. gen t = _n
+
+. tsset t
 
 Time variable: t, 1 to 203
         Delta: 1 unit
@@ -649,12 +654,12 @@ lrgdp.uroot(adf)</pre>
 Exogenous: Constant
 Lag Length: 1 (Automatic - based on SIC, maxlag=14)
 
-                                                                                         t-Statistic  Prob.*
+                                                     t-Statistic  Prob.*
 
-Augmented Dickey-Fuller test statistic                                                   -1.820451    0.3698
-Test critical values:                                1% level                            -3.462901
-                                                     5% level                            -2.875752
-                                                     10% level                           -2.574423
+Augmented Dickey-Fuller test statistic                 -1.820451  0.3698
+Test critical values:                   1% level       -3.462901
+                                        5% level       -2.875752
+                                        10% level      -2.574423
 
 *MacKinnon (1996) one-sided p-values.
 ...</pre>
@@ -667,7 +672,7 @@ gci.coint(e)</pre>
   <span class="label lab-out">real output</span>
   <pre class="out">                   Johansen Cointegration Test
 =================================================================
-Date: 09/05/26   Time: 19:08
+Date: 09/08/26   Time: 01:49
 Sample: 1959Q1 2009Q3
 Included observations: 203
 Lags interval (in first differences): 1 to 4
@@ -689,22 +694,22 @@ eq_ev.output</pre>
   <span class="label lab-out">real output</span>
   <pre class="out">Dependent Variable: LRCONS
 Method: Least Squares
-Date: 09/05/26   Time: 19:08
+Date: 09/08/26   Time: 01:49
 Sample: 1959Q1 2009Q3
 Included observations: 203
 
-Variable                      Coefficient  Std. Error             t-Statistic  Prob.
+Variable  Coefficient  Std. Error  t-Statistic   Prob.
 
-C                             -1.073573    0.018931               -56.71091    0.0000
-LRGDP                         1.074681     0.002151               499.5275     0.0000
-REALINT                       -0.001089    0.000375               -2.902182    0.0041
+C           -1.073573    0.018931    -56.71091  0.0000
+LRGDP        1.074681    0.002151     499.5275  0.0000
+REALINT     -0.001089    0.000375    -2.902182  0.0041
 
-R-squared                     0.999199     Mean dependent var                  8.361722
-Adjusted R-squared            0.999191     S.D. dependent var                  0.500639
-S.E. of regression            0.014236     Akaike info criterion               -5.651383
-Sum squared resid             0.040534     Schwarz criterion                   -5.602419
-Log likelihood                576.6154     Hannan-Quinn criter.                -5.631574
-F-statistic                   124805.2     Durbin-Watson stat                  0.278552
+R-squared           0.999199  Mean dependent var        8.361722
+Adjusted R-squared  0.999191  S.D. dependent var        0.500639
+S.E. of regression  0.014236  Akaike info criterion    -5.651383
+Sum squared resid   0.040534  Schwarz criterion        -5.602419
+Log likelihood      576.6154  Hannan-Quinn criter.     -5.631574
+F-statistic         124805.2  Durbin-Watson stat        0.278552
 ...</pre>
 
   <h3>5 · EViews plots, captured into the notebook</h3>
@@ -737,23 +742,23 @@ F-statistic                   124805.2     Durbin-Watson stat                  0
   <pre class="out">OLS: lrcons ~ lrgdp + realint
 
 Coefficients
-                python         eviews         matlab              r          stata
+                python         eviews          gauss         matlab              r          stata
 term
-_cons       -1.0735725     -1.0735725     -1.0735725     -1.0735725     -1.0735725
-lrgdp        1.0746806      1.0746806      1.0746806      1.0746806      1.0746806
-realint  -0.0010893364  -0.0010893364  -0.0010893364  -0.0010893364  -0.0010893364
+_cons       -1.0735725     -1.0735725     -1.0735725     -1.0735725     -1.0735725     -1.0735725
+lrgdp        1.0746806      1.0746806      1.0746806      1.0746806      1.0746806      1.0746806
+realint  -0.0010893364  -0.0010893364  -0.0010893364  -0.0010893364  -0.0010893364  -0.0010893364
 
 Summary statistics
        version model  nobs        r2    r2_adj      loglik          aic          bic      rmse       vcov
 engine
 python  3.11.0   OLS   203  0.999199  0.999191  576.615373 -1147.230747 -1137.291129  0.014236  nonrobust
 eviews      13   OLS   203  0.999199  0.999191  576.615373    -5.651383    -5.602419  0.014236        ols
+gauss   26.1.1   OLS   203  0.999199  0.999191  576.615373 -1147.230747 -1137.291129  0.014236  nonrobust
 matlab  R2024a   OLS   203  0.999199  0.999191  576.615373 -1147.230747 -1137.291129  0.014236  nonrobust
 r        4.5.2   OLS   203  0.999199  0.999191  576.615373 -1145.230747 -1131.977923  0.014236  nonrobust
 stata     19.5   OLS   203  0.999199  0.999191  576.615373 -1147.230747 -1137.291129  0.014236  nonrobust
 
 Agreement: all engines agree within tolerance
-         max_abs_diff  max_rel_diff  within_tolerance
 ...</pre>
 
   <div class="note"><b>The coefficients agree to machine precision.</b>
