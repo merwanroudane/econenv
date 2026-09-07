@@ -4,6 +4,65 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-09-07
+
+GAUSS becomes the sixth engine. Python, R, Stata, EViews and MATLAB are
+unchanged except where a shared bug affected them.
+
+### Added
+
+- **GAUSS**, driven through its terminal executable. Discovery, configuration,
+  `%gauss` / `%%gauss`, typed data transfer, diagnostics, OLS, and a searchable
+  command catalogue. Everything was verified against a live GAUSS 26.1.1 rather
+  than taken from documentation, which corrected four assumptions:
+  the executable is `tgauss`, not `engauss`; `loadall` is unavailable to the
+  batch compiler; `csvWriteM` writes about fifteen significant digits; and
+  GAUSS installs to `C:\gauss26`, not Program Files.
+- **GAUSS in `compare_ols`**, using GAUSS's own `ols` procedure. Six engines
+  now agree to 1.8e-15, with R², adjusted R², log-likelihood, AIC, BIC and RMSE
+  matching statsmodels, Stata and MATLAB exactly.
+- **`econenv_bridge.gss`**, which writes seventeen significant digits so a
+  double round-trips **exactly**. GAUSS's own writer moves a value by roughly
+  3e-15 per round trip, which would have put GAUSS out of step with the
+  machine-precision agreement that is the point of the comparison.
+- **`%econ gauss`** — 95 commands in 12 categories, 65 resolved against a live
+  GAUSS. It leads with the three rules that catch every newcomer: every
+  statement ends with `;`, a bare expression prints nothing, and `~` joins
+  columns while `|` stacks rows. Two catalogue claims were wrong and GAUSS
+  caught them: `autocov` and `autocor` do not exist; `acf` and `pacf` do.
+- **`%econ gauss colab`**, and a Colab section that now covers all six engines
+  and distinguishes the hosted runtime from the local one — where MATLAB,
+  GAUSS and EViews all work with your existing licences.
+- `docs/engines/gauss.md` and a generated `gauss-commands.md`, with a test that
+  fails if the page and the catalogue disagree.
+
+### Fixed
+
+- **The EViews output table was misaligned.** Three causes: every cell was
+  left-aligned, so decimal points did not line up and a negative coefficient
+  pushed its digits across; one set of column widths was computed for the whole
+  view, though a regression output is several tables stacked with different
+  column counts; and the heading row is separated from its data by a blank row,
+  so sizing blocks independently left "Coefficient" standing over nothing.
+  Numeric columns are right-aligned, each block is sized on its own columns,
+  and a heading row is merged with the block beneath it.
+- **The engine registry silently returned a short list.** `_ensure_loaded()`
+  imported the built-ins only when no engine class was registered yet — a proxy
+  for "not yet imported" that fails as soon as anything imports one engine
+  module directly. Depending on import order, `registry.names()` could omit
+  half the engines. It now tracks loading explicitly.
+- **`pytest` had no `gauss` marker**, so a test needing GAUSS would have failed
+  rather than skipped on a machine without it.
+
+### Changed
+
+- A GAUSS cell runs in a fresh process, so **only top-level values carry**
+  between cells, via GAUSS's own `save`/`load`. Procedures and `#include` state
+  do not, and that is documented rather than worked around: replaying earlier
+  cells to fake a session would silently re-run their side effects.
+- A name GAUSS already owns (`vec`, `rows`, `ones`, …) is refused before GAUSS
+  sees it, with an alternative, instead of surfacing a raw `G0276`.
+
 ## [1.2.0] — 2026-09-07
 
 A hardening pass over the MATLAB integration, from a bug report against 1.1.1.

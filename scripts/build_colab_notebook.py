@@ -8,7 +8,7 @@ Colab is Linux, which decides what is possible before anything is installed:
   destroyed when the session ends. Not practical, and a licence question.
 * **EViews** cannot run at all — its automation interface is Windows COM.
 
-So this notebook is deliberately a Python + R notebook. Promising five engines
+So this notebook is deliberately a Python + R notebook. Promising six engines
 on Colab would be a lie, and a user would spend an afternoon looking for a
 configuration problem that has no solution.
 
@@ -64,6 +64,7 @@ def cells():
         "| **Stata** | **possible** | Stata for Linux exists and pystata supports it - install it from Google Drive if you hold a Linux licence |\n"
         "| **EViews** | no | no Linux build, Wine cannot licence it, and EViews forbids remote access |\n"
         "| **MATLAB** | **possible** | MATLAB for Linux exists and the Engine API supports it - the same licence question as Stata |\n"
+        "| **GAUSS** | **possible** | GAUSS for Linux exists - again a licence question, not a technical one |\n"
         "\n"
         "**Stata is possible here.** See the installation notes in the repository for the\n"
         "Drive-based recipe; EconEnv finds a Linux Stata with no configuration at all.\n"
@@ -74,15 +75,16 @@ def cells():
         "server access to EViews via COM is not allowed*. That workaround is easy to\n"
         "build and contractually prohibited, so EconEnv does not ship it.\n"
         "\n"
-        "For EViews, run the five-engine notebook on a local Windows machine.\n"
+        "For EViews, run the six-engine notebook on a local Windows machine.\n"
         "\n"
         "---\n"
         "\n"
-        "## Want all five engines, and still Colab?\n"
+        "## Want all six engines, and still Colab?\n"
         "\n"
         "You can. Colab already runs in a browser **on your own PC**, so point that\n"
         "interface at a Jupyter server on the same PC: the notebook UI stays Colab,\n"
-        "while the kernel - and therefore Python, R, Stata, EViews **and MATLAB** - is\n"
+        "while the kernel - and therefore Python, R, Stata, EViews, MATLAB **and\n"
+        "GAUSS** - is\n"
         "your Windows machine.\n"
         "\n"
         "Nothing is exposed to the internet. Your browser talks to `localhost`,\n"
@@ -182,8 +184,8 @@ def cells():
         "## 5. Compare Python and R on the same model\n"
         "\n"
         "`compare_ols` runs the specification in every engine available. On Colab\n"
-        "that is Python and R; on a Windows machine with all five installed, the\n"
-        "same line returns five columns."
+        "that is Python and R; on a Windows machine with all six installed, the\n"
+        "same line returns six columns."
     )
     yield code("cmp = econenv.compare_ols(macro, 'lrcons ~ lrgdp + realint')\ncmp")
     yield code("cmp.coefficients()")
@@ -207,8 +209,8 @@ def cells():
         "\n"
         "## Next\n"
         "\n"
-        f"- [The full five-engine notebook]({REPO}/blob/main/examples/10_real_data_all_engines.ipynb) — "
-        "Python, R, Stata, EViews **and** MATLAB, for a local Windows machine\n"
+        f"- [The full six-engine notebook]({REPO}/blob/main/examples/10_real_data_all_engines.ipynb) — "
+        "Python, R, Stata, EViews, MATLAB **and** GAUSS, for a local Windows machine\n"
         "- [Documentation site](https://merwanroudane.github.io/econenv/)\n"
         f"- [Installation & User Guide (PDF)]({REPO}/blob/main/docs/guide/econenv-guide.pdf)\n"
         f"- [EViews commands for GUI users]({REPO}/blob/main/docs/engines/eviews-commands.md)\n"

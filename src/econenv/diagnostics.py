@@ -208,7 +208,8 @@ def check_host() -> List[Check]:
             Check(
                 "Google Colab",
                 Status.PASS,
-                "detected — Python and R work here; Stata is possible, EViews is not",
+                "hosted runtime — Python and R work here; Stata is possible; "
+                "EViews, MATLAB and GAUSS are not",
                 "Stata for Linux can be installed on the runtime if you have a Linux "
                 "licence — EconEnv finds it automatically once it is there. EViews cannot: "
                 "there is no Linux build, and EViews' own terms forbid reaching a Windows "

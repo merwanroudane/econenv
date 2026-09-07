@@ -14,6 +14,8 @@
 | [engines/stata.md](engines/stata.md) | PyStata delegation, editions, frames |
 | [engines/eviews.md](engines/eviews.md) | COM automation and its traps |
 | [engines/matlab.md](engines/matlab.md) | The Engine API, release matching, and figures |
+| [engines/gauss.md](engines/gauss.md) | GAUSS: discovery, transfer, precision, and what does not carry between cells |
+| [engines/gauss-commands.md](engines/gauss-commands.md) | 95 GAUSS commands, and the three syntax rules that catch everyone |
 | [engines/matlab-commands.md](engines/matlab-commands.md) | 102 MATLAB commands for research, each naming its toolbox |
 | [engines/eviews-commands.md](engines/eviews-commands.md) | The menu path you know, and the command it becomes |
 | [guide/econenv-guide.pdf](guide/econenv-guide.pdf) | **Installation and User Guide (PDF)** — everything from zero |

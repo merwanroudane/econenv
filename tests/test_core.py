@@ -9,10 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-#: Every engine that ships with EconEnv. Written once so adding a sixth does
-#: not mean hunting down the set literal in each test that asserts on it.
-BUILTIN_ENGINES = {"python", "r", "stata", "eviews", "matlab", "gauss"}
-
 import econenv
 from econenv import config, schema, transfer
 from econenv.engines import registry
@@ -25,6 +21,10 @@ from econenv.exceptions import (
 )
 from econenv.models.spec import ModelSpec, parse_spec
 from econenv.results import ExecutionResult, ModelResult
+
+#: Every engine that ships with EconEnv. Written once so adding a sixth does
+#: not mean hunting down the set literal in each test that asserts on it.
+BUILTIN_ENGINES = {"python", "r", "stata", "eviews", "matlab", "gauss"}
 
 
 # --------------------------------------------------------------------------- #

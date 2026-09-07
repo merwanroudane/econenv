@@ -100,6 +100,11 @@ def _build_parser() -> MagicParser:
     )
     matlab.add_argument("term", nargs="*", default=None)
 
+    gauss = sub.add_parser(
+        "gauss", add_help=False, help="Look up GAUSS commands, or GAUSS help topics."
+    )
+    gauss.add_argument("term", nargs="*", default=None)
+
     ols = sub.add_parser("ols", add_help=False, help="Run one OLS across engines.")
     ols.add_argument("formula", nargs="+")
     ols.add_argument("--data", required=True, help="Name of the DataFrame in Python.")
@@ -185,6 +190,72 @@ class EconMagics(Magics):
             label=args.label,
         )
         print(result)
+        return None
+
+    def _cmd_gauss(self, args, local_ns) -> Any:
+        """GAUSS commands, searchable from the cell.
+
+        GAUSS is the least like the others: no DataFrame, its own matrix
+        syntax, and the operators a researcher needs most (``~`` to build a
+        design matrix, ``/`` to solve it) are not guessable from Python or R.
+        """
+        from ..engines import gauss_commands as catalogue
+
+        term = " ".join(getattr(args, "term", None) or []).strip()
+        head = term.split()[0].lower() if term else ""
+
+        if head in ("status", "doctor"):
+            from .. import services
+
+            return services.doctor("gauss") if head == "doctor" else services.status()
+
+        if head == "colab":
+            print(_COLAB_HELP)
+            return None
+
+        if head in ("help", "magic"):
+            print(_GAUSS_MAGIC_HELP)
+            return None
+
+        if not term:
+            verified = sum(1 for c in catalogue.COMMANDS if c.verified)
+            print(
+                f"{len(catalogue.COMMANDS)} GAUSS commands for research "
+                f"({verified} resolved against a live GAUSS).\n"
+            )
+            for name, description in catalogue.categories().items():
+                count = len(catalogue.by_category(name))
+                print(f"  {name:<12} {description} ({count})")
+            print("\n  colab        Running GAUSS through Colab's local runtime")
+            print("  status       Which GAUSS EconEnv will start")
+            print("  doctor       Diagnose the GAUSS setup")
+            print("\nExamples:")
+            print("  %econ gauss regression        ols and friends")
+            print("  %econ gauss find missing      search everything")
+            print("  %econ gauss matrix            building and slicing")
+            print("\nThe three things that catch people out:")
+            print("  every statement ends with ;   a missing one is a syntax error")
+            print("  print x;                      a bare expression displays nothing")
+            print("  X = ones(n,1) ~ x1 ~ x2;      ~ joins columns, | stacks rows")
+            return None
+
+        if head in ("find", "search"):
+            term = " ".join(term.split()[1:])
+
+        matches = catalogue.find(term)
+        if not matches:
+            print(f"Nothing matches {term!r}. Try `%econ gauss` for the categories,")
+            print("or ask GAUSS itself:  %%gauss\n  help " + term.split()[0])
+            return None
+
+        heading = (
+            catalogue.categories().get(term.lower())
+            or f"{len(matches)} command(s) matching {term!r}"
+        )
+        print(f"{heading}\n")
+        for command in matches:
+            print(command)
+            print()
         return None
 
     def _cmd_matlab(self, args, local_ns) -> Any:
@@ -466,6 +537,22 @@ EViews and Stata all work exactly as they do in a local notebook.
      %%matlab
      version
 
+WHICH ENGINES WORK, AND WHERE
+
+  Hosted Colab (the default) runs on a Linux VM at Google:
+
+    Python   works      it is the kernel
+    R        works      already on the image
+    Stata    possible   Linux build + your own licence, installed each session
+    MATLAB   possible   Linux build + your own licence
+    GAUSS    possible   Linux build + your own licence
+    EViews   no         no Linux build, and its terms forbid remote COM
+
+  LOCAL RUNTIME runs the kernel on YOUR machine, so all six work exactly as in
+  a local notebook — including EViews, MATLAB and GAUSS, with your existing
+  licences. Nothing extra to install and no configuration: EconEnv cannot tell
+  the difference, which is the point.
+
 SECURITY
   The local runtime executes notebook code on your computer, with your files
   and your installed software. Connect only notebooks you trust, and never
@@ -624,3 +711,67 @@ WHAT IT WILL NOT DO
   raster figure, or round twice. Blank cells are missing numbers, not zeros.
 
   %econ matlab export   the same thing from the MATLAB side"""
+
+
+#: `%econ gauss help` — the magic, plus the three things about GAUSS syntax
+#: that catch every newcomer.
+_GAUSS_MAGIC_HELP = """%gauss and %%gauss
+===================
+
+  %gauss print rndn(2,2);        one statement
+
+  %%gauss                        a block
+  x = rndn(100, 3);
+  print meanc(x);
+
+THREE THINGS THAT CATCH PEOPLE OUT
+
+  Every statement ends with ;    a missing semicolon is a syntax error
+  print x;                       a bare `x;` displays nothing at all
+  X = ones(n,1) ~ x1 ~ x2;       ~ joins columns, | stacks rows
+
+  And GAUSS compiles the WHOLE cell before running any of it. A mistyped name
+  on the last line means the first line never ran either — which is why a cell
+  can produce no output at all rather than a partial result.
+
+SENDING PYTHON VALUES IN
+
+  %%gauss -i df -i k             repeat -i for several
+
+  int/float/NumPy scalar -> scalar     list/1-D array -> column vector
+  bool                   -> 1 or 0     2-D array      -> matrix, shape kept
+  str                    -> string     DataFrame      -> numeric matrix
+
+  A GAUSS matrix holds only numbers, so a DataFrame's text columns cannot
+  cross. They are named in a warning rather than dropped in silence, and the
+  column names are remembered so the frame comes back with them.
+
+  A name GAUSS already owns — vec, rows, ones, sumc — cannot take a variable.
+  EconEnv refuses it up front and suggests another.
+
+BRINGING RESULTS BACK
+
+  %%gauss -o b -o n
+
+  1x1 matrix -> float          matrix -> 2-D ndarray
+  vector     -> 1-D ndarray    string -> str
+
+  Numbers cross at 17 significant digits, so a double round-trips exactly.
+  GAUSS's own csvWriteM writes about 15, which is not enough to keep GAUSS in
+  step with the other engines.
+
+WHAT CARRIES BETWEEN CELLS
+
+  Values assigned at the top level do — EconEnv saves and reloads them with
+  GAUSS's own save/load. Procedures, #include state and library loads do NOT,
+  because each cell is a fresh process. Define a proc in the cell that uses it.
+
+A LEAST SQUARES CELL, ANNOTATED
+
+  %%gauss -i df -o b
+  y = df[.,3];                   /* third column                  */
+  X = ones(rows(df),1) ~ df[.,1] ~ df[.,2];   /* constant + regressors */
+  b = y / X;                     /* solve X*b = y by least squares */
+  print b;
+
+  `%econ gauss regression` shows ols(), which also gives standard errors."""

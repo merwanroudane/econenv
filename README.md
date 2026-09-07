@@ -4,7 +4,7 @@
 
 **One Notebook. Multiple Econometric Engines.**
 
-Python, R, Stata, EViews and MATLAB in a single Jupyter workflow — on one Python kernel.
+Python, R, Stata, EViews, MATLAB and GAUSS in a single Jupyter workflow — on one Python kernel.
 
 [![Website](https://img.shields.io/badge/docs-econenv-2B5CA8.svg)](https://merwanroudane.github.io/econenv/)
 [![PyPI](https://img.shields.io/pypi/v/econenv.svg)](https://pypi.org/project/econenv/)
@@ -140,7 +140,7 @@ Three rules hold the design together:
 
 | | |
 |---|---|
-| **Five engines, one kernel** | Python, R, Stata, EViews, MATLAB — persistent sessions, no kernel switching |
+| **Six engines, one kernel** | Python, R, Stata, EViews, MATLAB, GAUSS — persistent sessions, no kernel switching |
 | **Real data bridge** | `pandas.DataFrame` is canonical; push/pull/move between any two engines with no file round-trip |
 | **Type fidelity** | Factors, categoricals, dates, booleans, integers and missing values survive the trip — or you get a warning saying exactly what changed |
 | **Econometric metadata** | Time variable, panel variable, frequency, labels and conversion history travel with the frame |
@@ -196,6 +196,7 @@ Then, in a notebook:
 | Stata | optional | **17 or newer** — PyStata ships with Stata 17+ |
 | EViews | optional | **Windows only**; automation is COM-based |
 | `comtypes` | for EViews | `pip install "econenv[eviews]"` |
+| GAUSS | optional | any release with `tgauss`; EconEnv reports which installation it will use |
 | MATLAB | optional | needs `matlabengine` pinned to **both** the release and your Python — R2024a is `24.1.*` (Python ≤3.11), R2026a is `26.1.*` (first to accept 3.13). `econenv doctor` prints the exact pin. |
 | `rpy2` | never required | no Windows wheels; EconEnv's subprocess backend replaces it |
 
@@ -212,8 +213,9 @@ One line to install, no local setup.
 | Stata | **possible** | Stata for Linux + a Linux licence, installed from Drive each session |
 | EViews | no | no Linux build; Wine fails licence activation; and EViews forbids remote access — *"web server access to EViews via COM is not allowed"* |
 | MATLAB | **possible** | MATLAB for Linux exists; same licence question as Stata |
+| GAUSS | **possible** | GAUSS for Linux exists; same licence question as Stata |
 
-**Want all five engines with the Colab interface?** Use Colab's *local runtime*:
+**Want all six engines with the Colab interface?** Use Colab's *local runtime*:
 the notebook UI stays Colab, but the kernel runs on your own PC, so EViews and
 Stata work exactly as they do locally. Nothing is exposed to the internet — your
 browser talks to `localhost`. It needs the classic Jupyter stack
@@ -339,7 +341,8 @@ breaking change without a major bump.
 
 | Version | | What changed |
 |---|---|---|
-| **1.2.0** | [PyPI](https://pypi.org/project/econenv/1.2.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#120--2026-09-07) | MATLAB transfer hardening; research reports |
+| **1.3.0** | [PyPI](https://pypi.org/project/econenv/1.3.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#130--2026-09-07) | GAUSS as a sixth engine |
+| 1.2.0 | [PyPI](https://pypi.org/project/econenv/1.2.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#120--2026-09-07) | MATLAB transfer hardening; research reports |
 | 1.1.1 | [PyPI](https://pypi.org/project/econenv/1.1.1/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#111--2026-09-05) | MATLAB R2026a and Python 3.13; five-engine docs |
 | 1.0.9 | [PyPI](https://pypi.org/project/econenv/1.0.9/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#109--2026-09-05) | Working links on the PyPI page |
 | 1.0.8 | [PyPI](https://pypi.org/project/econenv/1.0.8/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#108--2026-09-05) | MATLAB as a fifth engine; publication export; broadcast |

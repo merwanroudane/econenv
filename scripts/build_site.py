@@ -124,7 +124,7 @@ CSS = """
   --line:#E4E2DC; --soft:#F4F2EC;
   --accent:#2B5CA8; --accent-dark:#1E4380; --accent-soft:#EAF1FB;
   --gold:#B8860B; --gold-soft:#FBF3E0;
-  --py:#3776AB; --r:#1F65B7; --stata:#7A2E2E; --ev:#1B7A43; --ml:#B0521A;
+  --py:#3776AB; --r:#1F65B7; --stata:#7A2E2E; --ev:#1B7A43; --ml:#B0521A; --gs:#5B3E8E;
   --ok:#2E7D4F; --ok-soft:#EDF7F0;
   --warn:#A76A00; --warn-soft:#FDF4E3;
   --radius:14px;
@@ -201,6 +201,7 @@ h4{font-size:16.5px;margin:22px 0 8px}
 .card.tint-stata{border-top:3px solid var(--stata)}
 .card.tint-ev{border-top:3px solid var(--ev)}
 .card.tint-ml{border-top:3px solid var(--ml)}
+.card.tint-gs{border-top:3px solid var(--gs)}
 
 pre{background:#F7F6F2;border:1px solid var(--line);border-radius:11px;padding:15px 17px;
   overflow-x:auto;font-size:13.6px;line-height:1.55;margin:12px 0}
@@ -213,6 +214,7 @@ code:not(pre code){background:var(--soft);padding:2px 6px;border-radius:6px;font
 .lab-py{background:#EAF2FA;color:var(--py)} .lab-r{background:#E9F0FB;color:var(--r)}
 .lab-stata{background:#F8ECEC;color:var(--stata)} .lab-ev{background:#E9F6EE;color:var(--ev)}
 .lab-ml{background:#FBEFE7;color:var(--ml)}
+.lab-gs{background:#F1ECF7;color:var(--gs)}
 .lab-out{background:var(--soft);color:var(--muted)}
 
 table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.8px;
@@ -254,6 +256,7 @@ figcaption{font-size:13.6px;color:var(--muted);margin-top:10px;text-align:center
 .n-stata{background:#F8ECEC;border-color:#EBCFCF;color:var(--stata)}
 .n-ev{background:#E9F6EE;border-color:#C6E5D4;color:var(--ev)}
 .n-ml{background:#FBEFE7;border-color:#F0DCCB;color:var(--ml)}
+.n-gs{background:#F1ECF7;border-color:#DDD2EC;color:var(--gs)}
 .arrow{color:var(--muted);font-size:19px}
 
 .kpi{text-align:center;padding:20px}
@@ -311,7 +314,7 @@ def build(outputs: dict, facts: dict) -> str:
 <div class="hero"><div class="wrap">
   <p class="tag">One Notebook. Multiple Econometric Engines.</p>
   <h1>Python, R, Stata and EViews<br>in a single notebook</h1>
-  <p class="lede">One dataset, one kernel, five programs. No CSV round-trip, no
+  <p class="lede">One dataset, one kernel, six programs. No CSV round-trip, no
   switching windows, and results you can compare side by side — with the
   differences explained instead of hidden.</p>
 
@@ -321,6 +324,7 @@ def build(outputs: dict, facts: dict) -> str:
     {engine_pill("Stata 17+", "stata", "#7A2E2E")}
     {engine_pill("EViews 12–14", "ev", "#1B7A43")}
     {engine_pill("MATLAB R2024a+", "ml", "#B0521A")}
+    {engine_pill("GAUSS 24+", "gs", "#5B3E8E")}
   </div>
 
   <div class="btns">
@@ -346,7 +350,7 @@ def build(outputs: dict, facts: dict) -> str:
 <!-- ============================ THE PROBLEM ============================ -->
 <section><div class="wrap">
   <p class="eyebrow">Why this exists</p>
-  <h2>The five-program problem</h2>
+  <h2>The six-program problem</h2>
   <p class="sub">An applied econometrics paper rarely lives in one program. The
   unit-root test is in EViews because that is where the output is readable. The
   panel estimator is in Stata. The plots are in R. The data cleaning is in
@@ -377,11 +381,12 @@ def build(outputs: dict, facts: dict) -> str:
     <span class="node n-stata">Stata</span>
     <span class="node n-ev">EViews</span>
     <span class="node n-ml">MATLAB</span>
+    <span class="node n-gs">GAUSS</span>
     <span class="arrow">→</span><span class="node n-py">back to Python</span>
   </div>
 
   <div class="grid g4" style="margin-top:24px">
-    <div class="card kpi"><div class="n">5</div><div class="l">engines, one kernel</div></div>
+    <div class="card kpi"><div class="n">6</div><div class="l">engines, one kernel</div></div>
     <div class="card kpi"><div class="n">0</div><div class="l">CSV files written</div></div>
     <div class="card kpi"><div class="n">{facts["tests"]}</div><div class="l">tests</div></div>
     <div class="card kpi"><div class="n">{facts["commands"]}</div><div class="l">EViews commands catalogued</div></div>
@@ -619,6 +624,26 @@ disp(fit)</pre>
       reappear under every later cell.</p>
     </div>
 
+    <div class="card tint-gs">
+      <span class="label lab-gs">GAUSS</span>
+      <h3><code>%%gauss</code></h3>
+      <pre>%%gauss -i df -o b
+y = df[.,3];
+X = ones(rows(df),1) ~ df[.,1] ~ df[.,2];
+b = y / X;                 /* least squares */
+print b;</pre>
+      <table>
+        <tr><td><code>-i NAME</code></td><td>push a DataFrame in as a numeric matrix</td></tr>
+        <tr><td><code>-o NAME</code></td><td>bring a value back as its natural type</td></tr>
+        <tr><td><code>-q</code></td><td>suppress output</td></tr>
+        <tr><td><code>--result</code></td><td>return the result object</td></tr>
+      </table>
+      <p style="font-size:14.5px;color:var(--muted)">Three things catch everyone:
+      every statement ends with <code>;</code>, a bare expression prints nothing,
+      and <code>~</code> joins columns while <code>|</code> stacks rows.
+      <code>%econ gauss</code> is a searchable catalogue of 95 commands.</p>
+    </div>
+
     <div class="card tint-py">
       <span class="label lab-py">Python</span>
       <h3>The API</h3>
@@ -737,8 +762,8 @@ eq_ev.output</pre>
 <!-- ============================ COMPARE ============================ -->
 <section id="compare"><div class="wrap">
   <p class="eyebrow">The part that is hard to do any other way</p>
-  <h2>The same model in all five engines</h2>
-  <p class="sub">One specification, five programs, one table — and an honest
+  <h2>The same model in all six engines</h2>
+  <p class="sub">One specification, six programs, one table — and an honest
   account of where they differ.</p>
 
   <span class="label lab-py">Python</span>
@@ -747,7 +772,7 @@ eq_ev.output</pre>
   <pre class="out">{o("compare_ols(macro", 20)}</pre>
 
   <div class="note"><b>The coefficients agree to machine precision.</b>
-  Maximum disagreement across the five engines is of the order of 10⁻¹⁵ —
+  Maximum disagreement across the six engines is of the order of 10⁻¹⁵ —
   floating-point noise and nothing more.</div>
 
   <div class="warn"><b>The information criteria deliberately do not agree.</b>
@@ -839,6 +864,7 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
       <tr><td><b>Stata</b></td><td><b>possible</b></td><td>Stata for Linux exists and pystata supports it — install it from Google Drive if you hold a Linux licence</td></tr>
       <tr><td><b>EViews</b></td><td>no</td><td>no Linux build; Wine cannot licence it; and EViews forbids remote access</td></tr>
       <tr><td><b>MATLAB</b></td><td><b>possible</b></td><td>MATLAB for Linux exists and the Engine API supports it — the same licence question as Stata, and the pin must match both the release and Colab's Python</td></tr>
+      <tr><td><b>GAUSS</b></td><td><b>possible</b></td><td>GAUSS for Linux exists — again a licence question, not a technical one</td></tr>
     </tbody>
   </table></div>
 
@@ -858,7 +884,7 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
   instance. That workaround is easy to build and contractually prohibited, so
   EconEnv will not ship it.</div>
 
-  <h3>All five engines, still in Colab</h3>
+  <h3>All six engines, still in Colab</h3>
   <p class="sub">There is a way round every limitation above, and it is Google's
   own feature: <b>connect Colab to a local runtime</b>. Colab already runs in a
   browser on your PC — point it at a Jupyter server on that same PC and the
@@ -875,6 +901,7 @@ graph gr1.line x  ' object form   — keeps the graph so you can edit it</pre>
     <span class="node n-stata">Stata</span>
     <span class="node n-ev">EViews</span>
     <span class="node n-ml">MATLAB</span>
+    <span class="node n-gs">GAUSS</span>
   </div>
 
   <p class="sub">Nothing is exposed to the internet: your browser talks to
@@ -1014,6 +1041,7 @@ conda install -c conda-forge rpy2</pre>
         <li><a href="{REPO}/blob/main/docs/engines/stata.md">Stata</a></li>
         <li><a href="{REPO}/blob/main/docs/engines/eviews.md">EViews</a></li>
         <li><a href="{REPO}/blob/main/docs/engines/matlab.md">MATLAB</a></li>
+        <li><a href="{REPO}/blob/main/docs/engines/gauss.md">GAUSS</a></li>
       </ul>
     </div>
   </div>

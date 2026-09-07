@@ -1,0 +1,306 @@
+"""GAUSS: discovery, the CLI contract, transfer rules and the catalogue.
+
+Everything here runs without GAUSS installed. The round trips against a real
+installation are in ``test_integration.py`` and skip when it is absent.
+
+The contract these tests encode was established by running GAUSS 26.1.1, not
+read from documentation — two of the design assumptions were wrong, and these
+tests are what stops them coming back.
+"""
+
+from __future__ import annotations
+
+import pathlib
+import sys
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from econenv.bridges import gauss_bridge
+from econenv.engines import _gauss_cli, gauss_commands
+from econenv.engines.gauss_engine import _version_key, find_gauss
+from econenv.exceptions import DataTransferError
+
+
+# --------------------------------------------------------------------------- #
+# the command line contract
+# --------------------------------------------------------------------------- #
+class TestCliContract:
+    """Verified against GAUSS 26.1.1: `tgauss -nb -nj -x -b program.gss`."""
+
+    def test_the_executable_names_include_tgauss(self):
+        """The design document said `engauss`; the installation ships `tgauss`."""
+        assert _gauss_cli.CLI_NAMES[0] == "tgauss"
+        assert "engauss" in _gauss_cli.CLI_NAMES, "older installations may still use it"
+
+    @pytest.mark.parametrize(
+        "code, stage",
+        [(0, "ok"), (3, "translator"), (7, "compile"), (15, "runtime")],
+    )
+    def test_exit_codes_are_named(self, code, stage):
+        assert _gauss_cli.EXIT_MEANING[code] == stage
+
+    def test_a_compile_error_says_that_nothing_ran(self):
+        """GAUSS compiles the whole program first, so a late typo voids it all.
+
+        Without saying this, a user sees a cell that printed nothing and looks
+        for the bug in the wrong place.
+        """
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        backend._carried = {}
+        backend._offset = 0
+        output = "error G0025 : Undefined symbol: 'nope'\n\tC:\\Temp\\econenv_cell.gss, line 2\n"
+        _, error = backend._interpret(output, 7, "print 1;\nx = nope;")
+        assert "compile error" in error
+        assert "nothing in this cell ran" in error
+        assert "G0025" in error
+
+    def test_the_reported_line_is_the_users_line_not_the_wrappers(self):
+        """The wrapper prepends `load` statements; GAUSS counts those too."""
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        backend._carried = {}
+        backend._offset = 4  # four lines of restored workspace
+        output = "error G0520 : bad\n\tC:\\Temp\\cell.gss, line 6\n"
+        _, error = backend._interpret(output, 15, "")
+        assert "at line 2 of the cell" in error
+
+    def test_the_temporary_path_never_reaches_the_user(self):
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        backend._carried = {}
+        backend._offset = 0
+        output = "error G0025 : nope\n\tC:\\Temp\\econenv_cell.gss, line 1\n"
+        text, error = backend._interpret(output, 7, "")
+        assert "econenv_cell.gss" not in error
+        assert "econenv_cell.gss" not in text
+
+    def test_the_error_is_not_repeated_in_the_output(self):
+        """It is reported once, as an error — not twice, once as output."""
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        backend._carried = {}
+        backend._offset = 0
+        output = "printed first\nProgram execute failed\nerror G0520 : bad\n"
+        text, error = backend._interpret(output, 15, "")
+        assert text == "printed first"
+        assert "G0520" in error
+
+    def test_a_reserved_name_is_explained(self):
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        backend._carried = {}
+        backend._offset = 0
+        output = "error G0276 : Illegal use of reserved word 'vec'\n"
+        _, error = backend._interpret(output, 7, "")
+        assert "'vec'" in error
+        assert "built-in" in error
+
+
+class TestAssignedNames:
+    """Which names a cell should carry into the next one."""
+
+    def test_top_level_assignments_are_carried(self):
+        assert _gauss_cli._assigned_names("x = 5;\ny = rndn(3,1);") == ["x", "y"]
+
+    def test_a_procedures_locals_are_not(self):
+        """They exist only inside the proc; saving them fails to compile."""
+        code = "proc (0) = f(a);\n    local nr;\n    nr = rows(a);\nendp;\nz = 1;"
+        assert _gauss_cli._assigned_names(code) == ["z"]
+
+    def test_comparisons_are_not_assignments(self):
+        assert _gauss_cli._assigned_names("if x == 1;\n    y = 2;\nendif;") == ["y"]
+
+    def test_duplicates_appear_once(self):
+        assert _gauss_cli._assigned_names("x = 1;\nx = 2;") == ["x"]
+
+
+# --------------------------------------------------------------------------- #
+# discovery
+# --------------------------------------------------------------------------- #
+class TestDiscovery:
+    @pytest.mark.parametrize(
+        "name, expected",
+        [("gauss26", (26, 0)), ("gauss24", (24, 0)), ("GAUSS 25", (25, 0)), ("gauss22.1", (22, 1))],
+    )
+    def test_the_version_is_read_from_the_directory_name(self, name, expected):
+        assert _version_key(pathlib.Path(name)) == expected
+
+    def test_newest_sorts_first(self):
+        paths = [pathlib.Path("gauss24"), pathlib.Path("gauss26"), pathlib.Path("gauss25")]
+        assert sorted(paths, key=_version_key, reverse=True)[0].name == "gauss26"
+
+    def test_discovery_returns_a_list_without_raising(self):
+        """It must be safe to call on a machine with no GAUSS at all."""
+        assert isinstance(find_gauss(), list)
+
+
+# --------------------------------------------------------------------------- #
+# transfer rules
+# --------------------------------------------------------------------------- #
+class FakeBackend:
+    def __init__(self, session):
+        self.session = session
+        self.programs = []
+        self.remembered = {}
+
+    def execute(self, code, timeout=600.0, carry=True):
+        self.programs.append(code)
+        return "", None
+
+    def remember(self, name, kind):
+        self.remembered[name] = kind
+
+
+class FakeEngine:
+    name = "gauss"
+
+    def __init__(self, session):
+        self._backend = FakeBackend(session)
+
+
+class TestPushRules:
+    def test_none_is_refused_with_the_alternative(self):
+        engine = FakeEngine(pathlib.Path("."))
+        with pytest.raises(DataTransferError) as caught:
+            gauss_bridge.push_value(engine, "x", None)
+        assert "no equivalent of None" in str(caught.value)
+        assert "nan" in str(caught.value).lower()
+
+    def test_a_gauss_builtin_name_is_refused_before_gauss_sees_it(self):
+        """`vec` is a GAUSS function; assigning to it is a G0276 compile error."""
+        engine = FakeEngine(pathlib.Path("."))
+        with pytest.raises(DataTransferError) as caught:
+            gauss_bridge.push_value(engine, "vec", 1.0)
+        message = str(caught.value)
+        assert "built-in" in message
+        assert "another name" in message, "offer a way forward"
+
+    def test_the_builtin_list_covers_the_names_a_researcher_reaches_for(self):
+        for name in ("vec", "rows", "cols", "ones", "sumc", "meanc"):
+            assert name in gauss_bridge.COMMON_BUILTINS
+
+    def test_more_than_two_dimensions_is_refused(self):
+        engine = FakeEngine(pathlib.Path("."))
+        with pytest.raises(DataTransferError) as caught:
+            gauss_bridge.push_value(engine, "a", np.zeros((2, 2, 2)))
+        assert "3 dimensions" in str(caught.value)
+
+    def test_nan_becomes_a_gauss_missing_value(self):
+        assert gauss_bridge._literal(float("nan")) == "miss(0, 0)"
+
+    def test_a_finite_number_is_written_exactly(self):
+        assert float(gauss_bridge._literal(0.1)) == 0.1
+
+
+class TestPathQuoting:
+    def test_backslashes_become_forward_slashes(self):
+        """A backslash is an escape inside a GAUSS string."""
+        quoted = gauss_bridge._gauss_path(pathlib.PurePath(r"C:\Temp\x.csv"))
+        assert "\\" not in quoted
+        assert quoted.endswith("x.csv")
+
+
+class TestReadingValues:
+    @pytest.mark.parametrize(
+        "cell, expected",
+        [("1.5", 1.5), ("-2", -2.0), ("", float("nan")), (".", float("nan"))],
+    )
+    def test_a_missing_field_reads_as_nan(self, cell, expected):
+        value = gauss_bridge._to_float(cell)
+        if np.isnan(expected):
+            assert np.isnan(value)
+        else:
+            assert value == expected
+
+
+class TestFrameConversion:
+    def test_text_columns_are_named_rather_than_dropped_silently(self):
+        """A regression on a frame that lost a column without saying so is worse
+        than one that refuses."""
+        engine = FakeEngine(pathlib.Path("."))
+        frame = pd.DataFrame({"x": [1.0, 2.0], "label": ["a", "b"]})
+        report = gauss_bridge.push_frame(engine, "d", frame)
+        text = " ".join(n.message for n in report.notes)
+        assert "label" in text
+
+    def test_a_frame_with_no_numeric_columns_is_refused(self):
+        engine = FakeEngine(pathlib.Path("."))
+        with pytest.raises(DataTransferError) as caught:
+            gauss_bridge.push_frame(engine, "d", pd.DataFrame({"a": ["x", "y"]}))
+        assert "only numbers" in str(caught.value)
+
+
+# --------------------------------------------------------------------------- #
+# the catalogue
+# --------------------------------------------------------------------------- #
+class TestGaussCatalogue:
+    def test_every_command_has_a_category_that_exists(self):
+        unknown = {c.category for c in gauss_commands.COMMANDS} - set(gauss_commands.CATEGORIES)
+        assert not unknown
+
+    def test_names_are_unique(self):
+        names = [c.name for c in gauss_commands.COMMANDS]
+        assert len(names) == len(set(names))
+
+    def test_every_command_has_a_runnable_example(self):
+        assert all(c.example.strip() for c in gauss_commands.COMMANDS)
+
+    @pytest.mark.parametrize(
+        "term, expected",
+        [
+            ("regression", "ols"),
+            ("listwise", "packr"),
+            ("cbind", "~"),
+            ("missing", "miss"),
+            ("loop", "do while"),
+            ("pvalue", "cdftc"),
+        ],
+    )
+    def test_search_finds_what_a_researcher_would_type(self, term, expected):
+        assert expected in [c.name for c in gauss_commands.find(term)]
+
+    def test_the_operators_are_catalogued_since_they_cannot_be_guessed(self):
+        """`~` and `|` have no equivalent in the other engines' syntax."""
+        for operator in ("~", "|", "/", ".*"):
+            assert gauss_commands.get(operator) is not None
+
+    def test_the_semicolon_rule_is_documented(self):
+        entry = gauss_commands.get(";")
+        assert entry is not None and "semicolon" in entry.does.lower()
+
+    def test_nothing_matches_returns_empty(self):
+        assert gauss_commands.find("zzzz") == []
+
+    def test_library_requirements_are_stated(self):
+        entry = gauss_commands.get("dfgls")
+        assert entry is not None and entry.library != gauss_commands.BASE
+
+
+class TestGeneratedDocs:
+    def test_the_docs_page_matches_the_catalogue(self):
+        """Regenerate with: python scripts/gen_gauss_docs.py"""
+        import importlib.util
+
+        root = pathlib.Path(__file__).resolve().parents[1]
+        spec = importlib.util.spec_from_file_location(
+            "gen_gauss_docs", root / "scripts" / "gen_gauss_docs.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["gen_gauss_docs"] = module
+        spec.loader.exec_module(module)
+
+        page = root / "docs" / "engines" / "gauss-commands.md"
+        assert page.exists(), "the GAUSS command reference is missing"
+        assert page.read_text(encoding="utf-8") == module.render(), (
+            "docs/engines/gauss-commands.md is out of date — run: python scripts/gen_gauss_docs.py"
+        )
+
+
+class TestBridgeResource:
+    def test_the_gauss_side_helper_ships_with_the_package(self):
+        helper = gauss_bridge._helper()
+        assert "proc (0) = econenv_write" in helper
+        assert "17" in helper, "the precision the writer depends on"
+
+    def test_it_writes_seventeen_digits_not_gauss_default(self):
+        """csvWriteM writes ~15, which moves a double by ~3e-15 per round trip
+        and would put GAUSS out of step with the other engines."""
+        assert "%*.*e" in gauss_bridge._helper()
