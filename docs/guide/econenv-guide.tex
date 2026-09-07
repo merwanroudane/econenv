@@ -73,7 +73,7 @@
 \begin{minipage}{0.86\textwidth}
 \small
 \textbf{About this guide.} It assumes nothing. Chapter~\ref{ch:install} starts
-from a computer with no Python on it and finishes with all five programs
+from a computer with no Python on it and finishes with all six programs
 talking to each other in one notebook. If you already have Python and Jupyter,
 skip to Section~\ref{sec:installecon}.
 
@@ -136,7 +136,7 @@ redoing the whole chain by hand.
 
 \section{What EconEnv does}
 
-EconEnv turns the five programs into \emph{execution engines behind one Python
+EconEnv turns the six programs into \emph{execution engines behind one Python
 kernel}. You write:
 
 \begin{lstlisting}
@@ -725,6 +725,124 @@ If you have several MATLAB releases installed, the one that starts is the one
 your \emph{engine package} matches --- not the newest on disk.
 \texttt{\%econ status} reports the release that will actually run.
 
+
+% ======================================================================
+\chapter{GAUSS}
+
+GAUSS is driven through its terminal executable, \texttt{tgauss}. Everything in
+this chapter was established by running GAUSS 26.1.1 rather than read from
+documentation, which matters because several plausible assumptions turned out
+to be wrong.
+
+\section{Finding it}
+
+Nothing to install beyond GAUSS itself. EconEnv looks at
+\texttt{gauss.home}, then the \texttt{GAUSSHOME} and \texttt{MTENGHOME}
+environment variables, then the usual locations.
+
+\begin{warn}
+GAUSS does \emph{not} install into Program Files on Windows. A typical path is
+\texttt{C:\textbackslash gauss26}, so a search that only looks where other
+vendors put things finds nothing. If yours is elsewhere:
+
+\begin{lstlisting}
+%econ config gauss.home C:/gauss26
+\end{lstlisting}
+\end{warn}
+
+Several GAUSS versions can be installed and they do not all work.
+\texttt{\%econ doctor gauss} names the one EconEnv will actually use and lists
+the others --- reporting the newest directory instead would repeat the mistake
+the EViews adapter made with ProgIDs.
+
+\section{Three things that catch everyone out}
+
+\begin{enumerate}
+  \item \textbf{Every statement ends with a semicolon.} A missing one is a
+        syntax error, not a warning.
+  \item \textbf{A bare expression prints nothing.} Where Python echoes the last
+        value, GAUSS needs \texttt{print x;}.
+  \item \textbf{\texttt{\textasciitilde} joins columns, \texttt{|} stacks
+        rows.} This is how a design matrix is built and has no counterpart in
+        the other engines' syntax.
+\end{enumerate}
+
+\begin{warn}
+And one that looks like a bug: GAUSS \textbf{compiles the whole cell before
+running any of it}. A mistyped name on the last line means the first line never
+ran either, so a cell can produce no output at all rather than a partial
+result. EconEnv says so explicitly, because the natural reading --- ``my print
+statement did nothing'' --- sends people looking in the wrong place.
+\end{warn}
+
+\section{A least squares cell, annotated}
+
+\begin{lstlisting}
+%%gauss -i df -o b
+y = df[.,3];                                /* third column          */
+X = ones(rows(df),1) ~ df[.,1] ~ df[.,2];   /* constant + regressors */
+b = y / X;                                  /* solve X*b = y         */
+print b;
+\end{lstlisting}
+
+\texttt{/} is the least-squares solve, not division: GAUSS's equivalent of
+\texttt{numpy.linalg.lstsq}, and more accurate than forming
+\texttt{inv(X'X)X'y} by hand. For standard errors use \texttt{ols}, which is
+what \texttt{compare\_ols} calls.
+
+\section{Finding the command you need}
+
+\begin{lstlisting}
+%econ gauss                   # the categories
+%econ gauss regression        # ols and friends
+%econ gauss find missing      # search everything
+\end{lstlisting}
+
+95 commands in 12 categories, 65 of them resolved against a live GAUSS. The
+operators are catalogued too, because they are the part a Python or R user
+cannot guess.
+
+\section{Data, and precision}
+
+A GAUSS matrix holds only numbers. A DataFrame's text columns cannot cross, and
+they are \emph{named in a warning} rather than dropped in silence --- a
+regression run on a frame that quietly lost a column is the worst outcome
+available. Column names are kept on the Python side, so the frame comes back
+with them. \texttt{NaN} crosses as a GAUSS missing value and returns as
+\texttt{NaN}.
+
+\begin{note}
+Numbers cross at seventeen significant digits, which round-trips an IEEE double
+exactly. GAUSS's own \texttt{csvWriteM} writes about fifteen, and a round trip
+through it moves a value by roughly $3\times10^{-15}$ --- enough to put GAUSS
+out of step with the machine-precision agreement that is the point of
+\texttt{compare\_ols}. EconEnv ships its own writer for that reason, and the
+measured round-trip difference is zero.
+\end{note}
+
+\section{What carries between cells}
+
+Each cell is a fresh process, so EconEnv carries the \emph{values} across using
+GAUSS's own \texttt{save} and \texttt{load}. \textbf{Procedures,
+\texttt{\#include}s and library loads do not carry} --- define a \texttt{proc}
+in the same cell that uses it.
+
+That limit is stated rather than worked around: replaying earlier cells to fake
+a session would silently re-run their side effects.
+
+\section{In the comparison}
+
+\begin{lstlisting}
+econenv.compare_ols(df, "y ~ x1 + x2")
+\end{lstlisting}
+
+GAUSS's own \texttt{ols} supplies the numbers. Maximum disagreement with Python
+across six engines is $1.8\times10^{-15}$; $R^2$, adjusted $R^2$,
+log-likelihood, AIC, BIC and RMSE match statsmodels, Stata and MATLAB exactly.
+\texttt{ols} stops at coefficients, standard errors, sigma and $R^2$, so the
+$t$ statistics, $p$-values, interval and information criteria are computed in
+GAUSS from its own residuals using \texttt{cdftc} and \texttt{cdftci}.
+
 % ======================================================================
 \chapter{Exporting results for publication}
 
@@ -746,7 +864,7 @@ the same object. From a cell, importing nothing:
 %econ export cmp paper/table1 --formats tex,docx --caption "Table 1"
 \end{lstlisting}
 
-What you pass can be a single model, a comparison across five engines, a
+What you pass can be a single model, a comparison across six engines, a
 DataFrame, a figure, or a list mixing them.
 
 \section{Two layouts}
@@ -1010,7 +1128,7 @@ Three independent blockers, none of which EconEnv can route around:
 The third is the one that settles it: that bridge is straightforward to build
 and contractually prohibited, so EconEnv does not ship it.
 
-\section{All five engines, still in Colab}
+\section{All six engines, still in Colab}
 
 There is a way to have the Colab interface \emph{and} every engine, and it
 avoids all of the above.
@@ -1093,7 +1211,7 @@ Describe, plot, diagnose & R & \texttt{plot(fit)} and R's diagnostic vocabulary 
 HAC standard errors & Stata & \texttt{newey} is the reference implementation \\
 Unit roots, cointegration & EViews & this is what EViews is for \\
 Forecast and stability & EViews & CUSUM, forecast bands \\
-Compare all five & EconEnv & one specification, five engines, one table \\
+Compare all six & EconEnv & one specification, six engines, one table \\
 \bottomrule
 \end{tabular}
 \end{center}
