@@ -9,6 +9,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+#: Every engine that ships with EconEnv. Written once so adding a sixth does
+#: not mean hunting down the set literal in each test that asserts on it.
+BUILTIN_ENGINES = {"python", "r", "stata", "eviews", "matlab", "gauss"}
+
 import econenv
 from econenv import config, schema, transfer
 from econenv.engines import registry
@@ -30,8 +34,8 @@ def test_version_is_exposed():
     assert econenv.__version__.count(".") == 2
 
 
-def test_all_four_engines_are_registered():
-    assert set(registry.names()) == {"python", "r", "stata", "eviews", "matlab"}
+def test_every_builtin_engine_is_registered():
+    assert set(registry.names()) == BUILTIN_ENGINES
 
 
 def test_python_is_listed_first():
@@ -345,7 +349,7 @@ def test_frame_hash_notices_a_dtype_change(sample_frame):
 def test_snapshot_is_serialisable():
     payload = transfer.snapshot(include_packages=False)
     json.dumps(payload, default=str)
-    assert set(payload["engines"]) == {"python", "r", "stata", "eviews", "matlab"}
+    assert set(payload["engines"]) == BUILTIN_ENGINES
 
 
 def test_provenance_record_has_the_required_fields():

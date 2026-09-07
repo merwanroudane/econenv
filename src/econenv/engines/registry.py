@@ -29,6 +29,7 @@ _classes: Dict[str, Type[BaseEngine]] = {}
 _instances: Dict[str, BaseEngine] = {}
 _plugin_errors: Dict[str, str] = {}
 _entry_points_loaded = False
+_builtins_loaded = False
 
 
 def register(engine_cls: Type[BaseEngine], *, replace: bool = False) -> Type[BaseEngine]:
@@ -96,7 +97,17 @@ def _load_entry_points() -> None:
 
 
 def _ensure_loaded() -> None:
-    if not _classes:
+    """Import the built-in engines exactly once.
+
+    This used to be guarded by ``if not _classes``, which is a proxy for "the
+    built-ins have not been imported" only until something imports one engine
+    module directly — as several test modules do. Registering that one class
+    made ``_classes`` non-empty, so the rest were never imported, and
+    ``registry.names()`` silently returned a short list.
+    """
+    global _builtins_loaded
+    if not _builtins_loaded:
+        _builtins_loaded = True
         _load_builtin()
     _load_entry_points()
 

@@ -108,6 +108,7 @@ class GaussEngine(BaseEngine):
         Capability.PULL_SCALAR,
         Capability.PULL_MATRIX,
         Capability.RESTART,
+        Capability.OLS,
     )
 
     def __init__(self, **options: Any) -> None:
@@ -157,6 +158,15 @@ class GaussEngine(BaseEngine):
         if self._version_cache_value is None and self._executable_path is not None:
             self._version_cache_value = probe_version(self._executable_path)
         return self._version_cache_value
+
+    def _version(self) -> Optional[str]:
+        """The running session's version.
+
+        For GAUSS this is the same number the executable's banner reports: the
+        CLI backend runs that exact executable, so unlike EViews there is no way
+        for the version on disk and the version running to disagree.
+        """
+        return self._static_version()
 
     def _info_detail(self) -> Dict[str, Any]:
         detail: Dict[str, Any] = {
@@ -234,6 +244,104 @@ class GaussEngine(BaseEngine):
         from ..bridges.gauss_bridge import evaluate
 
         return evaluate(self, expression)
+
+    # ------------------------------------------------------------------ #
+    # models
+    # ------------------------------------------------------------------ #
+    def _fit_ols(self, spec, data: pd.DataFrame, meta: Any = None):
+        """GAUSS's own ``ols`` procedure, so the comparison uses GAUSS's numbers.
+
+        ``ols`` returns coefficients, standard errors, sigma and R-squared and
+        stops there, so the t statistics, p-values, confidence interval,
+        log-likelihood and information criteria are computed here — in GAUSS,
+        from GAUSS's own residuals, using its ``cdftc`` and ``cdftci``.
+
+        The formulae follow statsmodels' conventions (``-2l + 2k`` for AIC,
+        ``sigma`` from ``n - k``) so that a difference between engines is a real
+        difference and not a normalisation choice. Where a convention genuinely
+        differs the comparison layer reports it rather than hiding it.
+        """
+        from ..results import ModelResult
+
+        columns = [spec.depvar, *spec.exog]
+        frame = data.loc[:, columns].dropna()
+
+        self.ensure_started()
+        self.push("eeY", frame[[spec.depvar]].to_numpy())
+        self.push("eeX", frame[list(spec.exog)].to_numpy())
+
+        # `ols` always fits a constant; without one the design matrix is passed
+        # through a no-constant fit instead, rather than silently adding it.
+        constant = "1" if spec.constant else "0"
+        script = f"""
+__output = 0;
+_olsres = 1;
+_con = {constant};
+{{ eeVnam, eeM, eeB, eeStb, eeVc, eeSe, eeSigma, eeCx, eeRsq, eeResid, eeDw }} =
+    ols("", eeY, eeX);
+eeN = rows(eeY);
+eeK = rows(eeB);
+eeDf = eeN - eeK;
+eeT = eeB ./ eeSe;
+eeP = 2 * cdftc(abs(eeT), eeDf);
+eeCrit = cdftci(0.025, eeDf);
+eeLo = eeB - eeCrit .* eeSe;
+eeHi = eeB + eeCrit .* eeSe;
+eeSsr = sumc(eeResid .^ 2);
+eeLl = -0.5 * eeN * (ln(2*pi) + ln(eeSsr / eeN) + 1);
+eeAic = -2 * eeLl + 2 * eeK;
+eeBic = -2 * eeLl + eeK * ln(eeN);
+eeR2a = 1 - (1 - eeRsq) * (eeN - 1) / eeDf;
+eeF = (eeRsq / (eeK - 1)) / ((1 - eeRsq) / eeDf);
+eeTable = eeB ~ eeSe ~ eeT ~ eeP ~ eeLo ~ eeHi;
+eeStats = eeN | eeK | eeDf | eeRsq | eeR2a | eeLl | eeAic | eeBic | eeSigma | eeF | eeDw;
+"""
+        exec_result = self.execute(script)
+
+        from ..bridges.gauss_bridge import pull_matrix
+
+        table = np.atleast_2d(pull_matrix(self, "eeTable"))
+        stats = np.asarray(pull_matrix(self, "eeStats"), dtype=float).ravel()
+
+        terms = (["_cons"] if spec.constant else []) + list(spec.exog)
+        if len(terms) != table.shape[0]:  # pragma: no cover - shape guard
+            terms = [f"b{i}" for i in range(table.shape[0])]
+
+        nobs, _, df_resid, r2, r2_adj, loglik, aic, bic, sigma, fstat, dwstat = stats[:11]
+
+        return ModelResult.from_arrays(
+            engine=self.name,
+            model="OLS",
+            terms=terms,
+            coef=table[:, 0],
+            std_err=table[:, 1],
+            stat=table[:, 2],
+            pvalue=table[:, 3],
+            ci_lower=table[:, 4],
+            ci_upper=table[:, 5],
+            depvar=spec.depvar,
+            nobs=int(nobs),
+            df_model=len(terms) - (1 if spec.constant else 0),
+            df_resid=int(df_resid),
+            r2=float(r2),
+            r2_adj=float(r2_adj),
+            loglik=float(loglik),
+            aic=float(aic),
+            bic=float(bic),
+            rmse=float(sigma),
+            fstat=float(fstat),
+            vcov_type=spec.vcov or "nonrobust",
+            engine_version=self.version(),
+            command='ols("", y, X)',
+            raw=exec_result.stdout,
+            notes=[
+                "GAUSS's ols reports coefficients, standard errors, sigma and "
+                "R-squared; the t statistics, p-values, interval and information "
+                "criteria are computed from its own residuals on statsmodels' "
+                "conventions.",
+                f"Durbin-Watson from GAUSS: {dwstat:.6f}",
+            ],
+        )
 
     def _pull_matrix(self, name: str) -> np.ndarray:
         from ..bridges.gauss_bridge import pull_matrix

@@ -63,8 +63,46 @@ class TestViewCapture:
         assert lines[1] == ""
         assert lines[3].startswith("C ")
         assert "5.044621" in lines[3]
-        # columns line up between the header and the data row
-        assert lines[2].index("Coefficient") == lines[3].index("5.044621")
+
+        # A numeric column is right-aligned, so the header and the value share a
+        # right edge rather than a left one — that is what makes decimal points
+        # line up down the column, and it is how EViews prints the table itself.
+        header_end = lines[2].index("Coefficient") + len("Coefficient")
+        value_end = lines[3].index("5.044621") + len("5.044621")
+        assert header_end == value_end
+
+    def test_numbers_in_a_column_line_up_on_the_decimal_point(self):
+        """Reported: the OLS output table looked ragged.
+
+        The renderer left-aligned every cell, so a negative coefficient pushed
+        its digits one place across and the column read as crooked.
+        """
+        grid = [
+            ["Variable", "Coefficient", "t-Statistic"],
+            ["C", "1.546745", "41.31799"],
+            ["X1", "-0.518894", "-15.07583"],
+        ]
+        lines = eviews_engine._render_grid(grid).splitlines()
+        ends = [line.index(".") for line in lines[1:]]
+        assert len(set(ends)) == 1, f"decimal points at differing columns: {lines}"
+
+    def test_each_block_is_sized_on_its_own_columns(self):
+        """A regression output is several tables stacked, not one.
+
+        The coefficient block has five columns; the summary block below has
+        four, and its labels are long. Sizing them together padded the
+        coefficients to fit "Mean dependent var".
+        """
+        grid = [
+            ["Variable", "Coefficient", "Std. Error"],
+            ["C", "1.546745", "0.037435"],
+            ["", "", ""],
+            ["R-squared", "0.984702", "Mean dependent var"],
+        ]
+        lines = eviews_engine._render_grid(grid).splitlines()
+        # the coefficient row must not be padded out to the width of the
+        # summary block's long label
+        assert len(lines[1]) < len(lines[3])
 
 
 class TestGraphPath:

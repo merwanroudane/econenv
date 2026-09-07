@@ -213,12 +213,18 @@ class TestComparison:
     @pytest.mark.stata
     @pytest.mark.eviews
     @pytest.mark.matlab
-    def test_all_five_engines_agree_to_machine_precision(self, sample_frame):
+    @pytest.mark.gauss
+    def test_all_six_engines_agree_to_machine_precision(self, sample_frame):
         """Brief §48. The point of the whole project."""
         comparison = econenv.compare_ols(sample_frame, "y ~ x1 + x2")
-        assert set(comparison.results) == {"python", "r", "stata", "eviews", "matlab"}, (
-            comparison.failures
-        )
+        assert set(comparison.results) == {
+            "python",
+            "r",
+            "stata",
+            "eviews",
+            "matlab",
+            "gauss",
+        }, comparison.failures
 
         table = comparison.coefficients()
         reference = table["python"]

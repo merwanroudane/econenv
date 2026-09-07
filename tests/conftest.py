@@ -17,7 +17,7 @@ import pytest
 #: Engines a test can be marked as needing. MATLAB was missing here while
 #: `test_all_five_engines_agree` already asserted it took part, so that test
 #: failed rather than skipped on a machine without MATLAB.
-ENGINES = ("r", "stata", "eviews", "matlab")
+ENGINES = ("r", "stata", "eviews", "matlab", "gauss")
 
 
 def pytest_collection_modifyitems(config, items):

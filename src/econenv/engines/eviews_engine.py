@@ -820,22 +820,110 @@ def _view_expression(line: str) -> Optional[str]:
     return stripped if _VIEW_RE.match(stripped) else None
 
 
+#: A cell EViews would right-align: a number, possibly signed, in decimal or
+#: exponential form, and the (n) that follows a lag or a test statistic.
+_NUMERIC_CELL = re.compile(r"^[-+]?(\d[\d,]*\.?\d*([eE][-+]?\d+)?|\.\d+)\)?$")
+
+
+def _is_numeric_cell(cell: str) -> bool:
+    return bool(_NUMERIC_CELL.match(cell.strip()))
+
+
+def _is_heading(row: List[str]) -> bool:
+    """A row of labels standing over columns of numbers."""
+    filled = [cell.strip() for cell in row if cell.strip()]
+    return bool(filled) and not any(_is_numeric_cell(cell) for cell in filled)
+
+
+def _blocks(grid: List[List[str]]) -> List[List[int]]:
+    """Row indices grouped into the blocks a blank row separates.
+
+    An EViews regression output is not one table. The coefficient block has
+    five columns; the summary block underneath has four, and its second column
+    holds long labels like "Mean dependent var". Sizing every column across the
+    whole grid therefore pads the coefficients to fit a label they have nothing
+    to do with, which is what made the table look ragged.
+    """
+    groups: List[List[int]] = []
+    current: List[int] = []
+    for index, row in enumerate(grid):
+        if any(cell.strip() for cell in row):
+            current.append(index)
+        elif current:
+            groups.append(current)
+            current = []
+    if current:
+        groups.append(current)
+
+    # EViews puts a blank row between the column headings and the coefficients,
+    # but they are one table and have to be sized together — otherwise
+    # "Coefficient" sits over nothing in particular. Blocks that use the same
+    # number of columns are therefore merged across the blank row.
+    merged: List[List[int]] = []
+    for group in groups:
+        heading = (
+            merged
+            and len(merged[-1]) == 1
+            and _column_count(grid, merged[-1]) == _column_count(grid, group) > 1
+        )
+        if heading:
+            merged[-1] = merged[-1] + group
+        else:
+            merged.append(group)
+    return merged
+
+
+def _column_count(grid: List[List[str]], rows: List[int]) -> int:
+    """How many columns the rows in this block actually fill."""
+    return max(
+        (max((i for i, cell in enumerate(grid[r]) if cell.strip()), default=-1) + 1 for r in rows),
+        default=0,
+    )
+
+
 def _render_grid(grid: List[List[str]]) -> str:
-    """Lay a frozen EViews table out as EViews itself would print it."""
+    """Lay a frozen EViews table out as EViews itself would print it.
+
+    Two things matter for a regression table to be readable: numbers are
+    right-aligned so the decimal points line up, and each block is sized on its
+    own columns rather than on the widest cell anywhere in the view.
+    """
     if not grid:
         return ""
-    width = max(len(row) for row in grid)
-    widths = [0] * width
-    for row in grid:
-        for index, cell in enumerate(row):
-            widths[index] = max(widths[index], len(cell))
-    lines = []
-    for row in grid:
-        last = max((i for i, cell in enumerate(row) if cell), default=-1)
-        if last < 0:
-            lines.append("")
-            continue
-        lines.append("  ".join(row[i].ljust(widths[i]) for i in range(last + 1)).rstrip())
+
+    lines = [""] * len(grid)
+    for block in _blocks(grid):
+        rows = [grid[i] for i in block]
+        width = max(len(row) for row in rows)
+        widths = [0] * width
+        numeric = [True] * width
+        # A heading row is words by definition, so judging the column on it
+        # would left-align the numbers underneath it. Widths still come from
+        # every row, so the heading is never clipped.
+        data_rows = rows[1:] if len(rows) > 1 and _is_heading(rows[0]) else rows
+        for row in rows:
+            for index, cell in enumerate(row):
+                widths[index] = max(widths[index], len(cell.strip()))
+        for row in data_rows:
+            for index, cell in enumerate(row):
+                if cell.strip() and not _is_numeric_cell(cell):
+                    numeric[index] = False
+
+        for offset, row in zip(block, rows):
+            last = max((i for i, cell in enumerate(row) if cell.strip()), default=-1)
+            if last < 0:
+                lines[offset] = ""
+                continue
+            pieces = []
+            for i in range(last + 1):
+                cell = row[i].strip() if i < len(row) else ""
+                # The first column is the label column even when it happens to
+                # hold only numbers, so it is never right-aligned.
+                if numeric[i] and i > 0:
+                    pieces.append(cell.rjust(widths[i]))
+                else:
+                    pieces.append(cell.ljust(widths[i]))
+            lines[offset] = "  ".join(pieces).rstrip()
     return "\n".join(lines)
 
 

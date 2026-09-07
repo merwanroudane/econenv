@@ -161,6 +161,7 @@ markers = [
     "stata: requires a licensed Stata installation",
     "eviews: requires a licensed EViews installation on Windows",
     "matlab: requires a licensed MATLAB with the Engine API installed",
+    "gauss: requires a licensed GAUSS installation",
     "windows: requires Microsoft Windows",
     "slow: takes more than a couple of seconds",
 ]
