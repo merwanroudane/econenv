@@ -803,6 +803,38 @@ def _execution_hint(message: str, done: int, total: int) -> str:
 # A bare ``object.view`` line is a display view; ``eq1.ls y c x`` carries
 # arguments and is an action. Only the former can be frozen into a table.
 _VIEW_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z][A-Za-z0-9_]*(\([^()]*\))?$")
+
+#: Views whose arguments follow a space rather than sitting in parentheses.
+#:
+#: ``_VIEW_RE`` anchors at the end of the options, so ``eq1.wald c(2)=0`` did not
+#: look like a view and was run as a bare command — which displays in EViews'
+#: own window and returns nothing here. The whole family of hypothesis tests was
+#: therefore silent, which is the one outcome this adapter is not allowed to
+#: have.
+#:
+#: An allow-list rather than a looser pattern, because a *proc* also takes
+#: space-separated arguments: ``eq1.ls y c x1`` re-estimates the equation, and
+#: freezing that would give a display command a side effect.
+#:
+#: ✓ = frozen to a table against EViews 13 through EconEnv.
+_VIEW_WITH_ARGUMENTS = frozenset(
+    {
+        "wald",  # ✓ eq1.wald c(2)=0
+        "testadd",  # ✓ eq1.testadd x3
+        "testdrop",  # ✓ eq1.testdrop x2
+        "chow",  # ✓ eq1.chow 60
+        "facbreak",  # documented; needs a valid break point
+        "ubreak",  # documented
+        "cointrep",  # documented
+        "testfit",
+        "testby",
+    }
+)
+
+#: ``object.view rest of the line``
+_VIEW_ARGS_RE = re.compile(
+    r"^[A-Za-z_][A-Za-z0-9_]*\.([A-Za-z][A-Za-z0-9_]*)(?:\([^()]*\))?\s+\S.*$"
+)
 _SHOW_RE = re.compile(r"^show\s+(.+)$", re.IGNORECASE)
 
 
@@ -817,7 +849,12 @@ def _view_expression(line: str) -> Optional[str]:
     match = _SHOW_RE.match(stripped)
     if match:
         return match.group(1).strip()
-    return stripped if _VIEW_RE.match(stripped) else None
+    if _VIEW_RE.match(stripped):
+        return stripped
+    match = _VIEW_ARGS_RE.match(stripped)
+    if match and match.group(1).lower() in _VIEW_WITH_ARGUMENTS:
+        return stripped
+    return None
 
 
 #: A cell EViews would right-align: a number, possibly signed, in decimal or

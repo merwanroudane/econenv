@@ -387,3 +387,47 @@ class TestRpy2Reporting:
         check = next(c for c in diagnostics.check_r() if c.name == "rpy2")
         assert check.status is diagnostics.Status.SKIP
         assert "subprocess backend" in check.detail
+
+
+class TestViewsWithSpaceArguments:
+    """A whole family of hypothesis tests was silently producing nothing.
+
+    `_VIEW_RE` anchors at the end of the parenthesised options, so
+    `eq1.wald c(2)=0` did not look like a view. It was run as a bare command,
+    which displays in EViews' own window and returns nothing here — and silence
+    is the one outcome this adapter is not allowed to have.
+    """
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "eq1.wald c(2)=0",
+            "eq1.testadd x3",
+            "eq1.testdrop x2",
+            "eq1.chow 60",
+        ],
+    )
+    def test_a_test_view_with_arguments_is_recognised(self, line):
+        assert eviews_engine._view_expression(line) == line
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "eq1.ls y c x1 x2",  # a proc: re-estimates, must not be frozen
+            "equation eq1.ls y c x",
+            "series x = nrnd",
+            "wfcreate u 100",
+            "eq1.forecast yf",  # a proc that creates a series
+        ],
+    )
+    def test_a_proc_is_not_mistaken_for_a_view(self, line):
+        """Freezing a proc would give a display command a side effect."""
+        assert eviews_engine._view_expression(line) is None
+
+    def test_the_plain_forms_still_work(self):
+        assert eviews_engine._view_expression("eq1.output") == "eq1.output"
+        assert eviews_engine._view_expression("x1.uroot(adf)") == "x1.uroot(adf)"
+
+    def test_the_allow_list_is_used_rather_than_a_loose_pattern(self):
+        """An unknown name with arguments stays a command, not a view."""
+        assert eviews_engine._view_expression("eq1.notaview something") is None

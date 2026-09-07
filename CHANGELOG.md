@@ -62,6 +62,15 @@ unchanged except where a shared bug affected them.
   half the engines. It now tracks loading explicitly.
 - **`pytest` had no `gauss` marker**, so a test needing GAUSS would have failed
   rather than skipped on a machine without it.
+- **Every EViews hypothesis test produced nothing at all.** `_VIEW_RE` anchors
+  at the end of the parenthesised options, so a view whose arguments follow a
+  space — `eq1.wald c(2)=0`, `eq1.testadd x3`, `eq1.testdrop x2`,
+  `eq1.chow 60` — did not look like a view. Each was run as a bare command,
+  which displays in EViews' own window and returns nothing here, so the whole
+  family was silent. Recognised now through an allow-list rather than a looser
+  pattern, because a *proc* also takes space-separated arguments and freezing
+  `eq1.ls y c x1` would give a display command the side effect of re-estimating
+  the equation. This predates the renderer work and was not introduced by it.
 - **`gauss` was not a known config section**, so every `%econ config gauss.*`
   documented on the engine page would have raised. Seven options are now
   declared.
