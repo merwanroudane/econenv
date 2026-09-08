@@ -535,3 +535,41 @@ class TestExplicitPlotSave:
 
         assert "eps" in _UNSUPPORTED_PLOT
         assert not _UNSUPPORTED_PLOT & set(_GRAPHICS_MIME), "no format in both sets"
+
+
+class TestPlotSizeUnits:
+    """Reported twice with screenshots: a plotting cell showed a broken icon.
+
+    `plotSave(file, 12 | 9)` without a unit writes onto a canvas of raw units —
+    measured at 4.2mm x 3.2mm against GAUSS 26.1.1. The file is full of valid
+    path data, so it looks right by size and is microscopic on screen. The unit
+    is therefore always stated.
+    """
+
+    @staticmethod
+    def _engine(graphics):
+        from econenv.engines import gauss_engine
+
+        engine = object.__new__(gauss_engine.GaussEngine)
+        engine._backend = type("B", (), {"session": pathlib.Path(".")})()
+        engine._graphics_format = lambda: graphics
+        return engine
+
+    @pytest.mark.parametrize("fmt", ["svg", "pdf"])
+    def test_vector_is_saved_in_inches(self, fmt):
+        _, program = self._engine(fmt)._with_graphics("plotXY(x, y);")
+        assert '"in"' in program, "a vector canvas is measured in inches"
+        assert "12 | 9" in program
+
+    @pytest.mark.parametrize("fmt", ["png", "jpg", "jpeg"])
+    def test_raster_is_saved_in_pixels(self, fmt):
+        _, program = self._engine(fmt)._with_graphics("plotXY(x, y);")
+        assert '"px"' in program, "a raster canvas is measured in pixels"
+        assert "1200 | 900" in program
+
+    def test_the_unit_is_never_left_off(self):
+        """Omitting it is what produced the four-millimetre figure."""
+        for fmt in ("svg", "png", "pdf", "jpg"):
+            _, program = self._engine(fmt)._with_graphics("plotXY(x, y);")
+            call = next(line for line in program.splitlines() if "plotSave" in line)
+            assert call.count(",") >= 2, f"{fmt}: plotSave needs a size and a unit"

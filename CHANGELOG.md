@@ -4,6 +4,26 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] — 2026-09-08
+
+### Fixed
+
+- **A GAUSS plot came out as a broken thumbnail.** `plotSave` takes a size *and
+  a unit*, and without the unit it writes onto a canvas of raw units — measured
+  against GAUSS 26.1.1:
+
+  ```
+  plotSave(f, 12 | 9)           ->  4.2mm x 3.2mm
+  plotSave(f, 12 | 9, "in")     ->  508mm x 381mm
+  plotSave(f, 800 | 600, "px")  ->  282mm x 212mm
+  ```
+
+  EconEnv omitted it, so every captured figure was a valid file full of path
+  data on a four-millimetre canvas — large enough to look right by file size and
+  microscopic on screen, which is why it took two reports to find. The unit is
+  now always stated: inches for `svg` and `pdf`, pixels for `png`, `jpg` and
+  `jpeg`.
+
 ## [1.4.0] — 2026-09-08
 
 **EconLang** — the first vertical slice of a language in which a researcher

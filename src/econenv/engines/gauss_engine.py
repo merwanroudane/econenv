@@ -69,9 +69,16 @@ _PLOT_SAVE = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 
-#: plotSave takes PIXELS for a raster format and INCHES for a vector one — the
-#: same two numbers mean different things. Passing 12|9 for a PNG produces a
-#: 12x9 pixel thumbnail, which is a genuinely confusing way to fail.
+#: ``plotSave`` takes a size AND a unit, and the unit is not optional in
+#: practice. Measured against GAUSS 26.1.1:
+#:
+#:     plotSave(f, 12 | 9)           ->  4.2mm x 3.2mm   (raw units)
+#:     plotSave(f, 12 | 9, "in")     ->  508mm x 381mm
+#:     plotSave(f, 800 | 600, "px")  ->  282mm x 212mm
+#:
+#: Omitting it wrote a file full of valid path data onto a four-millimetre
+#: canvas — big enough to look right by file size, and microscopic on screen.
+#: So the unit is always stated: inches for vector, pixels for raster.
 _VECTOR_INCHES = (12, 9)
 _RASTER_PIXELS = (1200, 900)
 
@@ -344,13 +351,17 @@ class GaussEngine(BaseEngine):
             return Path(saved.group(1)), code
 
         target = self._backend.session / f"econenv_plot_{uuid.uuid4().hex[:8]}.{fmt}"
-        if fmt == "png":
+        if fmt in ("png", "jpg", "jpeg"):
             width = int(_config.get_option("gauss", "width", _RASTER_PIXELS[0]))
             height = int(_config.get_option("gauss", "height", _RASTER_PIXELS[1]))
+            unit = "px"
         else:
             width, height = _VECTOR_INCHES
+            unit = "in"
         destination = str(target).replace("\\", "/")
-        return target, f'{code.rstrip()}\nplotSave("{destination}", {width} | {height});'
+        return target, (
+            f'{code.rstrip()}\nplotSave("{destination}", {width} | {height}, "{unit}");'
+        )
 
     def _read_figure(self, target: Path, keep: bool = False) -> List[Any]:
         """The saved plot as a Figure, or nothing if GAUSS did not write one.
