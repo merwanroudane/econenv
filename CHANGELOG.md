@@ -7,9 +7,7 @@ All notable changes to EconEnv are recorded here. The format follows
 ## [1.4.0] — 2026-09-08
 
 **EconLang** — the first vertical slice of a language in which a researcher
-states the model once and changes only which engine runs it. Also the fixes
-that landed after the 1.3.0 build was uploaded, so are not in the published
-1.3.0. (1.3.1 was prepared but superseded before release.)
+states the model once and changes only which engine runs it.
 
 ### Added — EconLang
 
@@ -64,6 +62,11 @@ before it spreads to more estimators.
 - `jpg` and `jpeg` plots are displayed rather than written and ignored.
 - A format `plotSave` refuses — `eps`, `tif`, `gif`, `bmp` — is named before
   GAUSS is asked, because GAUSS answers only "Program execute failed".
+
+## [1.3.1] — 2026-09-08
+
+What landed after the 1.3.0 wheel was uploaded, so is not in the published
+1.3.0.
 
 ### Added — GAUSS
 
