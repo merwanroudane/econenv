@@ -4,12 +4,57 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.1] — 2026-09-08
+## [1.4.0] — 2026-09-08
 
-Fixes and one new capability, all of which landed after the 1.3.0 build was
-uploaded — so they are not in the published 1.3.0.
+**EconLang** — the first vertical slice of a language in which a researcher
+states the model once and changes only which engine runs it. Also the fixes
+that landed after the 1.3.0 build was uploaded, so are not in the published
+1.3.0. (1.3.1 was prepared but superseded before release.)
 
-### Added
+### Added — EconLang
+
+```econ
+data "macro.csv"
+
+set time:
+    variable = year
+
+model ols baseline:
+    y = gdp
+    x = inflation, unemployment
+    vcov = HC3
+```
+
+- A real language, not a Python wrapper: an indentation-sensitive lexer, a
+  recursive-descent parser, an AST, and lowering into an **Econometric IR**
+  before any backend sees anything. The IR is `ModelSpec` — the same object
+  `compare_ols` already hands all six engines — so adding a backend is a
+  lowering rather than a rewrite, and no backend ever sees EconLang syntax.
+- `%%econlang` in a notebook. Estimated models land in Python under the names
+  they were given, as ordinary `ModelResult`s, so export and comparison work
+  on them unchanged.
+- **The generated native code is visible and is the code that runs.**
+  `show code m` prints it; `translate m` shows all six backends at once, from
+  the same compilers that execute — so the table cannot drift from reality.
+- **No silent substitution.** Where a backend cannot do what was asked, the
+  generated code says so: EViews' `cov=white` is the HC1 form, so a request
+  for HC3 emits the closest form *and* a comment naming the difference,
+  rather than quietly returning a different estimator.
+- `dryrun` interprets and generates without loading data or starting an
+  engine — it works even when the data file does not exist yet.
+- `explain m` describes the model in words rather than syntax.
+- Errors are part of the language: a code from a fixed taxonomy, the line, a
+  caret under the offending option, near-miss suggestions and, where it can be
+  worked out, the corrected line. An estimator that is not implemented yet is
+  a *capability* error naming what is available, not a syntax error.
+- Time declarations are checked: a repeated index is refused and suggests a
+  panel; gaps and unsorted rows are reported rather than estimated over.
+- `docs/econlang.md`, `examples/inflation.econ`, and 52 tests.
+
+This is deliberately **OLS only**. The architecture is meant to be proved
+before it spreads to more estimators.
+
+### Added — GAUSS
 
 - **A GAUSS procedure written in one cell is callable in the next.** Each cell
   runs a fresh `tgauss`, so EconEnv already carried *values* across with GAUSS's
