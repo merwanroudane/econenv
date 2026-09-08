@@ -194,6 +194,28 @@ under every later cell.
 
 `--no-graphs` turns capture off for one cell.
 
+### Saving the plot yourself
+
+If the cell calls `plotSave` itself, EconEnv **does not save a second copy** —
+it displays the file you named and leaves it where you put it:
+
+```python
+%%gauss
+x = seqa(0, 0.1, 101);
+y = sin(x);
+plotXY(x, y);
+
+plotSave("C:/Users/HP/Desktop/gauss_test.svg", 800 | 600, "px");
+```
+
+The plot appears in the notebook *and* the file is on your Desktop. Earlier
+versions appended their own `plotSave` on top of yours, which drew the figure
+twice and showed EconEnv's copy rather than yours.
+
+`svg`, `png`, `jpg`, `jpeg` and `pdf` all display inline. GAUSS's `plotSave`
+cannot write `eps`, `tif`, `gif` or `bmp` — it answers only "Program execute
+failed", so EconEnv names the format first.
+
 > **`plotSave` measures raster and vector differently.** The two numbers are
 > *pixels* for PNG and *inches* for SVG and PDF, so the same `12 | 9` that gives
 > a sensible SVG gives a 12×9 **pixel** PNG. EconEnv passes the right units for

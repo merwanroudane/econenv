@@ -53,7 +53,21 @@ _GRAPHICS_MIME = {
     "svg": "image/svg+xml",
     "png": "image/png",
     "pdf": "application/pdf",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
 }
+
+#: Formats GAUSS's plotSave refuses. Naming them turns its bare "Program
+#: execute failed" into something a user can act on.
+_UNSUPPORTED_PLOT = {"eps", "ps", "tif", "tiff", "gif", "bmp"}
+
+#: ``plotSave("file.svg", 800 | 600, "px")`` — the filename the cell saves to.
+#: Matched across newlines because the call is usually written over several
+#: lines, which is exactly how it appeared in the report that prompted this.
+_PLOT_SAVE = re.compile(
+    r"""\bplotSave\s*\(\s*["']([^"']+)["']""",
+    re.IGNORECASE | re.VERBOSE,
+)
 
 #: plotSave takes PIXELS for a raster format and INCHES for a vector one — the
 #: same two numbers mean different things. Passing 12|9 for a PNG produces a
@@ -283,11 +297,26 @@ class GaussEngine(BaseEngine):
         capture = kwargs.get("capture_graphs", True)
 
         target, program = self._with_graphics(code) if capture else (None, code)
+        # A target the cell named itself is not ours to delete afterwards.
+        theirs = bool(target) and program is code
+
+        if theirs and target is not None:
+            suffix = target.suffix.lstrip(".").lower()
+            if suffix in _UNSUPPORTED_PLOT:
+                raise EngineExecutionError(
+                    f"GAUSS's plotSave cannot write {suffix!r}. It reports only "
+                    '"Program execute failed", which is why EconEnv says so '
+                    "first.\n"
+                    f"  Supported here: {', '.join(sorted(_GRAPHICS_MIME))}.",
+                    engine=self.name,
+                    code=code,
+                )
+
         text, error = self._backend.execute(program, timeout=timeout)
         if error:
             raise EngineExecutionError(error, engine=self.name, code=code)
 
-        figures = self._read_figure(target) if target else []
+        figures = self._read_figure(target, keep=theirs) if target else []
         return ExecutionResult(engine=self.name, code=code, stdout=text, figures=figures)
 
     # ------------------------------------------------------------------ #
@@ -299,10 +328,20 @@ class GaussEngine(BaseEngine):
         return choice if choice in _GRAPHICS_MIME or choice == "off" else "svg"
 
     def _with_graphics(self, code: str) -> tuple:
-        """Append a ``plotSave`` when — and only when — the cell draws something."""
+        """Append a ``plotSave`` when — and only when — one is needed.
+
+        A cell that already calls ``plotSave`` has said where it wants the
+        figure. Adding a second call would draw it twice and leave EconEnv
+        showing its own copy rather than the file the researcher named, so the
+        explicit save wins and its file is what gets displayed.
+        """
         fmt = self._graphics_format()
         if fmt == "off" or not _PLOT_CALL.search(code):
             return None, code
+
+        saved = _PLOT_SAVE.search(code)
+        if saved is not None:
+            return Path(saved.group(1)), code
 
         target = self._backend.session / f"econenv_plot_{uuid.uuid4().hex[:8]}.{fmt}"
         if fmt == "png":
@@ -310,18 +349,29 @@ class GaussEngine(BaseEngine):
             height = int(_config.get_option("gauss", "height", _RASTER_PIXELS[1]))
         else:
             width, height = _VECTOR_INCHES
-        saved = str(target).replace("\\", "/")
-        return target, f'{code.rstrip()}\nplotSave("{saved}", {width} | {height});'
+        destination = str(target).replace("\\", "/")
+        return target, f'{code.rstrip()}\nplotSave("{destination}", {width} | {height});'
 
-    def _read_figure(self, target: Path) -> List[Any]:
-        """The saved plot as a Figure, or nothing if GAUSS did not write one."""
+    def _read_figure(self, target: Path, keep: bool = False) -> List[Any]:
+        """The saved plot as a Figure, or nothing if GAUSS did not write one.
+
+        *keep* is True for a file the cell named itself: that one belongs to the
+        researcher and must not be deleted after being displayed.
+        """
         from ..results import Figure
 
         if not target.exists() or target.stat().st_size == 0:
             return []
         data = target.read_bytes()
-        target.unlink(missing_ok=True)
-        mimetype = _GRAPHICS_MIME.get(target.suffix.lstrip("."), "image/svg+xml")
+        if not keep:
+            target.unlink(missing_ok=True)
+
+        suffix = target.suffix.lstrip(".").lower()
+        mimetype = _GRAPHICS_MIME.get(suffix)
+        if mimetype is None:
+            # A format EconEnv cannot show inline — an .eps, say. The file is
+            # still written; there is simply nothing to render.
+            return []
         return [Figure(data=data, mimetype=mimetype, engine=self.name, name=target.stem)]
 
     # ------------------------------------------------------------------ #

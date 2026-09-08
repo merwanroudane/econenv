@@ -54,6 +54,17 @@ model ols baseline:
 This is deliberately **OLS only**. The architecture is meant to be proved
 before it spreads to more estimators.
 
+### Fixed — GAUSS graphics
+
+- **A cell that called `plotSave` itself showed a broken image.** EconEnv
+  appended its own `plotSave` on top of the user's, so the figure was written
+  twice and the notebook displayed EconEnv's temporary copy rather than the file
+  the researcher had named. An explicit save now wins: the cell is sent
+  unchanged, the named file is what gets displayed, and it is left on disk.
+- `jpg` and `jpeg` plots are displayed rather than written and ignored.
+- A format `plotSave` refuses — `eps`, `tif`, `gif`, `bmp` — is named before
+  GAUSS is asked, because GAUSS answers only "Program execute failed".
+
 ### Added — GAUSS
 
 - **A GAUSS procedure written in one cell is callable in the next.** Each cell

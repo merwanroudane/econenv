@@ -458,3 +458,80 @@ class TestProceduresCarry:
         backend._procs = {"sq": "..."}
         backend.stop()
         assert backend._procs == {} and backend._carried == {}
+
+
+class TestExplicitPlotSave:
+    """Reported with a screenshot: a cell calling plotSave showed a broken image.
+
+    EconEnv was appending its own plotSave on top of the user's, so the figure
+    was written twice and the notebook showed EconEnv's copy rather than the
+    file the researcher had named.
+    """
+
+    @staticmethod
+    def _engine(graphics="svg"):
+        from econenv.engines import gauss_engine
+
+        engine = object.__new__(gauss_engine.GaussEngine)
+        engine._backend = type("B", (), {"session": pathlib.Path(".")})()
+        engine._graphics_format = lambda: graphics
+        return engine
+
+    def test_an_explicit_save_is_not_duplicated(self):
+        engine = self._engine()
+        code = 'plotXY(x, y);\nplotSave("C:/Users/HP/Desktop/out.svg", 800 | 600, "px");'
+        target, program = engine._with_graphics(code)
+        assert program is code, "the cell must be sent unchanged"
+        assert target == pathlib.Path("C:/Users/HP/Desktop/out.svg")
+
+    def test_the_users_file_is_what_gets_displayed(self, tmp_path):
+        """Not EconEnv's own copy of the same plot."""
+        engine = self._engine()
+        target = tmp_path / "mine.svg"
+        target.write_bytes(b"<svg/>")
+        figures = engine._read_figure(target, keep=True)
+        assert figures[0].name == "mine"
+        assert target.exists(), "a file the researcher named must survive"
+
+    def test_econenvs_own_capture_is_cleaned_up(self, tmp_path):
+        engine = self._engine()
+        target = tmp_path / "econenv_plot_abc.svg"
+        target.write_bytes(b"<svg/>")
+        engine._read_figure(target, keep=False)
+        assert not target.exists(), "a temporary capture must not be left behind"
+
+    def test_a_multi_line_plotsave_is_recognised(self):
+        """It was written across four lines in the report."""
+        from econenv.engines.gauss_engine import _PLOT_SAVE
+
+        code = 'plotSave(\n    "C:/Users/HP/Desktop/gauss_test.svg",\n    800 | 600,\n    "px"\n);'
+        assert _PLOT_SAVE.search(code).group(1).endswith("gauss_test.svg")
+
+    def test_a_cell_without_a_save_still_gets_one(self):
+        engine = self._engine()
+        target, program = engine._with_graphics("plotXY(x, y);")
+        assert "plotSave" in program
+        assert target is not None and "econenv_plot" in target.name
+
+    @pytest.mark.parametrize(
+        "extension, mimetype",
+        [
+            ("svg", "image/svg+xml"),
+            ("png", "image/png"),
+            ("jpg", "image/jpeg"),
+            ("jpeg", "image/jpeg"),
+            ("pdf", "application/pdf"),
+        ],
+    )
+    def test_every_format_gauss_writes_can_be_shown(self, tmp_path, extension, mimetype):
+        engine = self._engine()
+        target = tmp_path / f"p.{extension}"
+        target.write_bytes(b"data")
+        assert engine._read_figure(target, keep=True)[0].mimetype == mimetype
+
+    def test_a_format_gauss_refuses_is_named_before_it_fails(self):
+        """GAUSS answers only "Program execute failed", which explains nothing."""
+        from econenv.engines.gauss_engine import _GRAPHICS_MIME, _UNSUPPORTED_PLOT
+
+        assert "eps" in _UNSUPPORTED_PLOT
+        assert not _UNSUPPORTED_PLOT & set(_GRAPHICS_MIME), "no format in both sets"
