@@ -4,6 +4,63 @@ All notable changes to EconEnv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semantic](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] — 2026-09-08
+
+Fixes and one new capability, all of which landed after the 1.3.0 build was
+uploaded — so they are not in the published 1.3.0.
+
+### Added
+
+- **A GAUSS procedure written in one cell is callable in the next.** Each cell
+  runs a fresh `tgauss`, so EconEnv already carried *values* across with GAUSS's
+  own `save`/`load`; it now re-declares `proc ... endp;` definitions too.
+
+  ```gauss
+  %%gauss
+  proc (1) = sq(a);
+      retp(a .* a);
+  endp;
+  ```
+  ```gauss
+  %%gauss
+  print sq(9);      /* 81, in a brand new process */
+  ```
+
+  Carrying a *definition* is safe where replaying a *statement* is not: a `proc`
+  block computes nothing and touches nothing, so re-declaring it is idempotent,
+  while re-running `x = x + 1;` would change the answer. A cell that redefines a
+  procedure wins, and the stored definition is left out rather than emitted
+  twice — GAUSS rejects two definitions of one name in a program.
+
+  `#include` and `library` statements still do not carry; those need the
+  licensed GAUSS Engine.
+- EconEnv now looks for the GAUSS Engine library under `MTENGHOME` and beside
+  the installation, so `%econ doctor gauss` distinguishes "not on this machine"
+  from "found, but no binding yet".
+
+### Fixed
+
+- **Every EViews hypothesis test produced no output at all.** `_VIEW_RE` anchors
+  at the end of the parenthesised options, so a view whose arguments follow a
+  space — `eq1.wald c(2)=0`, `eq1.testadd x3`, `eq1.testdrop x2`,
+  `eq1.chow 60`, `eq1.facbreak 80` — did not look like a view. Each ran as a
+  bare command, which displays in EViews' own window and returns nothing here.
+  Recognised now through an allow-list of five names, every one verified against
+  EViews 13 as freezing to a real table; a looser pattern would have swept in
+  *procs*, and freezing `eq1.ls y c x1` would give a display command the side
+  effect of re-estimating the equation.
+
+### Changed
+
+- The GAUSS Engine verdict is now evidence, not assumption. Reading the real PE
+  export tables across all 476 DLLs in a GAUSS 26 installation finds zero
+  `GAUSS_*` symbols, and there is no `mteng` or `gsoop` anywhere in the tree —
+  the Engine is a separate Aptech product, and owning desktop GAUSS does not
+  include it. Two licence-free routes to a persistent workspace were tried and
+  rejected on evidence: piping `tgauss` returns no output through the pipe, and
+  a driver that `run`s a command file shares the workspace but never regains
+  control.
+
 ## [1.3.0] — 2026-09-07
 
 GAUSS becomes the sixth engine. Python, R, Stata, EViews and MATLAB are
@@ -62,15 +119,6 @@ unchanged except where a shared bug affected them.
   half the engines. It now tracks loading explicitly.
 - **`pytest` had no `gauss` marker**, so a test needing GAUSS would have failed
   rather than skipped on a machine without it.
-- **Every EViews hypothesis test produced nothing at all.** `_VIEW_RE` anchors
-  at the end of the parenthesised options, so a view whose arguments follow a
-  space — `eq1.wald c(2)=0`, `eq1.testadd x3`, `eq1.testdrop x2`,
-  `eq1.chow 60` — did not look like a view. Each was run as a bare command,
-  which displays in EViews' own window and returns nothing here, so the whole
-  family was silent. Recognised now through an allow-list rather than a looser
-  pattern, because a *proc* also takes space-separated arguments and freezing
-  `eq1.ls y c x1` would give a display command the side effect of re-estimating
-  the equation. This predates the renderer work and was not introduced by it.
 - **`gauss` was not a known config section**, so every `%econ config gauss.*`
   documented on the engine page would have raised. Seven options are now
   declared.
@@ -88,21 +136,12 @@ unchanged except where a shared bug affected them.
 - **The native backend is blocked, not merely unwritten.** The GAUSS Engine
   (`mteng`) is licensed separately from desktop GAUSS and is not part of an
   installation — `gauss.dll` exports no `GAUSS_*` symbols — so there is nothing
-  to bind to on a normal machine. Two licence-free routes to a persistent
-  workspace were tried and rejected on evidence: piping `tgauss` gives no
-  output through the pipe (it wants a console, which is why the Engine API
-  exists), and a driver program that `run`s a command file shares the workspace
-  but never regains control, because `run` transfers rather than returns.
-  EconEnv now *looks* for the Engine library under `MTENGHOME` and beside the
-  installation, and `%econ doctor gauss` distinguishes "not on this machine"
-  from "found, but no binding yet".
-- A GAUSS cell runs in a fresh process, so EconEnv carries **values** across
-  with GAUSS's own `save`/`load` **and re-declares procedure definitions**, so a
-  `proc` written in one cell is callable in the next. Carrying a definition is
-  safe where replaying a statement is not: a `proc ... endp;` block computes
-  nothing and touches nothing, so re-declaring it cannot change an answer, while
-  re-running `x = x + 1;` could. `#include`s and `library` statements still do
-  not carry — those need the licensed GAUSS Engine.
+  to bind to on a normal machine. `gauss.backend=native` says so instead of
+  "not built yet", and the CLI backend is what runs.
+- A GAUSS cell runs in a fresh process, so **only top-level values carry**
+  between cells, via GAUSS's own `save`/`load`. Procedures and `#include` state
+  do not, and that is documented rather than worked around: replaying earlier
+  cells to fake a session would silently re-run their side effects.
 - A name GAUSS already owns (`vec`, `rows`, `ones`, …) is refused before GAUSS
   sees it, with an alternative, instead of surfacing a raw `G0276`.
 

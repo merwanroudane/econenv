@@ -341,7 +341,8 @@ breaking change without a major bump.
 
 | Version | | What changed |
 |---|---|---|
-| **1.3.0** | [PyPI](https://pypi.org/project/econenv/1.3.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#130--2026-09-07) | GAUSS as a sixth engine |
+| **1.3.1** | [PyPI](https://pypi.org/project/econenv/1.3.1/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#131--2026-09-08) | GAUSS procedures carry between cells; EViews test views |
+| 1.3.0 | [PyPI](https://pypi.org/project/econenv/1.3.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#130--2026-09-07) | GAUSS as a sixth engine |
 | 1.2.0 | [PyPI](https://pypi.org/project/econenv/1.2.0/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#120--2026-09-07) | MATLAB transfer hardening; research reports |
 | 1.1.1 | [PyPI](https://pypi.org/project/econenv/1.1.1/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#111--2026-09-05) | MATLAB R2026a and Python 3.13; five-engine docs |
 | 1.0.9 | [PyPI](https://pypi.org/project/econenv/1.0.9/) · [notes](https://github.com/merwanroudane/econenv/blob/main/CHANGELOG.md#109--2026-09-05) | Working links on the PyPI page |
