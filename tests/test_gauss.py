@@ -371,3 +371,40 @@ class TestConfiguration:
         from econenv import config
 
         assert key in config.DEFAULTS["gauss"]
+
+
+class TestNativeBackendReporting:
+    """The native backend is blocked by a missing product, not unwritten code.
+
+    A desktop GAUSS installation contains no `mteng` library and its `gauss.dll`
+    exports no `GAUSS_*` symbols, so there is nothing to bind to. The two cases
+    are worth telling apart: absent, or present and unsupported.
+    """
+
+    def test_the_library_search_is_safe_on_a_machine_without_it(self):
+        from econenv.engines.gauss_engine import find_engine_library
+
+        assert find_engine_library() is None or find_engine_library().exists()
+
+    def test_asking_for_native_is_reported_not_silently_downgraded(self, monkeypatch):
+        from econenv.engines import gauss_engine
+
+        monkeypatch.setattr(gauss_engine._config, "get_option", lambda *a, **k: "native")
+        monkeypatch.setattr(gauss_engine, "find_engine_library", lambda: None)
+        engine = object.__new__(gauss_engine.GaussEngine)
+        assert engine._requested_backend() == "native-absent"
+
+    def test_a_present_engine_is_distinguished_from_an_absent_one(self, monkeypatch):
+        from econenv.engines import gauss_engine
+
+        monkeypatch.setattr(gauss_engine._config, "get_option", lambda *a, **k: "native")
+        monkeypatch.setattr(gauss_engine, "find_engine_library", lambda: pathlib.Path("mteng.dll"))
+        engine = object.__new__(gauss_engine.GaussEngine)
+        assert engine._requested_backend() == "native-present"
+
+    def test_auto_resolves_to_the_backend_that_exists(self, monkeypatch):
+        from econenv.engines import gauss_engine
+
+        monkeypatch.setattr(gauss_engine._config, "get_option", lambda *a, **k: "auto")
+        engine = object.__new__(gauss_engine.GaussEngine)
+        assert engine._requested_backend() == "cli"

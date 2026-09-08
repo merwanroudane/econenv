@@ -816,18 +816,18 @@ _VIEW_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z][A-Za-z0-9_]*(\([^()]*\
 #: space-separated arguments: ``eq1.ls y c x1`` re-estimates the equation, and
 #: freezing that would give a display command a side effect.
 #:
-#: ✓ = frozen to a table against EViews 13 through EconEnv.
+#: Every name here was frozen to a real table against EViews 13 through
+#: EconEnv; nothing is listed on documentation alone. Two earlier candidates
+#: were dropped after asking EViews about them: ``cointrep`` is not a valid
+#: view at all, and ``ubreak`` takes no space-separated arguments, so it is
+#: already matched by ``_VIEW_RE`` and never belonged here.
 _VIEW_WITH_ARGUMENTS = frozenset(
     {
-        "wald",  # ✓ eq1.wald c(2)=0
-        "testadd",  # ✓ eq1.testadd x3
-        "testdrop",  # ✓ eq1.testdrop x2
-        "chow",  # ✓ eq1.chow 60
-        "facbreak",  # documented; needs a valid break point
-        "ubreak",  # documented
-        "cointrep",  # documented
-        "testfit",
-        "testby",
+        "wald",  # eq1.wald c(2)=0
+        "testadd",  # eq1.testadd x3
+        "testdrop",  # eq1.testdrop x2
+        "chow",  # eq1.chow 60
+        "facbreak",  # eq1.facbreak 80
     }
 )
 

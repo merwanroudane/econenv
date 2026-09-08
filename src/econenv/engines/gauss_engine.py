@@ -118,6 +118,42 @@ def find_gauss() -> List[Path]:
     return found
 
 
+#: The GAUSS Engine's shared library, by platform. This is *not* part of a
+#: desktop GAUSS installation: Aptech licenses the Engine separately, and a
+#: normal ``C:\gauss26`` contains no ``mteng`` and its ``gauss.dll`` exports no
+#: ``GAUSS_*`` symbols. Checked for anyway, so that a machine which does have it
+#: gets told rather than silently running the slower backend for ever.
+_ENGINE_LIBRARY = {
+    "Windows": ("mteng.dll",),
+    "Darwin": ("libmteng.dylib",),
+    "Linux": ("libmteng.so",),
+}
+
+
+def find_engine_library() -> Optional[Path]:
+    """The GAUSS Engine shared library, if this machine has one.
+
+    Looked for under ``MTENGHOME`` first — the variable Aptech's own
+    documentation uses — then beside the desktop installation.
+    """
+    names = _ENGINE_LIBRARY.get(platform.system(), ())
+    if not names:
+        return None
+
+    roots: List[Path] = []
+    if value := os.environ.get("MTENGHOME"):
+        roots.append(Path(value))
+        roots.append(Path(value) / "bin")
+    roots.extend(find_gauss())
+
+    for root in roots:
+        for name in names:
+            candidate = root / name
+            if candidate.is_file():
+                return candidate
+    return None
+
+
 @register
 class GaussEngine(BaseEngine):
     """GAUSS, through its terminal executable."""
@@ -171,12 +207,17 @@ class GaussEngine(BaseEngine):
         return True
 
     def _requested_backend(self) -> str:
-        """``auto`` today means ``cli``; a native backend can claim it later."""
+        """Which backend to use, and why the answer is not always what was asked.
+
+        ``auto`` resolves to ``cli`` because that is the only backend built. A
+        request for ``native`` is reported rather than silently downgraded, and
+        the report distinguishes the two very different situations: the GAUSS
+        Engine is not on this machine at all, or it is present and EconEnv
+        simply cannot drive it yet.
+        """
         choice = str(_config.get_option("gauss", "backend", "auto") or "auto").lower()
-        if choice in ("native",):
-            # Stated rather than silently downgraded: a user who asked for the
-            # native backend should know they did not get it.
-            return "native-unavailable"
+        if choice == "native":
+            return "native-present" if find_engine_library() else "native-absent"
         return "cli"
 
     def _static_version(self) -> Optional[str]:
@@ -200,11 +241,20 @@ class GaussEngine(BaseEngine):
         }
         if self._executable_path is not None:
             detail.update(describe(self._executable_path))
-        if getattr(self, "_backend_kind", "cli") == "native-unavailable":
+        kind = getattr(self, "_backend_kind", "cli")
+        if kind == "native-absent":
             detail["backend"] = (
-                "cli — gauss.backend=native was requested, but the GAUSS Engine "
-                "(mteng) is a separately licensed Aptech product and is not part "
-                "of a desktop GAUSS installation"
+                "cli — native was requested, but the GAUSS Engine (mteng) is not "
+                "on this machine. It is licensed separately from desktop GAUSS; a "
+                "normal installation has no mteng library and its gauss.dll "
+                "exports no GAUSS_* symbols."
+            )
+        elif kind == "native-present":
+            detail["backend"] = (
+                f"cli — the GAUSS Engine was found at {find_engine_library()}, but "
+                "EconEnv has no binding to it yet. Please open an issue: the "
+                "backend interface exists and this is the machine that could "
+                "prove one works."
             )
         detail["session"] = (
             "One process per cell. Values are carried between cells with GAUSS's "

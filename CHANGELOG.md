@@ -88,8 +88,14 @@ unchanged except where a shared bug affected them.
 - **The native backend is blocked, not merely unwritten.** The GAUSS Engine
   (`mteng`) is licensed separately from desktop GAUSS and is not part of an
   installation — `gauss.dll` exports no `GAUSS_*` symbols — so there is nothing
-  to bind to on a normal machine. `gauss.backend=native` now says exactly that
-  instead of "not built yet", and the CLI backend is what runs.
+  to bind to on a normal machine. Two licence-free routes to a persistent
+  workspace were tried and rejected on evidence: piping `tgauss` gives no
+  output through the pipe (it wants a console, which is why the Engine API
+  exists), and a driver program that `run`s a command file shares the workspace
+  but never regains control, because `run` transfers rather than returns.
+  EconEnv now *looks* for the Engine library under `MTENGHOME` and beside the
+  installation, and `%econ doctor gauss` distinguishes "not on this machine"
+  from "found, but no binding yet".
 - A GAUSS cell runs in a fresh process, so **only top-level values carry**
   between cells, via GAUSS's own `save`/`load`. Procedures and `#include` state
   do not, and that is documented rather than worked around: replaying earlier

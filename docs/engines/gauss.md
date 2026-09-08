@@ -225,9 +225,32 @@ and hold a licence covering it — the same situation as Stata and MATLAB.
 a native binding to the GAUSS Engine C API can be added without changing
 anything above it. That would bring a persistent workspace and faster transfers.
 
-Today only the CLI backend exists. `%econ config gauss.backend native` is
-reported as unavailable rather than silently downgraded, because a user who
-asked for the native backend should know they did not get it.
+Today only the CLI backend exists, and the reason is worth stating plainly:
+**the GAUSS Engine is a separate product.** A desktop installation contains no
+`mteng` library, and its `gauss.dll` exports no `GAUSS_*` symbols — so on a
+normal machine there is nothing to bind to, and nothing to test a binding
+against.
+
+Two other routes were tried and do not work:
+
+- **Piping `tgauss`.** It consumes lines written to its stdin and prints its
+  prompt, but produces no results through the pipe; it wants a real console.
+  This is precisely why Aptech sells the Engine API.
+- **A driver program that `run`s a command file in a loop.** `run` *does* share
+  the workspace, but it transfers control rather than returning, so the loop
+  never continues.
+
+So a persistent GAUSS workspace — one where procedures and `#include`s survive
+between cells — needs the licensed Engine. If you have it, EconEnv finds it:
+
+```python
+%econ config gauss.backend native
+%econ doctor gauss
+```
+
+reports whether the library is present (looked for under `MTENGHOME`, then
+beside the installation) and distinguishes "not on this machine" from "found,
+but EconEnv has no binding yet". `auto` and `cli` are unaffected.
 
 ## Troubleshooting
 

@@ -796,14 +796,24 @@ def check_gauss(deep: bool = False) -> List[Check]:
 
     backend = str(_config.get_option("gauss", "backend", "auto") or "auto").lower()
     if backend == "native":
+        from .engines.gauss_engine import find_engine_library
+
+        library = find_engine_library()
         checks.append(
             Check(
                 "GAUSS backend",
                 Status.WARN,
                 "native requested, running cli",
-                "The GAUSS Engine (mteng) is licensed separately from desktop "
-                "GAUSS and is not part of this installation, so there is nothing "
-                "to bind to. Set gauss.backend to auto or cli to silence this.",
+                (
+                    f"The GAUSS Engine was found at {library}, but EconEnv has no "
+                    "binding to it yet — please open an issue."
+                    if library
+                    else "The GAUSS Engine (mteng) is licensed separately from "
+                    "desktop GAUSS and is not on this machine, so there is "
+                    "nothing to bind to. Ask Aptech about the GAUSS Engine if you "
+                    "need a persistent workspace; otherwise set gauss.backend to "
+                    "auto or cli to silence this."
+                ),
                 group="gauss",
             )
         )
