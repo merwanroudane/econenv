@@ -822,10 +822,15 @@ measured round-trip difference is zero.
 
 \section{What carries between cells}
 
-Each cell is a fresh process, so EconEnv carries the \emph{values} across using
-GAUSS's own \texttt{save} and \texttt{load}. \textbf{Procedures,
-\texttt{\#include}s and library loads do not carry} --- define a \texttt{proc}
-in the same cell that uses it.
+Each cell is a fresh process, so EconEnv carries two things across: the
+\emph{values}, using GAUSS's own \texttt{save} and \texttt{load}; and the
+\emph{procedure definitions}, re-declared in each later cell. So a \texttt{proc}
+written in one cell is callable in the next.
+
+Carrying a definition is safe where replaying a statement is not: a
+\texttt{proc ... endp;} block computes nothing and touches nothing, so
+re-declaring it cannot change an answer. \texttt{\#include}s and
+\texttt{library} statements still do not carry.
 
 That limit is stated rather than worked around: replaying earlier cells to fake
 a session would silently re-run their side effects.

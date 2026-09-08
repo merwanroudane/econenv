@@ -96,10 +96,13 @@ unchanged except where a shared bug affected them.
   EconEnv now *looks* for the Engine library under `MTENGHOME` and beside the
   installation, and `%econ doctor gauss` distinguishes "not on this machine"
   from "found, but no binding yet".
-- A GAUSS cell runs in a fresh process, so **only top-level values carry**
-  between cells, via GAUSS's own `save`/`load`. Procedures and `#include` state
-  do not, and that is documented rather than worked around: replaying earlier
-  cells to fake a session would silently re-run their side effects.
+- A GAUSS cell runs in a fresh process, so EconEnv carries **values** across
+  with GAUSS's own `save`/`load` **and re-declares procedure definitions**, so a
+  `proc` written in one cell is callable in the next. Carrying a definition is
+  safe where replaying a statement is not: a `proc ... endp;` block computes
+  nothing and touches nothing, so re-declaring it cannot change an answer, while
+  re-running `x = x + 1;` could. `#include`s and `library` statements still do
+  not carry — those need the licensed GAUSS Engine.
 - A name GAUSS already owns (`vec`, `rows`, `ones`, …) is refused before GAUSS
   sees it, with an alternative, instead of surfacing a raw `G0276`.
 

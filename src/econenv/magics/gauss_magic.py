@@ -141,9 +141,10 @@ class GaussMagics(Magics):
         IEEE double exactly — GAUSS's own ``csvWriteM`` writes about fifteen,
         which is not enough to keep GAUSS in step with the other engines.
 
-        **What does not carry between cells.** Top-level values do; procedures,
-        ``#include``s and library state do not, because each cell is a new
-        process. Define a procedure in the same cell that uses it.
+        **What carries between cells.** Top-level values do, and so do
+        ``proc ... endp;`` definitions — a definition is pure, so re-declaring
+        it in a later cell cannot change a result. ``#include``s and ``library``
+        statements do not carry, because each cell is a fresh process.
         """
         local_ns = local_ns or {}
         parser = _parser()

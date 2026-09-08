@@ -408,3 +408,53 @@ class TestNativeBackendReporting:
         monkeypatch.setattr(gauss_engine._config, "get_option", lambda *a, **k: "auto")
         engine = object.__new__(gauss_engine.GaussEngine)
         assert engine._requested_backend() == "cli"
+
+
+class TestProceduresCarry:
+    """A procedure written in one cell is callable in the next.
+
+    The design forbids rebuilding a session by replaying earlier cells, and
+    rightly — re-running `x = x + 1;` or a file write would change the answer.
+    But a `proc ... endp;` definition is *pure*: declaring it computes nothing
+    and touches nothing, so re-declaring it in a later cell is safe and
+    idempotent. That is what makes carrying definitions legitimate where
+    replaying statements is not.
+    """
+
+    def test_a_procedure_is_recognised(self):
+        code = "proc (1) = sq(a);\n    retp(a .* a);\nendp;"
+        assert set(_gauss_cli._procedures(code)) == {"sq"}
+
+    def test_several_procedures_in_one_cell(self):
+        code = (
+            "proc (1) = sq(a);\n    retp(a .* a);\nendp;\n"
+            "proc (2) = two(a, b);\n    retp(a, b);\nendp;"
+        )
+        assert set(_gauss_cli._procedures(code)) == {"sq", "two"}
+
+    def test_the_form_without_a_return_count(self):
+        assert set(_gauss_cli._procedures("proc show(a);\n    print a;\nendp;")) == {"show"}
+
+    def test_ordinary_code_defines_nothing(self):
+        assert _gauss_cli._procedures("x = 1;\nprint x;") == {}
+
+    def test_a_cell_that_redefines_does_not_get_the_old_one_too(self):
+        """GAUSS rejects two definitions of the same name in one program."""
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        backend._procs = {"sq": "proc (1) = sq(a);\n    retp(a);\nendp;"}
+        block = backend._procedure_block("proc (1) = sq(a);\n    retp(a + 1);\nendp;")
+        assert block == "", "the stored definition must be left out"
+
+    def test_a_stored_procedure_is_emitted_for_a_cell_that_does_not_redefine(self):
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        stored = "proc (1) = sq(a);\n    retp(a);\nendp;"
+        backend._procs = {"sq": stored}
+        assert backend._procedure_block("print sq(2);") == stored
+
+    def test_definitions_are_dropped_when_the_session_stops(self):
+        backend = object.__new__(_gauss_cli.GaussCliBackend)
+        backend._session = None
+        backend._carried = {"x": "matrix"}
+        backend._procs = {"sq": "..."}
+        backend.stop()
+        assert backend._procs == {} and backend._carried == {}

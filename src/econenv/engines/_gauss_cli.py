@@ -30,11 +30,17 @@ so.
 
 **State.** A process exits when the cell finishes, so nothing survives on its
 own. Rather than replaying previous cells — which would silently re-run side
-effects, and which the design document rightly forbids — this carries the
-*values* across with GAUSS's own ``save`` and ``load``: matrices to ``.fmt``,
-strings to ``.fst``, in a session directory. That is genuine state transfer, and
-what it does not carry (procedures, ``#include``s, local scopes) is documented
-rather than pretended.
+effects, and which the design document rightly forbids — this carries two
+things: the *values*, using GAUSS's own ``save`` and ``load`` (matrices to
+``.fmt``, strings to ``.fst``), and the *procedure definitions*, re-declared in
+each later cell.
+
+Carrying a definition is legitimate where replaying a statement is not: a
+``proc ... endp;`` block computes nothing and touches nothing, so re-declaring
+it is idempotent. ``x = x + 1;`` is not.
+
+What still does not carry — ``#include``s, ``library`` statements — is
+documented rather than pretended.
 """
 
 from __future__ import annotations
@@ -97,6 +103,10 @@ class GaussCliBackend:
         #: Lines this wrapper prepended, so GAUSS's line numbers can be
         #: translated back to the line the user actually typed.
         self._offset = 0
+        #: Procedure definitions from earlier cells, by name. A definition is
+        #: pure, so re-declaring it costs nothing and cannot change an answer -
+        #: which is what makes carrying it safe when replaying statements is not.
+        self._procs: Dict[str, str] = {}
 
     # ------------------------------------------------------------------ #
     # lifecycle
@@ -111,6 +121,7 @@ class GaussCliBackend:
             shutil.rmtree(self._session, ignore_errors=True)
             self._session = None
         self._carried.clear()
+        self._procs.clear()
 
     @property
     def session(self) -> Path:
@@ -241,13 +252,32 @@ class GaussCliBackend:
         guess about a language whose types we do not track.
         """
         assigned = _assigned_names(code) if carry else []
+        if carry:
+            self._procs.update(_procedures(code))
+
         preamble = self._preamble()
-        self._offset = len(preamble.splitlines()) if preamble else 0
-        parts = [preamble, code.rstrip()]
+        # Procedures come after the restored values and before the user's code,
+        # because GAUSS resolves a call at compile time and the whole program is
+        # compiled before any of it runs.
+        definitions = self._procedure_block(code) if carry else ""
+        header = "\n".join(part for part in (preamble, definitions) if part)
+        self._offset = len(header.splitlines()) if header else 0
+        parts = [header, code.rstrip()]
         for name in assigned:
             parts.append(f'save path="{_gauss_path(self.session)}" {name};')
             parts.append(f'print "{_TYPE_MARKER} {name} " type({name});')
         return "\n".join(part for part in parts if part) + "\n"
+
+    def _procedure_block(self, code: str) -> str:
+        """Definitions from earlier cells that this cell does not redefine.
+
+        A cell that defines a procedure again wins: its own text is used, and
+        the stored one is not emitted twice, because GAUSS rejects a duplicate
+        definition in the same program.
+        """
+        redefined = set(_procedures(code))
+        wanted = [body for name, body in sorted(self._procs.items()) if name not in redefined]
+        return "\n".join(wanted)
 
     def _preamble(self) -> str:
         """Restore the values earlier cells left behind."""
@@ -286,6 +316,28 @@ def _assigned_names(code: str) -> List[str]:
                 continue
             names.append(name)
     return names
+
+
+#: ``proc (1) = name(args);`` ... ``endp;`` — captured whole, so it can be
+#: re-declared in a later cell. ``proc name(args)`` without the return count is
+#: also legal GAUSS.
+_PROC_RE = re.compile(
+    r"^[ \t]*proc[ \t]*(?:\([^)]*\)[ \t]*=[ \t]*)?([A-Za-z_]\w*)[ \t]*\(.*?^[ \t]*endp[ \t]*;",
+    re.IGNORECASE | re.MULTILINE | re.DOTALL,
+)
+
+
+def _procedures(code: str) -> Dict[str, str]:
+    """Procedure definitions in *code*, by name.
+
+    Only whole ``proc ... endp;`` blocks are taken. A definition is pure, so
+    carrying it into the next cell cannot change a result — unlike replaying
+    ordinary statements, which the design deliberately refuses to do.
+    """
+    found: Dict[str, str] = {}
+    for match in _PROC_RE.finditer(code):
+        found[match.group(1).lower()] = match.group(0).rstrip()
+    return found
 
 
 #: ``struct plotControl p;`` and ``struct myType a, b;``

@@ -135,15 +135,35 @@ measured round-trip difference is **0**.
 ## What carries between cells, and what does not
 
 Each cell is a fresh `tgauss` process, so nothing survives on its own. EconEnv
-carries the **values** across using GAUSS's own `save` and `load` — matrices to
-`.fmt`, strings to `.fst`, in a session directory.
+carries two things across:
 
-**Procedures, `#include`s and library loads do not carry.** Define a `proc` in
-the same cell that uses it.
+- **values**, using GAUSS's own `save` and `load` — matrices to `.fmt`, strings
+  to `.fst`, in a session directory;
+- **procedure definitions**, re-declared in each later cell.
 
-That limit is stated rather than worked around. Rebuilding a session by
-replaying earlier cells would silently re-run their side effects, which is worse
-than carrying less.
+```python
+%%gauss
+proc (1) = sq(a);
+    retp(a .* a);
+endp;
+```
+
+```python
+%%gauss
+print sq(9);     /* 81 — the procedure survived into a new process */
+```
+
+Redefining a procedure wins, and the old definition is not emitted alongside it
+(GAUSS rejects two definitions of one name in the same program).
+
+Carrying a *definition* is safe in a way that replaying statements is not: a
+`proc ... endp;` block computes nothing and touches nothing, so re-declaring it
+cannot change an answer. Re-running `x = x + 1;` or a `writetable` could, which
+is why EconEnv does not rebuild a session from the cells you have run.
+
+**What still does not carry**: `#include`s, `library` statements, and anything
+whose effect is not a value or a procedure. Those need the licensed GAUSS
+Engine, which gives a genuinely persistent workspace.
 
 ## Figures
 
