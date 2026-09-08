@@ -34,3 +34,5 @@ paper/
 EconEnv_*_Prompt*.md
 EconEnv_*_Prompt*.txt
 EconEnv_*_Design.md
+ECONLANG_*.md
+*_MASTER_SPEC.md
